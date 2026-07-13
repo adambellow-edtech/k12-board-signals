@@ -1,0 +1,2569 @@
+<title>Breakout Land — a Breakout EDU world</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+/* Breakout Land — a bright toy-box world. Single deliberate theme: sunny daylight. */
+
+:root {
+  --ink: #1d2a4d;
+  --ink-soft: #4a5878;
+  --cream: #fff7e8;
+  --cream-edge: #e8d9b8;
+  --gold: #ffb627;
+  --gold-deep: #d98e00;
+  --coral: #ff6b5b;
+  --coral-deep: #d6503f;
+  --teal: #2ec4b6;
+  --teal-deep: #199488;
+  --purple: #9b5de5;
+  --sky: #8ed8f0;
+  --grass: #7cc665;
+  --white: #ffffff;
+  --radius: 18px;
+  --display: ui-rounded, 'Hiragino Maru Gothic ProN', 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif;
+  --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--body);
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--sky), #c8ecf7 55%, #bfe6c9);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+button { font-family: inherit; cursor: pointer; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
+
+/* ---------- screens ---------- */
+.screen { position: fixed; inset: 0; display: none; overflow: auto; }
+.screen.active { display: block; }
+#screen-world.active { display: block; overflow: hidden; }
+
+/* ---------- title ---------- */
+#screen-title {
+  display: none;
+  place-items: center;
+  text-align: center;
+}
+#screen-title.active { display: grid; }
+.title-wrap { padding: 24px; max-width: 640px; width: 100%; }
+.title-lock { font-size: 58px; line-height: 1; animation: bob 2.8s ease-in-out infinite; display: inline-block; }
+@keyframes bob { 0%,100% { transform: translateY(0) rotate(-4deg);} 50% { transform: translateY(-10px) rotate(4deg);} }
+.title-logo {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(44px, 9vw, 76px);
+  letter-spacing: .5px;
+  margin: 6px 0 2px;
+  color: var(--white);
+  text-shadow:
+    0 3px 0 var(--gold-deep),
+    0 7px 0 rgba(29, 42, 77, .28),
+    0 14px 24px rgba(29, 42, 77, .25);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+}
+.title-logo .land { color: var(--gold); }
+.title-tag {
+  font-size: 17px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, .68);
+  border-radius: 999px;
+  display: inline-block;
+  padding: 7px 18px;
+  margin-bottom: 22px;
+  font-weight: 600;
+}
+#title-canvas { width: 100%; height: 130px; display: block; margin: 4px 0 10px; }
+.role-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.role-btn {
+  border: 0;
+  border-radius: var(--radius);
+  padding: 16px 22px 14px;
+  min-width: 150px;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 18px;
+  color: var(--white);
+  box-shadow: 0 5px 0 rgba(0,0,0,.22), 0 12px 22px rgba(29,42,77,.18);
+  transition: transform .08s ease, box-shadow .08s ease;
+}
+.role-btn small { display: block; font-family: var(--body); font-weight: 600; font-size: 12.5px; opacity: .9; margin-top: 3px; }
+.role-btn:hover { transform: translateY(-2px); }
+.role-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.22); }
+.role-student { background: linear-gradient(180deg, var(--gold), #f5a300); color: #4a3405; }
+.role-teacher { background: linear-gradient(180deg, var(--teal), var(--teal-deep)); }
+.role-parent  { background: linear-gradient(180deg, var(--purple), #7d43c9); }
+.title-foot { margin-top: 20px; font-size: 12.5px; color: var(--ink-soft); }
+.title-foot button { border: 0; background: none; text-decoration: underline; color: inherit; font-size: inherit; }
+
+/* ---------- signboard panels (shared) ---------- */
+.board {
+  background: var(--cream);
+  border: 3px solid var(--cream-edge);
+  border-radius: 22px;
+  box-shadow: 0 8px 0 rgba(151, 122, 60, .18), 0 20px 44px rgba(29, 42, 77, .22);
+  padding: 22px 24px;
+}
+
+/* ---------- avatar creator ---------- */
+#screen-avatar { display: none; place-items: center; padding: 18px; }
+#screen-avatar.active { display: grid; }
+.av-wrap { display: flex; gap: 20px; max-width: 900px; width: 100%; align-items: stretch; flex-wrap: wrap; }
+.av-left { flex: 0 0 280px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#av-canvas { width: 240px; height: 300px; background: linear-gradient(180deg, #d9f2fa, #eef9f0); border-radius: 18px; border: 3px solid var(--cream-edge); }
+.av-right { flex: 1 1 380px; min-width: 300px; max-height: 74vh; overflow-y: auto; padding-right: 6px; }
+.av-right h3 { margin: 14px 0 7px; font-size: 15px; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-soft); }
+#av-name {
+  width: 100%; padding: 12px 14px; font-size: 17px; font-weight: 700; color: var(--ink);
+  border: 3px solid var(--cream-edge); border-radius: 12px; background: var(--white);
+  font-family: var(--display);
+}
+#av-name:focus { outline: 3px solid var(--gold); border-color: var(--gold); }
+.swatch-row, .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch {
+  width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,.9);
+  box-shadow: 0 2px 6px rgba(29,42,77,.25);
+}
+.swatch.sel { outline: 3px solid var(--ink); outline-offset: 2px; }
+.chip {
+  border: 2.5px solid var(--cream-edge); background: var(--white); border-radius: 999px;
+  padding: 8px 14px; font-weight: 700; font-size: 13.5px; color: var(--ink);
+}
+.chip.sel { background: var(--ink); color: var(--white); border-color: var(--ink); }
+.chip.locked { opacity: .65; }
+.chip .price { color: var(--gold-deep); }
+.btn-big {
+  display: block; width: 100%; margin-top: 16px; border: 0; border-radius: 16px;
+  background: linear-gradient(180deg, var(--gold), #f5a300); color: #4a3405;
+  font-family: var(--display); font-weight: 900; font-size: 19px; padding: 15px;
+  box-shadow: 0 5px 0 var(--gold-deep);
+  transition: transform .08s ease, box-shadow .08s ease;
+}
+.btn-big:hover { transform: translateY(-1px); }
+.btn-big:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--gold-deep); }
+.btn-big:disabled { filter: grayscale(.7); opacity: .6; cursor: not-allowed; }
+.btn-small {
+  border: 0; border-radius: 12px; padding: 9px 16px; font-weight: 800; font-size: 13.5px;
+  background: var(--teal); color: var(--white); box-shadow: 0 3px 0 var(--teal-deep);
+}
+.btn-small:active { transform: translateY(2px); box-shadow: none; }
+.btn-small:disabled { background: #b8c4c9; box-shadow: 0 3px 0 #93a1a8; cursor: default; }
+
+/* ---------- world ---------- */
+#world-canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
+#enter-btn {
+  position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 80px);
+  border: 0; border-radius: 999px; padding: 14px 26px;
+  font-family: var(--display); font-weight: 900; font-size: 17px;
+  background: var(--ink); color: var(--white);
+  box-shadow: 0 4px 0 #0d1530, 0 14px 30px rgba(29,42,77,.4);
+  transition: transform .2s ease; opacity: 0; pointer-events: none;
+}
+#enter-btn.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+.world-hint {
+  position: fixed; left: 50%; top: 74px; transform: translateX(-50%);
+  background: rgba(29,42,77,.72); color: var(--white); font-size: 12.5px; font-weight: 600;
+  padding: 6px 14px; border-radius: 999px; pointer-events: none;
+}
+
+/* ---------- HUD ---------- */
+#hud {
+  position: fixed; top: 10px; left: 10px; right: 10px; display: none;
+  justify-content: space-between; align-items: flex-start; gap: 10px; pointer-events: none;
+  z-index: 40;
+}
+#hud > * { pointer-events: auto; }
+.hud-left, .hud-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.hud-card {
+  background: rgba(255,247,232,.94); border: 2.5px solid var(--cream-edge);
+  border-radius: 999px; padding: 6px 14px 6px 8px; display: flex; align-items: center; gap: 8px;
+  box-shadow: 0 4px 12px rgba(29,42,77,.18);
+  font-variant-numeric: tabular-nums;
+}
+#hud-closet { border: 0; background: none; padding: 0; display: flex; align-items: center; gap: 9px; }
+#hud-avatar { width: 48px; height: 48px; border-radius: 50%; border: 2.5px solid var(--gold); background: #bfe9f5; }
+.hud-id { text-align: left; }
+.hud-id strong { display: block; font-family: var(--display); font-size: 14.5px; line-height: 1.15; }
+.hud-id span { font-size: 11px; color: var(--ink-soft); font-weight: 700; }
+.hud-xp { width: 96px; height: 7px; border-radius: 99px; background: #e6dcc4; overflow: hidden; margin-top: 3px; }
+.hud-xp > div { height: 100%; background: linear-gradient(90deg, var(--teal), #57c26b); border-radius: 99px; transition: width .5s ease; }
+.hud-stat { font-weight: 800; font-size: 14.5px; }
+.hud-stat .em { font-size: 17px; margin-right: 2px; }
+.hud-btn {
+  border: 2.5px solid var(--cream-edge); background: rgba(255,247,232,.94);
+  width: 40px; height: 40px; border-radius: 50%; font-size: 17px;
+  box-shadow: 0 4px 12px rgba(29,42,77,.18);
+}
+
+/* ---------- modals ---------- */
+.modal {
+  position: fixed; inset: 0; display: none; place-items: center; z-index: 60;
+  background: rgba(23, 33, 61, .45); backdrop-filter: blur(3px); padding: 18px;
+}
+.modal.open { display: grid; }
+.modal-card { width: min(680px, 96vw); max-height: 88vh; overflow-y: auto; position: relative; animation: pop .22s ease; }
+@keyframes pop { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-close {
+  position: absolute; top: 10px; right: 12px; border: 0; background: var(--coral); color: #fff;
+  width: 34px; height: 34px; border-radius: 50%; font-size: 16px; font-weight: 900;
+  box-shadow: 0 3px 0 var(--coral-deep);
+}
+.modal-card h2 { margin: 2px 36px 10px 0; font-size: 24px; }
+.muted { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+.center { text-align: center; }
+.big-emoji { font-size: 56px; text-align: center; margin: 8px 0; }
+.reward-row {
+  display: flex; gap: 14px; flex-wrap: wrap; background: rgba(255,182,39,.16);
+  border-radius: 12px; padding: 10px 14px; margin: 12px 0; font-size: 14.5px;
+}
+.card {
+  background: var(--white); border: 2.5px solid var(--cream-edge); border-radius: 16px;
+  padding: 14px 16px; margin: 12px 0;
+}
+.game-card { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.game-card.soon { opacity: .6; }
+.game-info { flex: 1 1 300px; }
+.game-info h3 { margin: 0 0 3px; font-size: 17.5px; }
+.game-info .meta { margin: 0 0 6px; font-size: 12.5px; font-weight: 700; color: var(--teal-deep); }
+.game-info .story { margin: 0; font-size: 13.5px; color: var(--ink-soft); line-height: 1.45; }
+.game-side { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+.game-side .btn-big { margin-top: 0; width: auto; padding: 12px 26px; font-size: 16px; }
+.done-pill { font-size: 12.5px; font-weight: 800; color: #2c7a3d; background: #dff3e2; border-radius: 999px; padding: 6px 12px; text-align: center; }
+
+/* ---------- puzzle modal ---------- */
+#pz-ctx { font-size: 12px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: var(--teal-deep); }
+#pz-step { font-size: 13px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; }
+.pz-lock-zone { display: flex; justify-content: center; margin: 6px 0 10px; }
+#pz-lock { width: 74px; height: 88px; position: relative; transition: transform .2s; }
+#pz-lock .shackle {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 44px; height: 40px; border: 9px solid #c9a86a; border-bottom: 0;
+  border-radius: 26px 26px 0 0; transition: transform .5s ease, border-color .3s;
+}
+#pz-lock .body {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 56px;
+  background: linear-gradient(180deg, var(--gold), #eda412); border-radius: 14px;
+  box-shadow: inset 0 -5px 0 rgba(0,0,0,.14);
+}
+#pz-lock .hole {
+  position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+  width: 12px; height: 20px; background: #7a5310; border-radius: 7px 7px 4px 4px;
+}
+#pz-lock.open-anim .shackle { transform: translateX(-50%) translateY(-14px) rotate(-24deg); border-color: #57c26b; }
+#pz-lock.shake { animation: shake .4s; }
+@keyframes shake { 0%,100% { transform: translateX(0);} 20% { transform: translateX(-7px);} 40% { transform: translateX(6px);} 60% { transform: translateX(-4px);} 80% { transform: translateX(3px);} }
+#pz-clue {
+  background: var(--white); border: 2.5px dashed var(--cream-edge); border-radius: 14px;
+  padding: 14px 16px; font-size: 15.5px; line-height: 1.55; margin: 0 0 12px;
+}
+#pz-hint { display: none; font-size: 13.5px; color: #8a6400; background: #fff3d1; border-radius: 10px; padding: 9px 13px; margin-bottom: 10px; }
+#pz-hint.show { display: block; }
+#pz-display { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
+#pz-display .slot {
+  width: 42px; height: 48px; border-radius: 10px; background: var(--white);
+  border: 2.5px solid var(--cream-edge); display: grid; place-items: center;
+  font-family: var(--display); font-weight: 900; font-size: 22px;
+}
+#pz-display .slot.filled { border-color: var(--ink); background: #f2f6ff; }
+#pz-display .dot { width: 24px; height: 24px; border-radius: 50%; display: block; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
+#pz-pad { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.pz-key {
+  min-width: 46px; height: 46px; border: 0; border-radius: 12px; font-family: var(--display);
+  font-weight: 900; font-size: 18px; background: var(--white); color: var(--ink);
+  border: 2.5px solid var(--cream-edge); box-shadow: 0 3px 0 var(--cream-edge);
+}
+.pz-key:active { transform: translateY(2px); box-shadow: none; }
+.pz-key.wide { min-width: 76px; }
+.pz-key.go { background: var(--teal); border-color: var(--teal-deep); box-shadow: 0 3px 0 var(--teal-deep); color: #fff; letter-spacing: .5px; }
+.pz-key .dot { width: 26px; height: 26px; border-radius: 50%; display: block; margin: auto; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
+.pz-key.colorkey, .pz-key.dirkey { font-size: 20px; }
+
+/* ---------- celebration ---------- */
+#cel-modal .modal-card { text-align: center; }
+#cel-title {
+  font-family: var(--display); font-weight: 900; font-size: clamp(34px, 7vw, 52px); margin: 8px 0 2px;
+  color: var(--gold); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill;
+  text-shadow: 0 4px 0 rgba(29,42,77,.2);
+  animation: celpop .5s cubic-bezier(.2, 2.4, .5, 1);
+}
+@keyframes celpop { from { transform: scale(.3) rotate(-6deg); } to { transform: scale(1) rotate(0);} }
+#cel-sub { font-weight: 800; font-size: 17px; color: var(--ink-soft); margin: 0 0 10px; }
+#cel-stats { display: flex; gap: 18px; justify-content: center; font-weight: 800; font-size: 16px; margin-bottom: 14px; font-variant-numeric: tabular-nums; }
+#confetti { position: fixed; inset: 0; z-index: 100; pointer-events: none; display: none; }
+
+/* ---------- shop / badges ---------- */
+.shop-h { margin: 16px 0 8px; font-size: 15px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-soft); }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.shop-item {
+  border: 2.5px solid var(--cream-edge); background: var(--white); border-radius: 14px;
+  padding: 12px; display: flex; flex-direction: column; gap: 5px; align-items: flex-start;
+}
+.shop-item:hover { border-color: var(--gold); }
+.shop-item.owned { border-color: var(--teal); background: #effaf8; }
+.shop-name { font-weight: 800; font-size: 14px; }
+.shop-price { font-size: 12.5px; font-weight: 800; color: var(--gold-deep); }
+.shop-item.owned .shop-price { color: var(--teal-deep); }
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.badge {
+  background: var(--white); border: 2.5px solid var(--cream-edge); border-radius: 14px;
+  padding: 14px 12px; text-align: center; display: flex; flex-direction: column; gap: 4px;
+  filter: grayscale(1); opacity: .55;
+}
+.badge.got { filter: none; opacity: 1; border-color: var(--gold); background: #fffaef; }
+.badge-icon { font-size: 30px; }
+.badge strong { font-size: 13.5px; }
+.badge span { font-size: 11.5px; color: var(--ink-soft); }
+.badge.small { padding: 10px; }
+
+/* ---------- math map ---------- */
+#screen-math { padding: 68px 14px 20px; }
+.math-wrap { max-width: 980px; margin: 0 auto; }
+.math-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.math-head h2 { margin: 0; font-size: 26px; }
+.math-head .skills { font-size: 13px; color: var(--ink-soft); font-weight: 600; }
+#grade-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.gpill {
+  border: 2.5px solid var(--cream-edge); background: var(--white); border-radius: 999px;
+  min-width: 44px; padding: 8px 10px; font-family: var(--display); font-weight: 900; font-size: 14px;
+}
+.gpill.sel { background: var(--ink); color: var(--white); border-color: var(--ink); }
+.math-board { padding: 10px; overflow-x: auto; }
+#math-svg { width: 100%; min-width: 720px; height: auto; display: block; }
+.mnode { cursor: pointer; }
+.mnode.locked, .mnode.locked-challenge { cursor: not-allowed; }
+.mnode:focus { outline: none; }
+.mnode:focus circle:first-of-type { stroke: var(--ink); }
+.math-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-top: 8px; padding: 0 6px; }
+.math-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+
+/* ---------- teacher & parent dashboards ---------- */
+.dash { max-width: 1020px; margin: 0 auto; padding: 22px 16px 40px; }
+.dash-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.dash-head h2 { margin: 0; font-size: 27px; }
+.dash-head .sub { color: var(--ink-soft); font-size: 13.5px; font-weight: 600; }
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 14px; align-items: start; }
+.dash .board { padding: 18px 20px; }
+.dash .board h3 { margin: 0 0 10px; font-size: 17px; }
+.dash .board .note { font-size: 12.5px; color: var(--ink-soft); margin: 4px 0 10px; }
+.span2 { grid-column: 1 / -1; }
+
+.t-table-wrap { overflow-x: auto; }
+table.t-table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; min-width: 560px; }
+.t-table th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-soft); padding: 6px 10px; border-bottom: 2px solid var(--cream-edge); }
+.t-table td { padding: 9px 10px; border-bottom: 1.5px solid #f0e8d4; }
+.t-name { font-weight: 800; }
+.pill { border-radius: 999px; padding: 3px 10px; font-weight: 800; font-size: 12px; }
+.pill.good { background: #dff3e2; color: #226b32; }
+.pill.mid { background: #fff3d1; color: #8a6400; }
+.pill.low { background: #fde3e0; color: #a33225; }
+
+.switch { position: relative; display: inline-block; width: 42px; height: 24px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch span {
+  position: absolute; inset: 0; border-radius: 99px; background: #cfd8dc; transition: .2s;
+}
+.switch span::before {
+  content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%;
+  left: 3px; top: 3px; background: #fff; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.switch input:checked + span { background: var(--teal); }
+.switch input:checked + span::before { transform: translateX(18px); }
+.switch input:focus-visible + span { outline: 3px solid var(--gold); }
+
+/* comparison chart */
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; font-weight: 700; margin-bottom: 12px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.cmp-group { margin-bottom: 14px; }
+.cmp-label { font-weight: 800; font-size: 13.5px; margin-bottom: 5px; }
+.cmp-bars { display: flex; flex-direction: column; gap: 4px; }
+.cmp-row { display: flex; align-items: center; gap: 8px; }
+.cmp-bar { height: 14px; border-radius: 0 4px 4px 0; min-width: 3px; transition: width .6s ease; }
+.cmp-val { font-size: 12px; font-weight: 700; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.chart-note { font-size: 12.5px; color: var(--ink-soft); margin: 10px 0 0; }
+
+.assign-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1.5px solid #f0e8d4; font-size: 14px; flex-wrap: wrap; }
+.assign-row .meta { color: var(--ink-soft); font-size: 12.5px; }
+.t-plus-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; font-size: 14px; font-weight: 700; }
+
+/* parent */
+.p-head { display: flex; gap: 16px; align-items: center; margin-bottom: 4px; }
+#p-avatar { width: 84px; height: 104px; background: linear-gradient(180deg,#d9f2fa,#eef9f0); border-radius: 14px; border: 2.5px solid var(--cream-edge); }
+.p-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin: 12px 0; }
+.p-stat { background: var(--white); border: 2.5px solid var(--cream-edge); border-radius: 14px; padding: 12px; text-align: center; }
+.p-stat strong { display: block; font-family: var(--display); font-size: 23px; font-variant-numeric: tabular-nums; }
+.p-stat span { font-size: 11.5px; color: var(--ink-soft); font-weight: 700; }
+.skill-row { display: flex; align-items: center; gap: 10px; margin: 9px 0; }
+.skill-label { flex: 0 0 128px; font-size: 13px; font-weight: 700; }
+.skill-track { flex: 1; height: 12px; border-radius: 99px; background: #ece4d0; overflow: hidden; }
+.skill-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--teal), #57c26b); transition: width .7s ease; }
+.skill-val { flex: 0 0 30px; text-align: right; font-size: 12.5px; font-weight: 800; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.p-week { display: flex; gap: 10px; align-items: flex-end; padding: 6px 2px 0; }
+.wk-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.wk-bar { width: 100%; max-width: 34px; background: var(--teal); border-radius: 6px 6px 0 0; }
+.wk-val { font-size: 11px; font-weight: 700; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.wk-day { font-size: 11px; font-weight: 700; color: var(--ink-soft); }
+.p-controls { display: flex; flex-direction: column; gap: 12px; }
+.p-control-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 700; }
+input[type=range] { width: 150px; accent-color: var(--teal); }
+
+/* back buttons on dashboards */
+.back-btn {
+  border: 2.5px solid var(--cream-edge); background: var(--white); border-radius: 999px;
+  padding: 9px 18px; font-weight: 800; font-size: 13.5px; color: var(--ink);
+}
+
+/* key catcher */
+#kc-canvas { width: 100%; height: min(60vh, 460px); border-radius: 16px; display: block; touch-action: none; }
+#kc-quit { margin-top: 10px; }
+
+/* toast */
+#toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 90px);
+  background: var(--ink); color: var(--white); font-weight: 700; font-size: 14.5px;
+  padding: 12px 20px; border-radius: 999px; z-index: 120; max-width: 90vw; text-align: center;
+  box-shadow: 0 12px 30px rgba(29,42,77,.4); transition: transform .25s ease;
+}
+#toast.show { transform: translate(-50%, 0); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+@media (max-width: 640px) {
+  .hud-id, .hud-stat span.lbl { display: none; }
+  .skill-label { flex-basis: 104px; }
+}
+
+</style>
+
+
+<!-- ============ TITLE ============ -->
+<section class="screen" id="screen-title">
+  <div class="title-wrap">
+    <span class="title-lock">🔐</span>
+    <h1 class="title-logo">BREAKOUT <span class="land">LAND</span></h1>
+    <p class="title-tag">Think hard. Break out. Play on! ✦ A Breakout EDU world</p>
+    <canvas id="title-canvas" aria-hidden="true"></canvas>
+    <div class="role-row">
+      <button class="role-btn role-student" id="t-student">I'm a Student<small>Explore the island!</small></button>
+      <button class="role-btn role-teacher" id="t-teacher">I'm a Teacher<small>Class dashboard</small></button>
+      <button class="role-btn role-parent" id="t-parent">I'm a Parent<small>Progress &amp; approvals</small></button>
+    </div>
+    <p class="title-foot">Interactive concept prototype · progress saves on this device · <button id="t-reset">reset demo</button></p>
+  </div>
+</section>
+
+<!-- ============ AVATAR CREATOR ============ -->
+<section class="screen" id="screen-avatar">
+  <div class="av-wrap board">
+    <div class="av-left">
+      <h2 id="av-title">Create Your Explorer</h2>
+      <canvas id="av-canvas" width="240" height="300"></canvas>
+      <button class="btn-big" id="av-done">Start Exploring!</button>
+    </div>
+    <div class="av-right">
+      <h3>Explorer name</h3>
+      <input id="av-name" maxlength="16" placeholder="e.g. Sam the Solver" autocomplete="off">
+      <h3>Skin</h3><div class="swatch-row" id="av-skin"></div>
+      <h3>Hair style</h3><div class="chip-row" id="av-hair"></div>
+      <h3>Hair color</h3><div class="swatch-row" id="av-haircolor"></div>
+      <h3>Outfit</h3><div class="chip-row" id="av-outfit"></div>
+      <h3>Accessory</h3><div class="chip-row" id="av-acc"></div>
+      <h3>Sidekick pet</h3><div class="chip-row" id="av-pet"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WORLD ============ -->
+<section class="screen" id="screen-world">
+  <canvas id="world-canvas"></canvas>
+  <div class="world-hint">Walk with WASD / arrows — or tap where you want to go</div>
+  <button id="enter-btn">Enter</button>
+</section>
+
+<!-- ============ HUD ============ -->
+<div id="hud">
+  <div class="hud-left">
+    <div class="hud-card">
+      <button id="hud-closet" title="Open the Closet (edit your look)">
+        <canvas id="hud-avatar" width="48" height="48"></canvas>
+        <span class="hud-id">
+          <strong id="hud-name">Explorer</strong>
+          <span id="hud-level">Lv 1 · Rookie Solver</span>
+          <span class="hud-xp"><div id="hud-xpbar" style="width:0%"></div></span>
+        </span>
+      </button>
+    </div>
+  </div>
+  <div class="hud-right">
+    <div class="hud-card hud-stat" title="Keys — earn them by breaking out, spend them in the Style Shop"><span class="em">🔑</span><span id="hud-keys">0</span></div>
+    <div class="hud-card hud-stat" title="Arcade minutes earned"><span class="em">🕹️</span><span id="hud-arcade">0m</span></div>
+    <div class="hud-card hud-stat" title="Lock of the Day streak"><span class="em">🔥</span><span id="hud-streak">0</span></div>
+    <button class="hud-btn" id="hud-mute" title="Sound on/off">🔊</button>
+    <button class="hud-btn" id="hud-home" title="Back to title">🏠</button>
+  </div>
+</div>
+
+<!-- ============ MATH MAP ============ -->
+<section class="screen" id="screen-math">
+  <div class="math-wrap">
+    <div class="math-head">
+      <div>
+        <h2>🧮 <span id="math-unit">Multiplication Meadow</span></h2>
+        <div class="skills" id="math-skills"></div>
+      </div>
+      <div id="grade-pills"></div>
+      <button class="back-btn" data-back-world>← Back to the island</button>
+    </div>
+    <div class="board math-board">
+      <svg id="math-svg" viewBox="0 0 900 460" role="img" aria-label="Breakout Math adventure trail"></svg>
+    </div>
+    <div class="math-legend">
+      <span><i style="background:#57c26b"></i>Quest — your math path</span>
+      <span><i style="background:#4cc9f0"></i>Review — warm-up, always open</span>
+      <span><i style="background:#9b5de5"></i>Challenge — unlock by beating a quest in ≤2 tries</span>
+      <span><i style="background:#ffb627"></i>Boss lock — end of unit</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TEACHER ============ -->
+<section class="screen" id="screen-teacher">
+  <div class="dash">
+    <div class="dash-head">
+      <div>
+        <h2>Ms. Rivera's Class — Room 12</h2>
+        <div class="sub">Breakout Land teacher dashboard · Grade 3 · 7 explorers</div>
+      </div>
+      <button class="back-btn" data-back-title>← Sign out</button>
+    </div>
+    <div class="dash-grid">
+      <div class="board span2">
+        <h3>Class roster</h3>
+        <p class="note">The demo player appears in this roster as “⭐you” — play as a student and watch your row update.</p>
+        <div class="t-table-wrap">
+          <table class="t-table">
+            <thead><tr><th>Explorer</th><th>Level</th><th>Games</th><th>Avg min</th><th>Success</th><th>Streak</th><th>Arcade</th></tr></thead>
+            <tbody id="t-roster"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="board">
+        <h3>How your class compares</h3>
+        <p class="note">Average minutes to breakout, per game — vs. your school and all players in the same age group.</p>
+        <div id="t-chart"></div>
+      </div>
+      <div class="board">
+        <h3>Assign games</h3>
+        <p class="note">Assignments appear instantly in every student's Game Hall on the island.</p>
+        <div id="t-assign"></div>
+        <div class="t-plus-row">
+          <span>✨ Breakout+ for this class</span>
+          <label class="switch"><input type="checkbox" id="t-plus"><span></span></label>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PARENT ============ -->
+<section class="screen" id="screen-parent">
+  <div class="dash">
+    <div class="dash-head">
+      <div>
+        <h2>Family Portal</h2>
+        <div class="sub">Following <strong id="p-name">your explorer</strong>'s adventure in Breakout Land</div>
+      </div>
+      <button class="back-btn" data-back-title>← Sign out</button>
+    </div>
+    <div class="dash-grid">
+      <div class="board">
+        <div class="p-head">
+          <canvas id="p-avatar" width="84" height="104"></canvas>
+          <p class="muted">Breakout games build the skills tests can't measure — critical thinking, teamwork and stick-with-it grit. Here's how those are growing.</p>
+        </div>
+        <div class="p-summary" id="p-summary"></div>
+      </div>
+      <div class="board">
+        <h3>4Cs &amp; SEL skill growth</h3>
+        <p class="note">Signals from gameplay: first-try solves, hint use, retries and collaboration games.</p>
+        <div id="p-skills"></div>
+      </div>
+      <div class="board">
+        <h3>This week's play</h3>
+        <p class="note">Minutes in Breakout Land per day.</p>
+        <div class="p-week" id="p-week"></div>
+      </div>
+      <div class="board">
+        <h3>Rewards you control</h3>
+        <div class="p-controls">
+          <div class="p-control-row">
+            <span>🕹️ Allow earned arcade time</span>
+            <label class="switch"><input type="checkbox" id="p-arcade"><span></span></label>
+          </div>
+          <div class="p-control-row">
+            <span>Weekly limit: <span id="p-limit-val">120 min/week</span></span>
+            <input type="range" id="p-limit" min="30" max="300" step="15">
+          </div>
+        </div>
+        <h3 style="margin-top:16px">Newest badges</h3>
+        <div class="badge-grid" id="p-badges"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BUILDING MODAL ============ -->
+<div class="modal" id="building-modal">
+  <div class="modal-card board">
+    <button class="modal-close" id="bm-close" aria-label="Close">✕</button>
+    <h2 id="bm-title"></h2>
+    <div id="bm-body"></div>
+  </div>
+</div>
+
+<!-- ============ PUZZLE MODAL ============ -->
+<div class="modal" id="puzzle-modal">
+  <div class="modal-card board">
+    <button class="modal-close" id="pz-close" aria-label="Close puzzle">✕</button>
+    <div id="pz-ctx"></div>
+    <h2 id="pz-title"></h2>
+    <div id="pz-step"></div>
+    <div class="pz-lock-zone">
+      <div id="pz-lock"><div class="shackle"></div><div class="body"></div><div class="hole"></div></div>
+    </div>
+    <p id="pz-clue"></p>
+    <div id="pz-hint"></div>
+    <div id="pz-display"></div>
+    <div id="pz-pad"></div>
+  </div>
+</div>
+
+<!-- ============ CELEBRATION ============ -->
+<div class="modal" id="cel-modal">
+  <div class="modal-card board">
+    <div class="big-emoji">🔓</div>
+    <div id="cel-title">YOU BROKE OUT!</div>
+    <p id="cel-sub"></p>
+    <div id="cel-stats"></div>
+    <button class="btn-big" id="cel-btn">Collect rewards! 🔑</button>
+  </div>
+</div>
+
+<!-- ============ KEY CATCHER ============ -->
+<div class="modal" id="kc-modal">
+  <div class="modal-card board">
+    <h2>🕹️ Key Catcher</h2>
+    <p class="muted">Move with your mouse, finger, or ◀ ▶ keys. Catch keys, dodge anvils!</p>
+    <canvas id="kc-canvas"></canvas>
+    <button class="btn-small" id="kc-quit">Quit round</button>
+  </div>
+</div>
+
+<canvas id="confetti"></canvas>
+<div id="toast" role="status"></div>
+<script>
+/* Breakout Land — content data (mock content standing in for the Breakout EDU catalog) */
+
+const DATA = {
+  skins: ['#ffd9b3', '#f0b98d', '#d99a6c', '#b5764a', '#8c5a33', '#6b4226'],
+  hairColors: ['#2b2118', '#5c3b1e', '#a86a2f', '#e8c15a', '#c94f30', '#7a4fd0', '#2ec4b6', '#e75480'],
+  hairStyles: [
+    { id: 'spiky',   name: 'Spiky' },
+    { id: 'puff',    name: 'Curly Puff' },
+    { id: 'long',    name: 'Long' },
+    { id: 'buzz',    name: 'Buzz' },
+    { id: 'pony',    name: 'Ponytail' },
+    { id: 'swoop',   name: 'Swoop' },
+  ],
+  outfits: [
+    { id: 'tee-teal',    name: 'Teal Tee',      color: '#2ec4b6', free: true },
+    { id: 'tee-coral',   name: 'Coral Tee',     color: '#ff6b5b', free: true },
+    { id: 'tee-gold',    name: 'Sunny Tee',     color: '#ffb627', free: true },
+    { id: 'tee-purple',  name: 'Berry Tee',     color: '#9b5de5', free: true },
+    { id: 'hoodie-navy', name: 'Navy Hoodie',   color: '#27406e', price: 30 },
+    { id: 'inventor',    name: 'Inventor Coat', color: '#f2f0e9', price: 45 },
+    { id: 'explorer',    name: 'Explorer Vest', color: '#7a5230', price: 45 },
+    { id: 'star-suit',   name: 'Star Suit',     color: '#3b2a6b', price: 80 },
+  ],
+  accessories: [
+    { id: 'none',     name: 'None',          free: true },
+    { id: 'cap',      name: 'Ball Cap',      price: 20 },
+    { id: 'glasses',  name: 'Smart Glasses', price: 20 },
+    { id: 'crown',    name: 'Key Crown',     price: 60 },
+    { id: 'wizard',   name: 'Wizard Hat',    price: 50 },
+    { id: 'cape',     name: 'Hero Cape',     price: 70 },
+    { id: 'headband', name: 'Headband',      price: 15 },
+  ],
+  pets: [
+    { id: 'nopet', name: 'No Pet', free: true },
+    { id: 'fox',   name: 'Lockfox',    price: 90,  color: '#e8743c' },
+    { id: 'owl',   name: 'Puzzle Owl', price: 90,  color: '#8a6db1' },
+    { id: 'bot',   name: 'Key-Bot',    price: 120, color: '#9db4c4' },
+  ],
+
+  badges: [
+    { id: 'first-breakout', name: 'First Breakout!',  desc: 'Complete your first game',            icon: 'lock' },
+    { id: 'daily-3',        name: 'On a Roll',        desc: '3-day Lock of the Day streak',        icon: 'flame' },
+    { id: 'key-50',         name: 'Key Collector',    desc: 'Earn 50 keys in total',               icon: 'key' },
+    { id: 'mathlete',       name: 'Mathlete',         desc: 'Clear 3 Breakout Math nodes',         icon: 'math' },
+    { id: 'challenge',      name: 'Challenge Champ',  desc: 'Beat a purple Challenge node',        icon: 'trophy' },
+    { id: 'stylist',        name: 'Style Star',       desc: 'Buy your first Style Shop item',      icon: 'star' },
+    { id: 'thinker',        name: 'Critical Thinker', desc: 'Solve a lock on the first try',       icon: 'bulb' },
+    { id: 'persistent',     name: 'Never Give Up',    desc: 'Solve a lock after 3+ tries',         icon: 'heart' },
+  ],
+
+  // Lock of the Day pool — rotates by date
+  dailyLocks: [
+    { type: 'number', clue: 'I am a two-digit number. My tens digit is double my ones digit, and my digits add up to 9. Open the lock!', answer: '63', hint: 'Try digits that add to 9 where the first is twice the second.' },
+    { type: 'word', clue: 'I have keys but open no locks, I have space but no room, you can enter but not go inside. What am I?', answer: 'KEYBOARD', hint: 'You might be using one right now…' },
+    { type: 'color', clue: 'Mix-up at the paint shop! Enter the colors of: the sun, the ocean, grass, and a strawberry — in that order.', answer: ['yellow', 'blue', 'green', 'red'], hint: 'Sun → Ocean → Grass → Strawberry.' },
+    { type: 'direction', clue: 'The treasure map says: toward the sunrise, then toward the mountains at the top, then sunrise again, then down the waterfall.', answer: ['right', 'up', 'right', 'down'], hint: 'Sunrise = East (right). Top of a map = up.' },
+    { type: 'number', clue: 'Three friends share 24 cookies equally, then each eats 2. How many cookies does each friend have left?', answer: '6', hint: '24 ÷ 3 first, then subtract.' },
+    { type: 'word', clue: 'The more you take, the more you leave behind. What are they?', answer: 'STEPS', hint: 'Think about walking.' },
+    { type: 'number', clue: 'A clock shows 3:15. How many minutes until 4 o’clock?', answer: '45', hint: '60 minutes in an hour.' },
+  ],
+
+  // Assigned games — in production these embed the breakoutedu.com digital game player
+  games: [
+    {
+      id: 'missing-mascot',
+      name: 'The Case of the Missing Mascot',
+      subject: 'ELA · Inference',
+      grade: '3–5',
+      story: 'Boomer the school mascot costume vanished the night before the big game! Follow the clues around the gym to figure out who borrowed it — and get it back before kickoff.',
+      minutes: 15,
+      locks: [
+        { type: 'word', clue: 'Clue #1 — A note on the locker reads: “Take the first letter of each word: Basketballs Often Occupy My Storage Try Every Rack.”', answer: 'BOOMSTER', hint: 'First letter of each word, in order.' },
+        { type: 'number', clue: 'Clue #2 — The janitor saw someone at “half past three”. Enter the time as 3 digits.', answer: '330', hint: 'Half past three = 3:30.' },
+      ],
+    },
+    {
+      id: 'space-escape',
+      name: 'Space Station Escape',
+      subject: 'Science · Problem Solving',
+      grade: '3–5',
+      story: 'A meteor shower knocked out the station’s main power! Reboot three systems and reach the escape pod before oxygen runs low. Work fast, think faster.',
+      minutes: 20,
+      locks: [
+        { type: 'color', clue: 'Reboot panel — “Power flows like a rainbow, but skip every other color starting from red.” (red, orange, yellow, green, blue, purple)', answer: ['red', 'yellow', 'blue'], hint: 'Red, skip orange, yellow, skip green…' },
+        { type: 'direction', clue: 'Airlock — The floor arrows spell the route: away from the meteor (it hit the left side), then toward the flashing light above, then above again, then toward the pod on the right.', answer: ['right', 'up', 'up', 'right'], hint: 'Away from left = right.' },
+        { type: 'number', clue: 'Escape pod — “Oxygen: 88%. It drops 8% every minute. Enter how many minutes until it hits 48%.”', answer: '5', hint: '88 − 48 = 40, and 40 ÷ 8 = ?' },
+      ],
+    },
+  ],
+
+  // Breakout+ bonus content (subscription-gated)
+  plusGames: [
+    { id: 'pirate-cove', name: 'Mystery at Pirate Cove', subject: 'Social Studies', grade: 'K–2' },
+    { id: 'time-machine', name: 'Dr. Tock’s Time Machine', subject: 'History', grade: '3–5' },
+    { id: 'code-cave', name: 'The Coding Cave', subject: 'CS · Logic', grade: '3–5' },
+    { id: 'sel-island', name: 'Friendship Island', subject: 'SEL', grade: 'K–2' },
+  ],
+
+  // Breakout Math — one sample unit trail per grade band (scoped & sequenced K–5)
+  mathUnits: {
+    K: { unit: 'Counting Camp', skills: 'Counting to 20 · comparing groups' },
+    1: { unit: 'Addition Alley', skills: 'Add & subtract within 20' },
+    2: { unit: 'Place Value Peaks', skills: 'Place value · 2-digit addition' },
+    3: { unit: 'Multiplication Meadow', skills: 'Multiply & divide within 100' },
+    4: { unit: 'Fraction Falls', skills: 'Fraction equivalence · comparison' },
+    5: { unit: 'Decimal Desert', skills: 'Decimals · volume · order of operations' },
+  },
+
+  // Math puzzle generators per grade (returns {clue, answer} for a number lock)
+  mathProblems: {
+    K: [
+      { clue: 'Count the keys: 🔑🔑🔑🔑🔑 + 🔑🔑🔑. How many keys in all?', answer: '8' },
+      { clue: 'You have 4 balloons. 2 fly away! How many are left?', answer: '2' },
+      { clue: 'Count by ones: 6, 7, 8, __? Enter the missing number.', answer: '9' },
+    ],
+    1: [
+      { clue: '7 + 6 = ? Open the lock with the sum!', answer: '13' },
+      { clue: '15 − 8 = ? Enter the difference.', answer: '7' },
+      { clue: 'Double 9 is…?', answer: '18' },
+    ],
+    2: [
+      { clue: 'What is 10 more than 47?', answer: '57' },
+      { clue: '36 + 25 = ? Regroup carefully!', answer: '61' },
+      { clue: 'In the number 83, how many TENS are there?', answer: '8' },
+    ],
+    3: [
+      { clue: '7 × 8 = ? The classic! Enter the product.', answer: '56' },
+      { clue: '54 ÷ 6 = ? Enter the quotient.', answer: '9' },
+      { clue: 'An array has 4 rows of 6 chairs. How many chairs?', answer: '24' },
+    ],
+    4: [
+      { clue: 'Which is bigger: 3/4 or 2/3? Enter the top number of the bigger fraction.', answer: '3' },
+      { clue: '1/2 = ?/8 — enter the missing numerator.', answer: '4' },
+      { clue: '6 × 40 = ? Enter the product.', answer: '240' },
+    ],
+    5: [
+      { clue: '2.5 + 1.75 = ? Enter as digits, no decimal point (e.g. 4.25 → 425).', answer: '425' },
+      { clue: 'Volume of a 3 × 4 × 2 box (cubic units)?', answer: '24' },
+      { clue: '(8 + 4) ÷ 2 × 3 = ? Order of operations!', answer: '18' },
+    ],
+  },
+
+  // Node layout for a math trail: type sequence along the path
+  mathTrail: ['core', 'core', 'review', 'core', 'challenge', 'core', 'review', 'core', 'challenge', 'boss'],
+
+  // Mock roster for teacher dashboard (the live player is appended as "You")
+  roster: [
+    { name: 'Ava R.',    level: 6, keys: 142, games: 9,  avgMin: 11.2, success: 0.92, streak: 5, arcade: true },
+    { name: 'Diego M.',  level: 5, keys: 118, games: 8,  avgMin: 13.9, success: 0.88, streak: 2, arcade: true },
+    { name: 'Jordan P.', level: 4, keys: 87,  games: 6,  avgMin: 16.4, success: 0.71, streak: 0, arcade: false },
+    { name: 'Lily C.',   level: 7, keys: 203, games: 12, avgMin: 9.8,  success: 0.95, streak: 8, arcade: true },
+    { name: 'Marcus T.', level: 3, keys: 54,  games: 4,  avgMin: 18.1, success: 0.64, streak: 1, arcade: true },
+    { name: 'Nia W.',    level: 5, keys: 131, games: 8,  avgMin: 12.6, success: 0.85, streak: 3, arcade: true },
+  ],
+
+  // Comparison data: average minutes to breakout, per game (class / school / all players in age group)
+  comparisons: [
+    { game: 'Missing Mascot',   class: 12.4, school: 14.1, global: 15.8 },
+    { game: 'Space Escape',     class: 17.2, school: 16.5, global: 18.9 },
+    { game: 'Mult. Meadow 1–5', class: 8.1,  school: 9.4,  global: 10.2 },
+  ],
+  chartColors: { class: '#00907F', school: '#B26A00', global: '#7A44C9' },
+
+  parentWeek: [
+    { day: 'Mon', min: 22 }, { day: 'Tue', min: 15 }, { day: 'Wed', min: 30 },
+    { day: 'Thu', min: 0 },  { day: 'Fri', min: 25 }, { day: 'Sat', min: 12 }, { day: 'Sun', min: 0 },
+  ],
+};
+
+
+/* Breakout Land — game state, economy, persistence */
+
+const SAVE_KEY = 'breakoutLandSave.v1';
+
+const defaultState = () => ({
+  created: false,
+  player: {
+    name: '',
+    skin: DATA.skins[1],
+    hairStyle: 'puff',
+    hairColor: DATA.hairColors[0],
+    outfit: 'tee-teal',
+    accessory: 'none',
+    pet: 'nopet',
+  },
+  keys: 15,
+  totalKeys: 15,
+  xp: 0,
+  arcadeMin: 5,
+  streak: 0,
+  lastDaily: null,          // date string of last Lock of the Day completion
+  unlocked: [],             // purchased item ids
+  badges: [],
+  gamesDone: {},            // gameId -> { minutes, attempts }
+  mathStars: {},            // nodeKey (grade:index) -> stars
+  mathAttempts: {},         // nodeKey -> attempts on current/last run
+  mathGrade: 3,
+  assigned: ['missing-mascot', 'space-escape'],
+  perms: { teacherArcade: true, parentArcade: true, weeklyLimitMin: 120 },
+  plus: true,               // teacher has Breakout+ (toggle in teacher view)
+  pos: { x: 800, y: 715 },  // avatar position in world (just south of Lock Plaza)
+});
+
+let state = defaultState();
+
+function saveState() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) { /* private mode */ }
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) state = Object.assign(defaultState(), JSON.parse(raw));
+  } catch (e) { state = defaultState(); }
+}
+function resetState() {
+  state = defaultState();
+  saveState();
+}
+
+/* ---- economy ---- */
+
+const LEVELS = ['Rookie Solver', 'Clue Finder', 'Puzzle Pal', 'Code Cracker', 'Lock Whisperer',
+  'Escape Artist', 'Puzzle Pro', 'Master of Locks', 'Breakout Legend'];
+
+function levelInfo() {
+  const lvl = Math.min(LEVELS.length, Math.floor(state.xp / 100) + 1);
+  return { n: lvl, name: LEVELS[lvl - 1], into: state.xp % 100, next: 100 };
+}
+
+function grant({ keys = 0, xp = 0, arcade = 0 }) {
+  state.keys += keys;
+  state.totalKeys += Math.max(0, keys);
+  state.xp += xp;
+  if (state.perms.teacherArcade && state.perms.parentArcade) state.arcadeMin += arcade;
+  checkBadges();
+  saveState();
+  updateHUD();
+}
+
+function awardBadge(id) {
+  if (state.badges.includes(id)) return false;
+  state.badges.push(id);
+  const b = DATA.badges.find(b => b.id === id);
+  toast(`🏅 Badge earned: ${b ? b.name : id}!`);
+  saveState();
+  return true;
+}
+
+function checkBadges() {
+  if (state.totalKeys >= 50) awardBadge('key-50');
+  if (Object.keys(state.gamesDone).length >= 1) awardBadge('first-breakout');
+  if (state.streak >= 3) awardBadge('daily-3');
+  const mathDone = Object.keys(state.mathStars).length;
+  if (mathDone >= 3) awardBadge('mathlete');
+  if (state.unlocked.length >= 1) awardBadge('stylist');
+}
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+function dailyLock() {
+  // rotate through the pool by day-of-year
+  const d = new Date();
+  const start = new Date(d.getFullYear(), 0, 0);
+  const day = Math.floor((d - start) / 86400000);
+  return DATA.dailyLocks[day % DATA.dailyLocks.length];
+}
+
+function completeDaily() {
+  const today = todayKey();
+  if (state.lastDaily === today) return;
+  const y = new Date(Date.now() - 86400000);
+  const yKey = `${y.getFullYear()}-${y.getMonth() + 1}-${y.getDate()}`;
+  state.streak = (state.lastDaily === yKey) ? state.streak + 1 : 1;
+  state.lastDaily = today;
+  grant({ keys: 10, xp: 25, arcade: 5 });
+}
+
+function arcadeAllowed() {
+  return state.perms.teacherArcade && state.perms.parentArcade;
+}
+
+function itemOwned(item) {
+  return item.free || state.unlocked.includes(item.id);
+}
+
+function buyItem(item) {
+  if (itemOwned(item)) return true;
+  if (state.keys < item.price) return false;
+  state.keys -= item.price;
+  state.unlocked.push(item.id);
+  checkBadges();
+  saveState();
+  updateHUD();
+  return true;
+}
+
+
+/* Breakout Land — lock puzzle engine, celebration, sounds, toasts */
+
+/* ---- tiny WebAudio chirps (no assets) ---- */
+let audioCtx = null, muted = false;
+function ac() {
+  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  return audioCtx;
+}
+function tone(freq, dur = .12, type = 'triangle', gain = .06, when = 0) {
+  const ctx = ac(); if (!ctx || muted) return;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(gain, ctx.currentTime + when);
+  g.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime + when + dur);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(ctx.currentTime + when); o.stop(ctx.currentTime + when + dur + .02);
+}
+function blip(f = 700) { tone(f, .09, 'triangle', .05); }
+function buzz() { tone(140, .18, 'sawtooth', .04); }
+function fanfare() { [523, 659, 784, 1047].forEach((f, i) => tone(f, .18, 'triangle', .07, i * .11)); }
+
+/* ---- toast ---- */
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+/* ---- confetti ---- */
+function confetti() {
+  const cv = document.getElementById('confetti');
+  const ctx = cv.getContext('2d');
+  cv.width = innerWidth; cv.height = innerHeight;
+  cv.style.display = 'block';
+  const colors = ['#ffb627', '#ff6b5b', '#2ec4b6', '#9b5de5', '#4cc9f0', '#ffd75e'];
+  const bits = Array.from({ length: 140 }, () => ({
+    x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * .5,
+    vx: (Math.random() - .5) * 2.4, vy: 2 + Math.random() * 3.2,
+    r: 3 + Math.random() * 5, a: Math.random() * Math.PI, va: (Math.random() - .5) * .3,
+    c: colors[(Math.random() * colors.length) | 0], key: Math.random() < .12,
+  }));
+  const t0 = performance.now();
+  (function loop(t) {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    bits.forEach(b => {
+      b.x += b.vx; b.y += b.vy; b.a += b.va;
+      ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a);
+      if (b.key) {
+        ctx.fillStyle = '#ffb627';
+        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(2, -1.4, 8, 2.8); ctx.fillRect(7, 1, 2, 3); ctx.fillRect(10, 1, 2, 4);
+      } else {
+        ctx.fillStyle = b.c; ctx.fillRect(-b.r / 2, -b.r / 2, b.r, b.r * .6);
+      }
+      ctx.restore();
+    });
+    if (t - t0 < 2600) requestAnimationFrame(loop);
+    else { cv.style.display = 'none'; }
+  })(t0);
+}
+
+/* ---- lock puzzle engine ----
+   Runs a sequence of locks; calls onWin({attempts, seconds}) when all open. */
+
+const puzzle = { locks: [], idx: 0, attempts: 0, lockAttempts: 0, t0: 0, onWin: null, title: '', ctxLabel: '', entry: [] };
+
+const COLOR_SET = [
+  { id: 'red', c: '#e63946' }, { id: 'orange', c: '#f77f2f' }, { id: 'yellow', c: '#ffd75e' },
+  { id: 'green', c: '#57c26b' }, { id: 'blue', c: '#3d7bd9' }, { id: 'purple', c: '#9b5de5' },
+];
+const DIR_SET = [
+  { id: 'up', g: '▲' }, { id: 'down', g: '▼' }, { id: 'left', g: '◀' }, { id: 'right', g: '▶' },
+];
+
+function startPuzzle({ title, ctxLabel, locks, onWin }) {
+  Object.assign(puzzle, { locks, idx: 0, attempts: 0, lockAttempts: 0, t0: Date.now(), onWin, title, ctxLabel, entry: [] });
+  document.getElementById('pz-title').textContent = title;
+  document.getElementById('pz-ctx').textContent = ctxLabel || '';
+  document.getElementById('puzzle-modal').classList.add('open');
+  renderLock();
+}
+
+function closePuzzle() {
+  document.getElementById('puzzle-modal').classList.remove('open');
+}
+
+function renderLock() {
+  const lk = puzzle.locks[puzzle.idx];
+  puzzle.entry = [];
+  puzzle.lockAttempts = 0;
+  document.getElementById('pz-step').textContent =
+    puzzle.locks.length > 1 ? `Lock ${puzzle.idx + 1} of ${puzzle.locks.length}` : 'One lock stands in your way';
+  document.getElementById('pz-clue').textContent = lk.clue;
+  document.getElementById('pz-hint').textContent = '';
+  document.getElementById('pz-hint').classList.remove('show');
+  const lockEl = document.getElementById('pz-lock');
+  lockEl.classList.remove('open-anim', 'shake');
+
+  const pad = document.getElementById('pz-pad');
+  const disp = document.getElementById('pz-display');
+  pad.innerHTML = ''; disp.innerHTML = '';
+
+  const addKey = (label, fn, cls = '') => {
+    const b = document.createElement('button');
+    b.className = 'pz-key ' + cls; b.innerHTML = label; b.onclick = fn;
+    pad.appendChild(b); return b;
+  };
+
+  if (lk.type === 'number') {
+    disp.dataset.slots = String(lk.answer.length);
+    updateEntryDisplay('digit');
+    '1234567890'.split('').forEach(d =>
+      addKey(d, () => { if (puzzle.entry.length < lk.answer.length) { puzzle.entry.push(d); blip(500 + puzzle.entry.length * 60); updateEntryDisplay('digit'); } }));
+    addKey('⌫', () => { puzzle.entry.pop(); updateEntryDisplay('digit'); blip(300); }, 'wide');
+    addKey('TRY IT', () => submitEntry(lk, puzzle.entry.join('')), 'go wide');
+  } else if (lk.type === 'word') {
+    disp.dataset.slots = String(lk.answer.length);
+    updateEntryDisplay('letter');
+    const letters = shuffle((lk.answer + pickExtraLetters(lk.answer)).split('')).slice(0, Math.max(10, lk.answer.length + 3));
+    letters.forEach(ch =>
+      addKey(ch, () => { if (puzzle.entry.length < lk.answer.length) { puzzle.entry.push(ch); blip(520 + puzzle.entry.length * 40); updateEntryDisplay('letter'); } }));
+    addKey('⌫', () => { puzzle.entry.pop(); updateEntryDisplay('letter'); blip(300); }, 'wide');
+    addKey('TRY IT', () => submitEntry(lk, puzzle.entry.join('')), 'go wide');
+  } else if (lk.type === 'color') {
+    disp.dataset.slots = String(lk.answer.length);
+    updateEntryDisplay('color');
+    COLOR_SET.forEach(cs =>
+      addKey(`<span class="dot" style="background:${cs.c}"></span>`, () => {
+        if (puzzle.entry.length < lk.answer.length) { puzzle.entry.push(cs.id); blip(480 + puzzle.entry.length * 70); updateEntryDisplay('color'); }
+      }, 'colorkey'));
+    addKey('⌫', () => { puzzle.entry.pop(); updateEntryDisplay('color'); blip(300); }, 'wide');
+    addKey('TRY IT', () => submitEntry(lk, puzzle.entry.join(',')), 'go wide');
+  } else if (lk.type === 'direction') {
+    disp.dataset.slots = String(lk.answer.length);
+    updateEntryDisplay('dir');
+    DIR_SET.forEach(ds =>
+      addKey(ds.g, () => {
+        if (puzzle.entry.length < lk.answer.length) { puzzle.entry.push(ds.id); blip(460 + puzzle.entry.length * 70); updateEntryDisplay('dir'); }
+      }, 'dirkey'));
+    addKey('⌫', () => { puzzle.entry.pop(); updateEntryDisplay('dir'); blip(300); }, 'wide');
+    addKey('TRY IT', () => submitEntry(lk, puzzle.entry.join(',')), 'go wide');
+  }
+}
+
+function updateEntryDisplay(kind) {
+  const disp = document.getElementById('pz-display');
+  const slots = parseInt(disp.dataset.slots || '4', 10);
+  disp.innerHTML = '';
+  for (let i = 0; i < slots; i++) {
+    const s = document.createElement('span');
+    s.className = 'slot';
+    const v = puzzle.entry[i];
+    if (v !== undefined) {
+      s.classList.add('filled');
+      if (kind === 'color') { s.innerHTML = `<span class="dot" style="background:${COLOR_SET.find(c => c.id === v).c}"></span>`; }
+      else if (kind === 'dir') { s.textContent = DIR_SET.find(d => d.id === v).g; }
+      else { s.textContent = v; }
+    }
+    disp.appendChild(s);
+  }
+}
+
+function submitEntry(lk, entered) {
+  const want = Array.isArray(lk.answer) ? lk.answer.join(',') : String(lk.answer).toUpperCase();
+  const got = String(entered).toUpperCase();
+  puzzle.attempts++; puzzle.lockAttempts++;
+  if (got === want.toUpperCase()) {
+    // lock pops open
+    tone(880, .15); tone(1175, .2, 'triangle', .07, .1);
+    document.getElementById('pz-lock').classList.add('open-anim');
+    if (puzzle.lockAttempts === 1) awardBadge('thinker');
+    if (puzzle.lockAttempts >= 3) awardBadge('persistent');
+    setTimeout(() => {
+      puzzle.idx++;
+      if (puzzle.idx < puzzle.locks.length) {
+        toast('Click! One down — next lock! 🔓');
+        renderLock();
+      } else {
+        const seconds = Math.round((Date.now() - puzzle.t0) / 1000);
+        closePuzzle();
+        celebration(puzzle.title, puzzle.attempts, seconds, () => puzzle.onWin({ attempts: puzzle.attempts, seconds }));
+      }
+    }, 750);
+  } else {
+    buzz();
+    const lockEl = document.getElementById('pz-lock');
+    lockEl.classList.remove('shake'); void lockEl.offsetWidth; lockEl.classList.add('shake');
+    puzzle.entry = [];
+    updateEntryDisplay(lk.type === 'number' ? 'digit' : lk.type === 'word' ? 'letter' : lk.type === 'color' ? 'color' : 'dir');
+    if (puzzle.lockAttempts >= 2 && lk.hint) {
+      const h = document.getElementById('pz-hint');
+      h.textContent = '💡 Hint: ' + lk.hint;
+      h.classList.add('show');
+    }
+    toast('Not quite — look at the clue again. You’ve got this!');
+  }
+}
+
+function celebration(title, attempts, seconds, onDone) {
+  confetti(); fanfare();
+  document.getElementById('cel-title').textContent = 'YOU BROKE OUT!';
+  document.getElementById('cel-sub').textContent = title;
+  document.getElementById('cel-stats').innerHTML =
+    `<span>⏱ ${Math.floor(seconds / 60)}m ${seconds % 60}s</span><span>🎯 ${attempts} ${attempts === 1 ? 'try' : 'tries'}</span>`;
+  const modal = document.getElementById('cel-modal');
+  modal.classList.add('open');
+  document.getElementById('cel-btn').onclick = () => {
+    modal.classList.remove('open');
+    onDone && onDone();
+  };
+}
+
+/* helpers */
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function pickExtraLetters(word) {
+  const pool = 'AEIOURSTLNM';
+  let out = '';
+  while (out.length < 4) { const ch = pool[(Math.random() * pool.length) | 0]; if (!word.includes(ch)) out += ch; }
+  return out;
+}
+
+
+/* Breakout Land — chibi avatar renderer (canvas) + avatar creator UI */
+
+function outfitColor(id) {
+  const o = DATA.outfits.find(o => o.id === id);
+  return o ? o.color : '#2ec4b6';
+}
+
+/**
+ * Draw the avatar centered at (x, y = feet), height ≈ 86 * scale.
+ * frame: animation time in seconds; walking: bool; dir: -1 left / 1 right.
+ */
+function drawAvatar(ctx, x, y, scale, cfg, frame = 0, walking = false, dir = 1) {
+  const s = scale;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(dir, 1);
+
+  const bob = walking ? Math.sin(frame * 12) * 2.2 * s : Math.sin(frame * 2.4) * 1.1 * s;
+  const legSwing = walking ? Math.sin(frame * 12) * 7 * s : 0;
+  const skin = cfg.skin, hair = cfg.hairColor, outfit = outfitColor(cfg.outfit);
+
+  // shadow
+  ctx.fillStyle = 'rgba(20,35,25,.18)';
+  ctx.beginPath(); ctx.ellipse(0, 2 * s, 17 * s, 5 * s, 0, 0, Math.PI * 2); ctx.fill();
+
+  ctx.translate(0, bob);
+
+  // cape (behind)
+  if (cfg.accessory === 'cape') {
+    ctx.fillStyle = '#d63e2e';
+    ctx.beginPath();
+    ctx.moveTo(-11 * s, -46 * s);
+    ctx.quadraticCurveTo(-20 * s, -20 * s, -14 * s + legSwing * .4, -2 * s);
+    ctx.lineTo(10 * s, -6 * s);
+    ctx.quadraticCurveTo(14 * s, -26 * s, 11 * s, -46 * s);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // legs
+  ctx.strokeStyle = '#3a3f52'; ctx.lineCap = 'round'; ctx.lineWidth = 6 * s;
+  ctx.beginPath(); ctx.moveTo(-6 * s, -16 * s); ctx.lineTo(-6 * s + legSwing, 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(6 * s, -16 * s); ctx.lineTo(6 * s - legSwing, 0); ctx.stroke();
+  // shoes
+  ctx.fillStyle = '#faf6ee';
+  ctx.beginPath(); ctx.ellipse(-6 * s + legSwing, 0, 5 * s, 3 * s, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(6 * s - legSwing, 0, 5 * s, 3 * s, 0, 0, Math.PI * 2); ctx.fill();
+
+  // body
+  ctx.fillStyle = outfit;
+  roundRect(ctx, -13 * s, -44 * s, 26 * s, 30 * s, 10 * s); ctx.fill();
+  if (cfg.outfit === 'star-suit') {
+    ctx.fillStyle = '#ffd75e';
+    drawStar(ctx, 0, -30 * s, 5, 5 * s, 2.4 * s); ctx.fill();
+  }
+  if (cfg.outfit === 'inventor') {
+    ctx.strokeStyle = '#c9c2b2'; ctx.lineWidth = 1.6 * s;
+    ctx.beginPath(); ctx.moveTo(0, -44 * s); ctx.lineTo(0, -16 * s); ctx.stroke();
+  }
+
+  // arms
+  ctx.strokeStyle = outfit; ctx.lineWidth = 5.5 * s;
+  const armSwing = walking ? Math.sin(frame * 12 + Math.PI) * 6 * s : 0;
+  ctx.beginPath(); ctx.moveTo(-12 * s, -38 * s); ctx.lineTo(-16 * s + armSwing * .5, -22 * s); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(12 * s, -38 * s); ctx.lineTo(16 * s - armSwing * .5, -22 * s); ctx.stroke();
+  ctx.fillStyle = skin;
+  ctx.beginPath(); ctx.arc(-16 * s + armSwing * .5, -21 * s, 3.4 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(16 * s - armSwing * .5, -21 * s, 3.4 * s, 0, Math.PI * 2); ctx.fill();
+
+  // head (big, chibi)
+  ctx.fillStyle = skin;
+  ctx.beginPath(); ctx.arc(0, -62 * s, 19 * s, 0, Math.PI * 2); ctx.fill();
+
+  // hair styles
+  ctx.fillStyle = hair;
+  const hs = cfg.hairStyle;
+  if (hs === 'spiky') {
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * 7 * s - 4 * s, -72 * s);
+      ctx.lineTo(i * 7 * s, -88 * s - Math.abs(i) * -2 * s);
+      ctx.lineTo(i * 7 * s + 4 * s, -72 * s);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(0, -68 * s, 18 * s, Math.PI, 0); ctx.fill();
+  } else if (hs === 'puff') {
+    ctx.beginPath(); ctx.arc(0, -76 * s, 15 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-12 * s, -70 * s, 10 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(12 * s, -70 * s, 10 * s, 0, Math.PI * 2); ctx.fill();
+  } else if (hs === 'long') {
+    ctx.beginPath(); ctx.arc(0, -66 * s, 19.5 * s, Math.PI * .95, Math.PI * 2.05); ctx.fill();
+    roundRect(ctx, -19 * s, -68 * s, 8 * s, 28 * s, 4 * s); ctx.fill();
+    roundRect(ctx, 11 * s, -68 * s, 8 * s, 28 * s, 4 * s); ctx.fill();
+  } else if (hs === 'buzz') {
+    ctx.beginPath(); ctx.arc(0, -64 * s, 19 * s, Math.PI * 1.05, Math.PI * 1.95); ctx.fill();
+  } else if (hs === 'pony') {
+    ctx.beginPath(); ctx.arc(0, -66 * s, 19 * s, Math.PI * .95, Math.PI * 2.05); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-16 * s, -78 * s, 6 * s, 12 * s, .6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffb627';
+    ctx.beginPath(); ctx.arc(-13 * s, -72 * s, 2.6 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = hair;
+  } else { // swoop
+    ctx.beginPath(); ctx.arc(0, -66 * s, 19 * s, Math.PI, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(8 * s, -76 * s, 12 * s, 7 * s, -.35, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // face
+  ctx.fillStyle = '#22252e';
+  ctx.beginPath(); ctx.arc(-6.5 * s, -62 * s, 2.4 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6.5 * s, -62 * s, 2.4 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#22252e'; ctx.lineWidth = 1.8 * s; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(0, -57 * s, 5 * s, Math.PI * .15, Math.PI * .85); ctx.stroke();
+  // cheeks
+  ctx.fillStyle = 'rgba(255,120,110,.35)';
+  ctx.beginPath(); ctx.arc(-11 * s, -56 * s, 3 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(11 * s, -56 * s, 3 * s, 0, Math.PI * 2); ctx.fill();
+
+  // accessories (front)
+  const acc = cfg.accessory;
+  if (acc === 'cap') {
+    ctx.fillStyle = '#2f6fdb';
+    ctx.beginPath(); ctx.arc(0, -70 * s, 17 * s, Math.PI, 0); ctx.fill();
+    roundRect(ctx, 2 * s, -74 * s, 22 * s, 5 * s, 2.5 * s); ctx.fill();
+  } else if (acc === 'glasses') {
+    ctx.strokeStyle = '#1d2a4d'; ctx.lineWidth = 2 * s;
+    ctx.beginPath(); ctx.arc(-6.5 * s, -62 * s, 5.5 * s, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(6.5 * s, -62 * s, 5.5 * s, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-1 * s, -62 * s); ctx.lineTo(1 * s, -62 * s); ctx.stroke();
+  } else if (acc === 'crown') {
+    ctx.fillStyle = '#ffb627';
+    ctx.beginPath();
+    ctx.moveTo(-12 * s, -78 * s); ctx.lineTo(-12 * s, -90 * s); ctx.lineTo(-6 * s, -82 * s);
+    ctx.lineTo(0, -92 * s); ctx.lineTo(6 * s, -82 * s); ctx.lineTo(12 * s, -90 * s); ctx.lineTo(12 * s, -78 * s);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ff6b5b';
+    ctx.beginPath(); ctx.arc(0, -84 * s, 2.2 * s, 0, Math.PI * 2); ctx.fill();
+  } else if (acc === 'wizard') {
+    ctx.fillStyle = '#5b3fbf';
+    ctx.beginPath(); ctx.moveTo(-16 * s, -74 * s); ctx.lineTo(16 * s, -74 * s); ctx.lineTo(3 * s, -102 * s); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffd75e';
+    drawStar(ctx, 2 * s, -86 * s, 5, 3 * s, 1.4 * s); ctx.fill();
+  } else if (acc === 'headband') {
+    ctx.fillStyle = '#ff6b5b';
+    roundRect(ctx, -18 * s, -74 * s, 36 * s, 5 * s, 2.5 * s); ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawPet(ctx, x, y, scale, petId, frame) {
+  const pet = DATA.pets.find(p => p.id === petId);
+  if (!pet || petId === 'nopet') return;
+  const s = scale;
+  const hop = Math.abs(Math.sin(frame * 6)) * 4 * s;
+  ctx.save(); ctx.translate(x, y - hop);
+  ctx.fillStyle = 'rgba(20,35,25,.15)';
+  ctx.beginPath(); ctx.ellipse(0, hop, 8 * s, 2.5 * s, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = pet.color;
+  ctx.beginPath(); ctx.arc(0, -8 * s, 7 * s, 0, Math.PI * 2); ctx.fill();      // body
+  ctx.beginPath(); ctx.arc(0, -17 * s, 5.5 * s, 0, Math.PI * 2); ctx.fill();   // head
+  if (petId === 'fox' || petId === 'owl') { // ears
+    ctx.beginPath(); ctx.moveTo(-5 * s, -20 * s); ctx.lineTo(-3 * s, -26 * s); ctx.lineTo(-1 * s, -20 * s); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(1 * s, -20 * s); ctx.lineTo(3 * s, -26 * s); ctx.lineTo(5 * s, -20 * s); ctx.closePath(); ctx.fill();
+  }
+  if (petId === 'bot') {
+    ctx.strokeStyle = pet.color; ctx.lineWidth = 1.5 * s;
+    ctx.beginPath(); ctx.moveTo(0, -22 * s); ctx.lineTo(0, -26 * s); ctx.stroke();
+    ctx.fillStyle = '#ff6b5b'; ctx.beginPath(); ctx.arc(0, -27 * s, 1.6 * s, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = '#22252e';
+  ctx.beginPath(); ctx.arc(-2 * s, -17.5 * s, 1 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(2 * s, -17.5 * s, 1 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+/* helpers */
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function drawStar(ctx, cx, cy, points, outer, inner) {
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 === 0 ? outer : inner;
+    const a = (i * Math.PI) / points - Math.PI / 2;
+    const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+/* ---- Avatar creator screen ---- */
+
+let creatorRAF = null;
+
+function openAvatarCreator(isEdit) {
+  showScreen('avatar');
+  const p = state.player;
+  document.getElementById('av-name').value = p.name;
+  document.getElementById('av-title').textContent = isEdit ? 'The Closet' : 'Create Your Explorer';
+  document.getElementById('av-done').textContent = isEdit ? 'Save Look' : 'Start Exploring!';
+
+  buildSwatchRow('av-skin', DATA.skins.map(c => ({ id: c, color: c })), p.skin, v => { p.skin = v; });
+  buildSwatchRow('av-haircolor', DATA.hairColors.map(c => ({ id: c, color: c })), p.hairColor, v => { p.hairColor = v; });
+  buildChipRow('av-hair', DATA.hairStyles, p.hairStyle, v => { p.hairStyle = v; });
+  buildItemRow('av-outfit', DATA.outfits, p.outfit, v => { p.outfit = v; });
+  buildItemRow('av-acc', DATA.accessories, p.accessory, v => { p.accessory = v; });
+  buildItemRow('av-pet', DATA.pets, p.pet, v => { p.pet = v; });
+
+  const cv = document.getElementById('av-canvas');
+  const ctx = cv.getContext('2d');
+  cancelAnimationFrame(creatorRAF);
+  const t0 = performance.now();
+  (function loop(t) {
+    const sec = (t - t0) / 1000;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    // podium
+    ctx.fillStyle = 'rgba(29,42,77,.08)';
+    ctx.beginPath(); ctx.ellipse(cv.width / 2, cv.height - 26, 74, 16, 0, 0, Math.PI * 2); ctx.fill();
+    drawAvatar(ctx, cv.width / 2, cv.height - 30, 1.9, state.player, sec, false, 1);
+    drawPet(ctx, cv.width / 2 + 78, cv.height - 30, 1.6, state.player.pet, sec);
+    if (document.getElementById('screen-avatar').classList.contains('active')) {
+      creatorRAF = requestAnimationFrame(loop);
+    }
+  })(t0);
+}
+
+function buildSwatchRow(elId, items, current, onPick) {
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.className = 'swatch' + (it.id === current ? ' sel' : '');
+    b.style.background = it.color;
+    b.setAttribute('aria-label', it.color);
+    b.onclick = () => { onPick(it.id); [...el.children].forEach(c => c.classList.remove('sel')); b.classList.add('sel'); blip(620); };
+    el.appendChild(b);
+  });
+}
+
+function buildChipRow(elId, items, current, onPick) {
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (it.id === current ? ' sel' : '');
+    b.textContent = it.name;
+    b.onclick = () => { onPick(it.id); [...el.children].forEach(c => c.classList.remove('sel')); b.classList.add('sel'); blip(620); };
+    el.appendChild(b);
+  });
+}
+
+function buildItemRow(elId, items, current, onPick) {
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  items.forEach(it => {
+    const owned = itemOwned(it);
+    const b = document.createElement('button');
+    b.className = 'chip' + (it.id === current ? ' sel' : '') + (owned ? '' : ' locked');
+    b.innerHTML = owned ? it.name : `🔒 ${it.name} · <span class="price">${it.price}🔑</span>`;
+    b.onclick = () => {
+      if (!owned) { toast(`Unlock ${it.name} in the Style Shop for ${it.price} keys!`); buzz(); return; }
+      onPick(it.id);
+      [...el.children].forEach(c => c.classList.remove('sel')); b.classList.add('sel'); blip(620);
+    };
+    el.appendChild(b);
+  });
+}
+
+function finishAvatar() {
+  const name = document.getElementById('av-name').value.trim();
+  state.player.name = name || 'Explorer';
+  const first = !state.created;
+  state.created = true;
+  saveState();
+  if (first) toast(`Welcome to Breakout Land, ${state.player.name}! 🎉`);
+  enterWorld();
+}
+
+
+/* Breakout Land — the walkable hub island (canvas) */
+
+const WORLD = { w: 1600, h: 1100 };
+
+const BUILDINGS = [
+  { id: 'daily',  name: 'Lock Plaza',          sub: 'Lock of the Day', x: 800,  y: 470,  w: 150, h: 120, color: '#ffb627', roof: '#e8961e', icon: 'lock' },
+  { id: 'games',  name: 'Game Hall',           sub: 'Assigned games',  x: 420,  y: 560,  w: 190, h: 140, color: '#ff6b5b', roof: '#d6503f', icon: 'flag' },
+  { id: 'math',   name: 'Math Trailhead',      sub: 'Breakout Math',   x: 1180, y: 400,  w: 170, h: 130, color: '#57c26b', roof: '#3da457', icon: 'math' },
+  { id: 'arcade', name: 'The Arcade',          sub: 'Earned play time',x: 1220, y: 760,  w: 180, h: 140, color: '#9b5de5', roof: '#7d43c9', icon: 'joy' },
+  { id: 'shop',   name: 'Style Shop',          sub: 'Spend your keys', x: 430,  y: 870,  w: 160, h: 125, color: '#4cc9f0', roof: '#2fa7d4', icon: 'shirt' },
+  { id: 'badges', name: 'Badge Hall',          sub: 'Your trophies',   x: 640,  y: 330,  w: 150, h: 115, color: '#f2f0e9', roof: '#cfc9b8', icon: 'trophy' },
+  { id: 'plus',   name: 'Breakout+ Clubhouse', sub: 'Bonus content',   x: 880,  y: 880,  w: 165, h: 130, color: '#27406e', roof: '#1a2c4e', icon: 'plus' },
+];
+
+const TREES = [
+  [200, 300], [280, 220], [1380, 250], [1470, 340], [180, 700], [240, 1000], [1440, 980],
+  [1500, 620], [700, 180], [1000, 200], [560, 1020], [1080, 1020], [130, 480], [960, 320],
+];
+const FLOWERS = Array.from({ length: 40 }, (_, i) => [
+  180 + ((i * 173) % 1280), 260 + ((i * 271) % 760), ['#ff6b5b', '#ffd75e', '#e75480', '#9b5de5'][i % 4],
+]);
+
+const world = {
+  cv: null, ctx: null, raf: null,
+  keysDown: {}, target: null, nearBuilding: null,
+  dir: 1, walking: false, t0: 0, clouds: [],
+};
+
+function enterWorld() {
+  showScreen('world');
+  updateHUD();
+  if (!world.cv) initWorld();
+  world.t0 = performance.now();
+  cancelAnimationFrame(world.raf);
+  worldLoop(world.t0);
+}
+
+function initWorld() {
+  world.cv = document.getElementById('world-canvas');
+  world.ctx = world.cv.getContext('2d');
+  world.clouds = Array.from({ length: 6 }, (_, i) => ({
+    x: (i * 300) % WORLD.w, y: 40 + (i * 97) % 160, s: .7 + (i % 3) * .3, v: 8 + (i % 3) * 5,
+  }));
+
+  addEventListener('keydown', e => {
+    if (!screenIs('world')) return;
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    world.keysDown[e.key.toLowerCase()] = true;
+    if ((e.key === 'e' || e.key === 'E' || e.key === 'Enter') && world.nearBuilding) {
+      openBuilding(world.nearBuilding.id);
+    }
+    if (e.key.startsWith('Arrow')) e.preventDefault();
+  });
+  addEventListener('keyup', e => { world.keysDown[e.key.toLowerCase()] = false; });
+
+  const toWorldXY = (e) => {
+    const r = world.cv.getBoundingClientRect();
+    const scale = getViewScale();
+    const cam = getCamera(scale);
+    const cx = (e.clientX - r.left) * (world.cv.width / r.width) / (window.devicePixelRatio || 1);
+    const cy = (e.clientY - r.top) * (world.cv.height / r.height) / (window.devicePixelRatio || 1);
+    return { x: cam.x + cx / scale, y: cam.y + cy / scale };
+  };
+  world.cv.addEventListener('pointerdown', e => {
+    const p = toWorldXY(e);
+    // tapped a building near the player? open it
+    const b = BUILDINGS.find(b => Math.abs(p.x - b.x) < b.w / 2 + 20 && Math.abs(p.y - (b.y - b.h / 2)) < b.h / 2 + 30);
+    if (b && world.nearBuilding && b.id === world.nearBuilding.id) { openBuilding(b.id); return; }
+    world.target = p;
+  });
+
+  document.getElementById('enter-btn').addEventListener('click', () => {
+    if (world.nearBuilding) openBuilding(world.nearBuilding.id);
+  });
+}
+
+function getViewScale() {
+  const vw = world.cv.clientWidth, vh = world.cv.clientHeight;
+  return Math.max(vw / 1100, vh / 800, .62); // zoom level: shows a comfy window onto the world
+}
+function getCamera(scale) {
+  const vw = world.cv.clientWidth / scale, vh = world.cv.clientHeight / scale;
+  let x = state.pos.x - vw / 2, y = state.pos.y - vh / 2;
+  x = Math.max(0, Math.min(WORLD.w - vw, x));
+  y = Math.max(0, Math.min(WORLD.h - vh, y));
+  return { x, y, vw, vh };
+}
+
+function worldLoop(t) {
+  if (!screenIs('world')) return;
+  const sec = (t - world.t0) / 1000;
+  stepPlayer();
+  drawWorld(sec);
+  world.raf = requestAnimationFrame(worldLoop);
+}
+
+function stepPlayer() {
+  const sp = 4.4;
+  let dx = 0, dy = 0;
+  const k = world.keysDown;
+  if (k['arrowleft'] || k['a']) dx -= 1;
+  if (k['arrowright'] || k['d']) dx += 1;
+  if (k['arrowup'] || k['w']) dy -= 1;
+  if (k['arrowdown'] || k['s']) dy += 1;
+
+  if (dx || dy) {
+    world.target = null;
+    const len = Math.hypot(dx, dy);
+    state.pos.x += (dx / len) * sp;
+    state.pos.y += (dy / len) * sp;
+    world.walking = true;
+    if (dx) world.dir = dx > 0 ? 1 : -1;
+  } else if (world.target) {
+    const tx = world.target.x - state.pos.x, ty = world.target.y - state.pos.y;
+    const d = Math.hypot(tx, ty);
+    if (d < 6) { world.target = null; world.walking = false; }
+    else {
+      state.pos.x += (tx / d) * sp;
+      state.pos.y += (ty / d) * sp;
+      world.walking = true;
+      if (Math.abs(tx) > 1) world.dir = tx > 0 ? 1 : -1;
+    }
+  } else {
+    world.walking = false;
+  }
+
+  // island bounds (keep off the water ring)
+  state.pos.x = Math.max(120, Math.min(WORLD.w - 120, state.pos.x));
+  state.pos.y = Math.max(230, Math.min(WORLD.h - 90, state.pos.y));
+
+  // building proximity
+  world.nearBuilding = null;
+  for (const b of BUILDINGS) {
+    const d = Math.hypot(state.pos.x - b.x, state.pos.y - (b.y + 18));
+    if (d < 110) { world.nearBuilding = b; break; }
+  }
+  const btn = document.getElementById('enter-btn');
+  if (world.nearBuilding) {
+    btn.classList.add('show');
+    btn.textContent = `Enter ${world.nearBuilding.name} ✦`;
+  } else {
+    btn.classList.remove('show');
+  }
+}
+
+function drawWorld(sec) {
+  const cv = world.cv, ctx = world.ctx;
+  const dpr = window.devicePixelRatio || 1;
+  const wpx = cv.clientWidth * dpr, hpx = cv.clientHeight * dpr;
+  if (cv.width !== wpx || cv.height !== hpx) { cv.width = wpx; cv.height = hpx; }
+  ctx.save();
+  ctx.scale(dpr, dpr);
+
+  const scale = getViewScale();
+  const cam = getCamera(scale);
+
+  // sky
+  const sky = ctx.createLinearGradient(0, 0, 0, cv.clientHeight);
+  sky.addColorStop(0, '#8ed8f0'); sky.addColorStop(1, '#c8ecf7');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, cv.clientWidth, cv.clientHeight);
+
+  ctx.scale(scale, scale);
+  ctx.translate(-cam.x, -cam.y);
+
+  // water ring
+  ctx.fillStyle = '#4cb8dd';
+  roundRect(ctx, 20, 130, WORLD.w - 40, WORLD.h - 160, 90); ctx.fill();
+  // waves
+  ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 3;
+  for (let i = 0; i < 8; i++) {
+    const wx = 120 + (i * 217) % (WORLD.w - 260), wy = 170 + (i * 313) % (WORLD.h - 260);
+    const off = Math.sin(sec * 1.5 + i) * 4;
+    ctx.beginPath(); ctx.arc(wx + off, wy, 12, Math.PI * .1, Math.PI * .9); ctx.stroke();
+  }
+
+  // island
+  ctx.fillStyle = '#e9d8a6';
+  roundRect(ctx, 70, 190, WORLD.w - 140, WORLD.h - 270, 80); ctx.fill();
+  const grass = ctx.createLinearGradient(0, 200, 0, WORLD.h);
+  grass.addColorStop(0, '#8fd07a'); grass.addColorStop(1, '#6cbb5a');
+  ctx.fillStyle = grass;
+  roundRect(ctx, 90, 210, WORLD.w - 180, WORLD.h - 310, 70); ctx.fill();
+
+  // dirt paths from plaza to buildings
+  ctx.strokeStyle = '#d9b980'; ctx.lineWidth = 34; ctx.lineCap = 'round';
+  BUILDINGS.forEach(b => {
+    ctx.beginPath(); ctx.moveTo(800, 560); ctx.quadraticCurveTo((800 + b.x) / 2, (560 + b.y) / 2 + 40, b.x, b.y + 26); ctx.stroke();
+  });
+  // plaza circle
+  ctx.fillStyle = '#e6c98f';
+  ctx.beginPath(); ctx.arc(800, 570, 90, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#d4b276'; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.arc(800, 570, 74, 0, Math.PI * 2); ctx.stroke();
+
+  // flowers
+  FLOWERS.forEach(([fx, fy, c]) => {
+    if (fx > 700 && fx < 900 && fy > 470 && fy < 670) return; // keep plaza clear
+    ctx.fillStyle = c;
+    for (let p = 0; p < 5; p++) {
+      const a = (p / 5) * Math.PI * 2;
+      ctx.beginPath(); ctx.arc(fx + Math.cos(a) * 3, fy + Math.sin(a) * 3, 2.2, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = '#ffd75e';
+    ctx.beginPath(); ctx.arc(fx, fy, 2, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // fountain: giant golden lock statue in the plaza
+  drawLockStatue(ctx, 800, 545, sec);
+
+  // draw entities in y-order: buildings behind/ahead of player
+  const drawables = [
+    ...BUILDINGS.map(b => ({ y: b.y, fn: () => drawBuilding(ctx, b, sec) })),
+    ...TREES.map(([tx, ty]) => ({ y: ty, fn: () => drawTree(ctx, tx, ty, sec) })),
+    {
+      y: state.pos.y,
+      fn: () => {
+        drawPet(ctx, state.pos.x - 34 * world.dir, state.pos.y + 2, 1, state.player.pet, sec);
+        drawAvatar(ctx, state.pos.x, state.pos.y, 1, state.player, sec, world.walking, world.dir);
+        // name tag
+        ctx.font = '700 13px system-ui, sans-serif';
+        const nm = state.player.name || 'Explorer';
+        const tw = ctx.measureText(nm).width;
+        ctx.fillStyle = 'rgba(29,42,77,.75)';
+        roundRect(ctx, state.pos.x - tw / 2 - 8, state.pos.y - 118, tw + 16, 20, 10); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.fillText(nm, state.pos.x, state.pos.y - 104);
+        ctx.textAlign = 'left';
+      },
+    },
+  ];
+  drawables.sort((a, b) => a.y - b.y).forEach(d => d.fn());
+
+  // target marker
+  if (world.target) {
+    ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 3;
+    const r = 10 + Math.sin(sec * 8) * 3;
+    ctx.beginPath(); ctx.arc(world.target.x, world.target.y, r, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  // floating sparkle keys
+  for (let i = 0; i < 5; i++) {
+    const kx = 300 + (i * 331) % 1100, ky = 280 + (i * 449) % 660;
+    const fl = Math.sin(sec * 2 + i * 1.7) * 6;
+    ctx.save(); ctx.globalAlpha = .5 + Math.sin(sec * 3 + i) * .25;
+    ctx.translate(kx, ky + fl); ctx.rotate(Math.sin(sec + i) * .2);
+    drawKeyGlyph(ctx, 0, 0, .8, '#ffd75e');
+    ctx.restore();
+  }
+
+  ctx.restore();
+
+  // clouds (screen space)
+  ctx.save(); ctx.scale(dpr, dpr);
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  world.clouds.forEach(c => {
+    const cx = (c.x + sec * c.v) % (cv.clientWidth + 260) - 130;
+    ctx.beginPath();
+    ctx.arc(cx, c.y, 24 * c.s, 0, Math.PI * 2);
+    ctx.arc(cx + 26 * c.s, c.y + 6 * c.s, 18 * c.s, 0, Math.PI * 2);
+    ctx.arc(cx - 26 * c.s, c.y + 7 * c.s, 16 * c.s, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawBuilding(ctx, b, sec) {
+  const { x, y, w, h } = b;
+  const bx = x - w / 2, by = y - h;
+
+  // glow if near
+  if (world.nearBuilding && world.nearBuilding.id === b.id) {
+    ctx.save();
+    ctx.shadowColor = '#fff28a'; ctx.shadowBlur = 26;
+    ctx.fillStyle = 'rgba(255,242,138,.25)';
+    roundRect(ctx, bx - 6, by - 6, w + 12, h + 12, 18); ctx.fill();
+    ctx.restore();
+  }
+
+  // walls
+  ctx.fillStyle = b.color;
+  roundRect(ctx, bx, by + h * .28, w, h * .72, 12); ctx.fill();
+  // roof
+  ctx.fillStyle = b.roof;
+  ctx.beginPath();
+  ctx.moveTo(bx - 12, by + h * .34);
+  ctx.lineTo(x, by - h * .1);
+  ctx.lineTo(bx + w + 12, by + h * .34);
+  ctx.closePath(); ctx.fill();
+  // door
+  ctx.fillStyle = 'rgba(30,25,20,.55)';
+  roundRect(ctx, x - 16, y - 40, 32, 40, 8); ctx.fill();
+  ctx.fillStyle = '#ffd75e';
+  ctx.beginPath(); ctx.arc(x + 8, y - 20, 2.8, 0, Math.PI * 2); ctx.fill();
+  // windows
+  ctx.fillStyle = 'rgba(255,255,255,.75)';
+  roundRect(ctx, bx + 14, by + h * .42, 22, 18, 5); ctx.fill();
+  roundRect(ctx, bx + w - 36, by + h * .42, 22, 18, 5); ctx.fill();
+
+  // icon medallion on roof
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(x, by + h * .18, 17, 0, Math.PI * 2); ctx.fill();
+  drawIcon(ctx, b.icon, x, by + h * .18, 1);
+
+  // sign
+  ctx.font = '800 15px system-ui, sans-serif';
+  const tw = ctx.measureText(b.name).width;
+  ctx.fillStyle = '#fff7e8';
+  ctx.strokeStyle = '#c9a86a'; ctx.lineWidth = 2;
+  roundRect(ctx, x - tw / 2 - 12, y + 8, tw + 24, 26, 8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#3c3325';
+  ctx.textAlign = 'center';
+  ctx.fillText(b.name, x, y + 26);
+  ctx.textAlign = 'left';
+
+  // lock badge if gated
+  if (b.id === 'arcade' && !arcadeAllowed()) drawPadlockBadge(ctx, x + w / 2 - 8, by + h * .3);
+  if (b.id === 'plus' && !state.plus) drawPadlockBadge(ctx, x + w / 2 - 8, by + h * .3);
+}
+
+function drawPadlockBadge(ctx, x, y) {
+  ctx.fillStyle = '#e63946';
+  ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.4;
+  ctx.strokeRect(x - 5, y - 2, 10, 8);
+  ctx.beginPath(); ctx.arc(x, y - 3, 4, Math.PI, 0); ctx.stroke();
+}
+
+function drawTree(ctx, x, y, sec) {
+  const sway = Math.sin(sec * 1.2 + x) * 2;
+  ctx.fillStyle = '#8a5a2b';
+  roundRect(ctx, x - 6, y - 34, 12, 36, 5); ctx.fill();
+  ctx.fillStyle = '#4da457';
+  ctx.beginPath(); ctx.arc(x + sway, y - 52, 26, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x - 18 + sway, y - 38, 18, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 18 + sway, y - 38, 18, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#63b96e';
+  ctx.beginPath(); ctx.arc(x - 6 + sway, y - 56, 12, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawLockStatue(ctx, x, y, sec) {
+  const bob = Math.sin(sec * 1.6) * 3;
+  // pedestal
+  ctx.fillStyle = '#cfc9b8';
+  roundRect(ctx, x - 26, y + 6, 52, 18, 6); ctx.fill();
+  ctx.save();
+  ctx.translate(0, bob);
+  // shackle
+  ctx.strokeStyle = '#e8961e'; ctx.lineWidth = 9; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(x, y - 34, 18, Math.PI, 0); ctx.stroke();
+  // body
+  ctx.fillStyle = '#ffb627';
+  roundRect(ctx, x - 27, y - 36, 54, 44, 12); ctx.fill();
+  ctx.fillStyle = '#8a5a10';
+  ctx.beginPath(); ctx.arc(x, y - 18, 6, 0, Math.PI * 2); ctx.fill();
+  roundRect(ctx, x - 2.6, y - 16, 5.2, 12, 2.5); ctx.fill();
+  // sparkle
+  const sp = (sec % 2.4) / 2.4;
+  if (sp < .35) {
+    ctx.save(); ctx.globalAlpha = 1 - sp / .35;
+    ctx.fillStyle = '#fff';
+    drawStar(ctx, x + 20, y - 40, 4, 7, 2.6); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawKeyGlyph(ctx, x, y, s, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y, 6 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#e9f6fb';
+  ctx.beginPath(); ctx.arc(x, y, 2.6 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = color;
+  ctx.fillRect(x + 4 * s, y - 1.6 * s, 14 * s, 3.2 * s);
+  ctx.fillRect(x + 12 * s, y + 1.6 * s, 2.6 * s, 4.5 * s);
+  ctx.fillRect(x + 16 * s, y + 1.6 * s, 2.6 * s, 6 * s);
+}
+
+function drawIcon(ctx, icon, x, y, s) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = '#5a4a20'; ctx.fillStyle = '#5a4a20'; ctx.lineWidth = 2.2 * s; ctx.lineCap = 'round';
+  if (icon === 'lock') {
+    ctx.strokeRect(-6 * s, -2 * s, 12 * s, 9 * s);
+    ctx.beginPath(); ctx.arc(0, -2 * s, 4.5 * s, Math.PI, 0); ctx.stroke();
+  } else if (icon === 'flag') {
+    ctx.beginPath(); ctx.moveTo(-4 * s, 8 * s); ctx.lineTo(-4 * s, -8 * s); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-4 * s, -8 * s); ctx.lineTo(7 * s, -5 * s); ctx.lineTo(-4 * s, -2 * s); ctx.closePath(); ctx.fill();
+  } else if (icon === 'math') {
+    ctx.font = `900 ${13 * s}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('×÷', 0, 1);
+  } else if (icon === 'joy') {
+    ctx.beginPath(); ctx.arc(0, -4 * s, 4 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0, -1 * s); ctx.lineTo(0, 5 * s); ctx.stroke();
+    ctx.strokeRect(-6 * s, 5 * s, 12 * s, 4 * s);
+  } else if (icon === 'shirt') {
+    ctx.beginPath();
+    ctx.moveTo(-7 * s, -5 * s); ctx.lineTo(-2 * s, -8 * s); ctx.lineTo(2 * s, -8 * s); ctx.lineTo(7 * s, -5 * s);
+    ctx.lineTo(5 * s, -1 * s); ctx.lineTo(3 * s, -2 * s); ctx.lineTo(3 * s, 8 * s); ctx.lineTo(-3 * s, 8 * s);
+    ctx.lineTo(-3 * s, -2 * s); ctx.lineTo(-5 * s, -1 * s); ctx.closePath(); ctx.fill();
+  } else if (icon === 'trophy') {
+    ctx.beginPath(); ctx.moveTo(-5 * s, -7 * s); ctx.lineTo(5 * s, -7 * s); ctx.lineTo(3.4 * s, 2 * s); ctx.lineTo(-3.4 * s, 2 * s); ctx.closePath(); ctx.fill();
+    ctx.fillRect(-4 * s, 5 * s, 8 * s, 3 * s);
+    ctx.fillRect(-1.2 * s, 2 * s, 2.4 * s, 4 * s);
+  } else if (icon === 'plus') {
+    ctx.font = `900 ${16 * s}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffd75e';
+    ctx.fillText('+', 0, 1);
+  } else if (icon === 'star') {
+    drawStar(ctx, 0, 0, 5, 8 * s, 3.5 * s); ctx.fill();
+  }
+  ctx.restore();
+}
+
+
+/* Breakout Land — screens, HUD, building interiors, teacher & parent views */
+
+/* ---- screen management ---- */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  document.getElementById('hud').style.display = (id === 'world' || id === 'math') ? 'flex' : 'none';
+}
+function screenIs(id) {
+  const el = document.getElementById('screen-' + id);
+  return el && el.classList.contains('active');
+}
+function closeBuildingModal() {
+  document.getElementById('building-modal').classList.remove('open');
+}
+
+/* ---- HUD ---- */
+function updateHUD() {
+  const li = levelInfo();
+  document.getElementById('hud-name').textContent = state.player.name || 'Explorer';
+  document.getElementById('hud-level').textContent = `Lv ${li.n} · ${li.name}`;
+  document.getElementById('hud-keys').textContent = state.keys;
+  document.getElementById('hud-arcade').textContent = `${state.arcadeMin}m`;
+  document.getElementById('hud-streak').textContent = state.streak;
+  document.getElementById('hud-xpbar').style.width = `${li.into}%`;
+  const chip = document.getElementById('hud-avatar');
+  const ctx = chip.getContext('2d');
+  ctx.clearRect(0, 0, chip.width, chip.height);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(24, 24, 24, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = '#bfe9f5'; ctx.fillRect(0, 0, 48, 48);
+  drawAvatar(ctx, 24, 66, .62, state.player, 0, false, 1);
+  ctx.restore();
+}
+
+/* ---- building router ---- */
+function openBuilding(id) {
+  blip(760);
+  if (id === 'math') { openMathMap(); return; }
+  const body = document.getElementById('bm-body');
+  const title = document.getElementById('bm-title');
+  const modal = document.getElementById('building-modal');
+  body.innerHTML = '';
+  if (id === 'daily') renderDaily(title, body);
+  else if (id === 'games') renderGameHall(title, body);
+  else if (id === 'arcade') renderArcade(title, body);
+  else if (id === 'shop') renderShop(title, body);
+  else if (id === 'badges') renderBadgeHall(title, body);
+  else if (id === 'plus') renderPlus(title, body);
+  modal.classList.add('open');
+}
+
+/* ---- Lock Plaza: Lock of the Day ---- */
+function renderDaily(title, body) {
+  title.textContent = '🔐 Lock of the Day';
+  const done = state.lastDaily === todayKey();
+  if (done) {
+    body.innerHTML = `
+      <div class="big-emoji">🎉</div>
+      <p class="center"><strong>You already cracked today’s lock!</strong></p>
+      <p class="center muted">Streak: ${state.streak} day${state.streak === 1 ? '' : 's'} 🔥 — come back tomorrow to keep it alive.</p>`;
+    return;
+  }
+  body.innerHTML = `
+    <p class="muted">One fresh lock every day. Crack it to grow your streak and earn <strong>10 🔑 + 25 XP + 5 arcade minutes</strong>.</p>
+    <div class="reward-row"><span>🔥 Current streak: <strong>${state.streak}</strong></span></div>
+    <button class="btn-big" id="daily-go">Take on today’s lock!</button>`;
+  document.getElementById('daily-go').onclick = () => {
+    closeBuildingModal();
+    startPuzzle({
+      title: 'Lock of the Day',
+      ctxLabel: 'Daily challenge',
+      locks: [dailyLock()],
+      onWin: () => {
+        completeDaily();
+        toast(`+10 🔑  +25 XP  +5 arcade minutes! Streak: ${state.streak} 🔥`);
+      },
+    });
+  };
+}
+
+/* ---- Game Hall ---- */
+function renderGameHall(title, body) {
+  title.textContent = '🚩 Game Hall';
+  const rows = state.assigned.map(id => {
+    const g = DATA.games.find(g => g.id === id);
+    if (!g) return '';
+    const done = state.gamesDone[g.id];
+    return `
+      <div class="card game-card">
+        <div class="game-info">
+          <h3>${g.name}</h3>
+          <p class="meta">${g.subject} · Grades ${g.grade} · ~${g.minutes} min · ${g.locks.length} locks</p>
+          <p class="story">${g.story}</p>
+        </div>
+        <div class="game-side">
+          ${done
+            ? `<span class="done-pill">✔ Broke out in ${Math.floor(done.seconds / 60)}m ${done.seconds % 60}s</span>
+               <button class="btn-small" data-play="${g.id}">Play again</button>`
+            : `<button class="btn-big" data-play="${g.id}">Play!</button>`}
+        </div>
+      </div>`;
+  }).join('');
+  body.innerHTML = `
+    <p class="muted">Games assigned by <strong>Ms. Rivera</strong>. In the full version this is where the Breakout EDU digital game player opens — Breakout Land wraps it and awards your keys, XP and badges when you break out.</p>
+    ${rows || '<p class="center muted">No games assigned yet — check back soon!</p>'}`;
+  body.querySelectorAll('[data-play]').forEach(btn => {
+    btn.onclick = () => {
+      const g = DATA.games.find(g => g.id === btn.dataset.play);
+      closeBuildingModal();
+      startPuzzle({
+        title: g.name,
+        ctxLabel: g.subject,
+        locks: g.locks,
+        onWin: ({ attempts, seconds }) => {
+          const first = !state.gamesDone[g.id];
+          state.gamesDone[g.id] = { attempts, seconds };
+          grant(first ? { keys: 25, xp: 60, arcade: 10 } : { keys: 5, xp: 15, arcade: 0 });
+          toast(first ? '+25 🔑  +60 XP  +10 arcade minutes!' : 'Replay complete! +5 🔑 +15 XP');
+        },
+      });
+    };
+  });
+}
+
+/* ---- Arcade ---- */
+function renderArcade(title, body) {
+  title.textContent = '🕹️ The Arcade';
+  if (!arcadeAllowed()) {
+    body.innerHTML = `
+      <div class="big-emoji">🔒</div>
+      <p class="center"><strong>The Arcade is locked right now.</strong></p>
+      <p class="center muted">Your teacher or parent has paused arcade time. Keep solving — your minutes will be waiting!</p>`;
+    return;
+  }
+  body.innerHTML = `
+    <p class="muted">You earn arcade minutes by breaking out of games. Playing <strong>Key Catcher</strong> costs <strong>5 minutes</strong> per round.</p>
+    <div class="reward-row"><span>🕹️ Your bank: <strong>${state.arcadeMin} minutes</strong></span></div>
+    <div class="card game-card">
+      <div class="game-info">
+        <h3>Key Catcher</h3>
+        <p class="story">Catch falling keys, dodge the anvils! 30 seconds of pure fun.</p>
+      </div>
+      <div class="game-side">
+        <button class="btn-big" id="kc-go" ${state.arcadeMin < 5 ? 'disabled' : ''}>${state.arcadeMin < 5 ? 'Need 5 min' : 'Play (−5 min)'}</button>
+      </div>
+    </div>
+    <div class="card game-card soon">
+      <div class="game-info"><h3>Puzzle Kart</h3><p class="story">Coming soon to the Arcade…</p></div>
+    </div>`;
+  const go = document.getElementById('kc-go');
+  if (go && state.arcadeMin >= 5) go.onclick = () => { closeBuildingModal(); startKeyCatcher(); };
+}
+
+/* Key Catcher minigame */
+const kc = { raf: null, score: 0, tLeft: 30, px: .5, items: [], last: 0 };
+function startKeyCatcher() {
+  state.arcadeMin -= 5; saveState(); updateHUD();
+  const modal = document.getElementById('kc-modal');
+  modal.classList.add('open');
+  const cv = document.getElementById('kc-canvas');
+  const ctx = cv.getContext('2d');
+  Object.assign(kc, { score: 0, tLeft: 30, px: .5, items: [], last: performance.now() });
+  const move = (clientX) => {
+    const r = cv.getBoundingClientRect();
+    kc.px = Math.max(.06, Math.min(.94, (clientX - r.left) / r.width));
+  };
+  cv.onpointermove = e => move(e.clientX);
+  cv.onpointerdown = e => move(e.clientX);
+  const keyHandler = e => {
+    if (e.key === 'ArrowLeft' || e.key === 'a') kc.px = Math.max(.06, kc.px - .045);
+    if (e.key === 'ArrowRight' || e.key === 'd') kc.px = Math.min(.94, kc.px + .045);
+  };
+  addEventListener('keydown', keyHandler);
+
+  cancelAnimationFrame(kc.raf);
+  (function loop(t) {
+    const dt = Math.min(.05, (t - kc.last) / 1000); kc.last = t;
+    kc.tLeft -= dt;
+    const W = cv.width = cv.clientWidth, H = cv.height = cv.clientHeight;
+
+    // spawn
+    if (Math.random() < dt * 2.2) kc.items.push({ x: .08 + Math.random() * .84, y: -.05, v: .25 + Math.random() * .3, bad: Math.random() < .22 });
+
+    ctx.fillStyle = '#1d2a4d'; ctx.fillRect(0, 0, W, H);
+    // stars
+    ctx.fillStyle = 'rgba(255,255,255,.5)';
+    for (let i = 0; i < 24; i++) ctx.fillRect((i * 137) % W, (i * 211) % (H * .7), 2, 2);
+
+    // items
+    kc.items.forEach(it => { it.y += it.v * dt; });
+    kc.items = kc.items.filter(it => {
+      const ix = it.x * W, iy = it.y * H;
+      const caught = it.y > .86 && it.y < .96 && Math.abs(it.x - kc.px) < .07;
+      if (caught) {
+        if (it.bad) { kc.score = Math.max(0, kc.score - 3); buzz(); }
+        else { kc.score += 1; blip(900); }
+        return false;
+      }
+      if (it.y > 1.05) return false;
+      if (it.bad) {
+        ctx.fillStyle = '#8d99ae';
+        ctx.beginPath(); ctx.moveTo(ix - 12, iy); ctx.lineTo(ix + 12, iy); ctx.lineTo(ix + 7, iy + 12); ctx.lineTo(ix - 7, iy + 12); ctx.closePath(); ctx.fill();
+        ctx.fillRect(ix - 4, iy - 8, 8, 8);
+      } else {
+        drawKeyGlyph(ctx, ix, iy, 1.1, '#ffd75e');
+      }
+      return true;
+    });
+
+    // catcher (player's avatar head on a cart)
+    const cx = kc.px * W, cy = H * .93;
+    ctx.fillStyle = '#ffb627';
+    roundRect(ctx, cx - 34, cy - 8, 68, 16, 8); ctx.fill();
+    drawAvatar(ctx, cx, cy - 4, .55, state.player, t / 1000, true, 1);
+
+    // HUD
+    ctx.fillStyle = '#fff'; ctx.font = '800 20px system-ui'; ctx.textAlign = 'left';
+    ctx.fillText(`🔑 ${kc.score}`, 14, 30);
+    ctx.textAlign = 'right';
+    ctx.fillText(`⏱ ${Math.max(0, Math.ceil(kc.tLeft))}s`, W - 14, 30);
+    ctx.textAlign = 'left';
+
+    if (kc.tLeft > 0 && modal.classList.contains('open')) {
+      kc.raf = requestAnimationFrame(loop);
+    } else {
+      removeEventListener('keydown', keyHandler);
+      if (kc.tLeft <= 0) {
+        modal.classList.remove('open');
+        const bonus = Math.min(10, Math.floor(kc.score / 3));
+        grant({ keys: bonus, xp: kc.score });
+        fanfare();
+        toast(`Key Catcher: ${kc.score} keys caught! Bonus: +${bonus} 🔑 +${kc.score} XP`);
+      }
+    }
+  })(performance.now());
+  document.getElementById('kc-quit').onclick = () => { modal.classList.remove('open'); removeEventListener('keydown', keyHandler); };
+}
+
+/* ---- Style Shop ---- */
+function renderShop(title, body) {
+  title.textContent = '🛍️ Style Shop';
+  const section = (label, items, equipKey) => `
+    <h3 class="shop-h">${label}</h3>
+    <div class="shop-grid">
+      ${items.filter(i => !i.free).map(i => {
+        const owned = itemOwned(i);
+        return `<button class="shop-item ${owned ? 'owned' : ''}" data-buy="${i.id}" data-kind="${equipKey}">
+          <span class="shop-name">${i.name}</span>
+          <span class="shop-price">${owned ? 'Owned ✓' : `${i.price} 🔑`}</span>
+        </button>`;
+      }).join('')}
+    </div>`;
+  body.innerHTML = `
+    <p class="muted">Spend your hard-earned keys! Equip anything you own in <strong>The Closet</strong> (avatar button, top left).</p>
+    <div class="reward-row"><span>Your keys: <strong>${state.keys} 🔑</strong></span></div>
+    ${section('Outfits', DATA.outfits, 'outfit')}
+    ${section('Accessories', DATA.accessories, 'accessory')}
+    ${section('Pets', DATA.pets, 'pet')}`;
+  body.querySelectorAll('[data-buy]').forEach(btn => {
+    btn.onclick = () => {
+      const all = [...DATA.outfits, ...DATA.accessories, ...DATA.pets];
+      const item = all.find(i => i.id === btn.dataset.buy);
+      if (itemOwned(item)) {
+        state.player[btn.dataset.kind] = item.id;
+        saveState(); blip(800);
+        toast(`Equipped ${item.name}!`);
+        return;
+      }
+      if (buyItem(item)) {
+        state.player[btn.dataset.kind] = item.id;
+        saveState();
+        fanfare(); confetti();
+        toast(`You bought & equipped ${item.name}! 🎉`);
+        renderShop(document.getElementById('bm-title'), document.getElementById('bm-body'));
+      } else {
+        buzz();
+        toast(`You need ${item.price - state.keys} more keys for ${item.name}. Keep breaking out!`);
+      }
+    };
+  });
+}
+
+/* ---- Badge Hall ---- */
+function renderBadgeHall(title, body) {
+  title.textContent = '🏅 Badge Hall';
+  body.innerHTML = `
+    <p class="muted">Every badge tells a story about how you think — not just what you know.</p>
+    <div class="badge-grid">
+      ${DATA.badges.map(b => {
+        const got = state.badges.includes(b.id);
+        return `<div class="badge ${got ? 'got' : ''}">
+          <div class="badge-icon">${badgeGlyph(b.icon)}</div>
+          <strong>${b.name}</strong>
+          <span>${b.desc}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+function badgeGlyph(icon) {
+  return { lock: '🔓', flame: '🔥', key: '🔑', math: '➗', trophy: '🏆', star: '⭐', bulb: '💡', heart: '💪' }[icon] || '🏅';
+}
+
+/* ---- Breakout+ Clubhouse ---- */
+function renderPlus(title, body) {
+  title.textContent = '✨ Breakout+ Clubhouse';
+  if (!state.plus) {
+    body.innerHTML = `
+      <div class="big-emoji">🔒</div>
+      <p class="center"><strong>The Clubhouse needs a Breakout+ key.</strong></p>
+      <p class="center muted">Ask your teacher about Breakout+ to unlock hundreds of bonus games, seasonal events, and exclusive avatar gear.</p>`;
+    return;
+  }
+  body.innerHTML = `
+    <p class="muted">Your class has <strong>Breakout+</strong>! Bonus games, seasonal events and exclusive gear live here.</p>
+    ${DATA.plusGames.map(g => `
+      <div class="card game-card">
+        <div class="game-info"><h3>${g.name}</h3><p class="meta">${g.subject} · Grades ${g.grade}</p></div>
+        <div class="game-side"><button class="btn-small" data-plus="${g.id}">Play!</button></div>
+      </div>`).join('')}`;
+  body.querySelectorAll('[data-plus]').forEach(btn => {
+    btn.onclick = () => {
+      const g = DATA.plusGames.find(g => g.id === btn.dataset.plus);
+      closeBuildingModal();
+      const probs = DATA.mathProblems[3];
+      const p = probs[(Math.random() * probs.length) | 0];
+      startPuzzle({
+        title: g.name, ctxLabel: 'Breakout+ bonus',
+        locks: [{ type: 'number', clue: `${g.name} demo lock — ${p.clue}`, answer: p.answer, hint: 'Take it one step at a time.' }],
+        onWin: () => { grant({ keys: 8, xp: 20, arcade: 3 }); toast('+8 🔑 +20 XP +3 arcade minutes!'); },
+      });
+    };
+  });
+}
+
+/* ---- Breakout Math adventure map ---- */
+function openMathMap() {
+  showScreen('math');
+  updateHUD();
+  renderMathMap();
+}
+
+function nodeKey(grade, i) { return `${grade}:${i}`; }
+
+function renderMathMap() {
+  const grade = state.mathGrade;
+  const unit = DATA.mathUnits[grade];
+  document.getElementById('math-unit').textContent = unit.unit;
+  document.getElementById('math-skills').textContent = unit.skills;
+
+  // grade pills
+  const gp = document.getElementById('grade-pills');
+  gp.innerHTML = '';
+  ['K', 1, 2, 3, 4, 5].forEach(g => {
+    const b = document.createElement('button');
+    b.className = 'gpill' + (String(g) === String(grade) ? ' sel' : '');
+    b.textContent = g === 'K' ? 'K' : `G${g}`;
+    b.onclick = () => { state.mathGrade = g; saveState(); renderMathMap(); blip(650); };
+    gp.appendChild(b);
+  });
+
+  // trail
+  const svgW = 900, svgH = 460;
+  const pts = DATA.mathTrail.map((_, i) => {
+    const t = i / (DATA.mathTrail.length - 1);
+    const x = 70 + t * (svgW - 140);
+    const y = svgH / 2 + Math.sin(t * Math.PI * 2.2) * 130 + (i % 2 ? 26 : -26);
+    return [x, y];
+  });
+  let path = `M ${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    path += ` C ${(x0 + x1) / 2} ${y0}, ${(x0 + x1) / 2} ${y1}, ${x1} ${y1}`;
+  }
+
+  const nodeState = i => {
+    const key = nodeKey(grade, i);
+    const type = DATA.mathTrail[i];
+    if (state.mathStars[key]) return 'done';
+    // review nodes always open; others unlock in order (previous non-review core done)
+    if (type === 'review') return 'open';
+    const prevCore = DATA.mathTrail.slice(0, i).map((t, j) => ({ t, j })).filter(n => n.t !== 'review').pop();
+    if (!prevCore) return 'open';
+    if (type === 'challenge' || type === 'boss') {
+      // challenge unlocks if previous core done in ≤ 2 attempts (beating the average) — the adaptive hook
+      const prevKey = nodeKey(grade, prevCore.j);
+      if (!state.mathStars[prevKey]) return 'locked';
+      return (state.mathAttempts[prevKey] || 9) <= 2 ? 'open' : 'locked-challenge';
+    }
+    return state.mathStars[nodeKey(grade, prevCore.j)] ? 'open' : 'locked';
+  };
+
+  const typeColor = { core: '#57c26b', review: '#4cc9f0', challenge: '#9b5de5', boss: '#ffb627' };
+  const typeLabel = { core: 'Quest', review: 'Review', challenge: 'Challenge', boss: 'BOSS' };
+
+  const nodes = DATA.mathTrail.map((type, i) => {
+    const [x, y] = pts[i];
+    const st = nodeState(i);
+    const key = nodeKey(grade, i);
+    const stars = state.mathStars[key] || 0;
+    const r = type === 'boss' ? 34 : 26;
+    const locked = st === 'locked' || st === 'locked-challenge';
+    return `
+      <g class="mnode ${st}" data-node="${i}" transform="translate(${x},${y})" tabindex="${locked ? -1 : 0}" role="button" aria-label="${typeLabel[type]} ${i + 1}">
+        ${st === 'open' && type !== 'review' ? `<circle r="${r + 8}" fill="${typeColor[type]}" opacity=".25"><animate attributeName="r" values="${r + 4};${r + 12};${r + 4}" dur="1.6s" repeatCount="indefinite"/></circle>` : ''}
+        <circle r="${r}" fill="${locked ? '#b8c4c9' : typeColor[type]}" stroke="#fff" stroke-width="4"/>
+        <text y="6" text-anchor="middle" font-size="${type === 'boss' ? 20 : 16}" font-weight="900" fill="#fff">${locked ? '🔒' : (st === 'done' ? '✓' : i + 1)}</text>
+        <text y="${r + 18}" text-anchor="middle" font-size="11" font-weight="800" fill="#27406e">${typeLabel[type]}</text>
+        ${stars ? `<text y="${-r - 8}" text-anchor="middle" font-size="13">${'⭐'.repeat(stars)}</text>` : ''}
+      </g>`;
+  }).join('');
+
+  document.getElementById('math-svg').innerHTML = `
+    <path d="${path}" fill="none" stroke="#e6c98f" stroke-width="22" stroke-linecap="round"/>
+    <path d="${path}" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="2 16" stroke-linecap="round"/>
+    ${nodes}`;
+
+  document.querySelectorAll('.mnode').forEach(g => {
+    const i = parseInt(g.dataset.node, 10);
+    const st = nodeState(i);
+    g.addEventListener('click', () => {
+      if (st === 'locked') { buzz(); toast('Finish the previous quest to unlock this one!'); return; }
+      if (st === 'locked-challenge') { buzz(); toast('Challenge locks open when you beat a quest in 2 tries or fewer — or when your teacher assigns it!'); return; }
+      startMathNode(grade, i);
+    });
+  });
+}
+
+function startMathNode(grade, i) {
+  const type = DATA.mathTrail[i];
+  const probs = DATA.mathProblems[grade];
+  const count = type === 'boss' ? 3 : type === 'challenge' ? 2 : 1;
+  const locks = Array.from({ length: count }, (_, j) => {
+    const p = probs[(i + j) % probs.length];
+    return { type: 'number', clue: p.clue, answer: p.answer, hint: 'Draw it out or count it up — you’ve got this.' };
+  });
+  const unit = DATA.mathUnits[grade].unit;
+  startPuzzle({
+    title: `${unit} — ${type === 'boss' ? 'BOSS Lock' : type === 'challenge' ? 'Challenge' : type === 'review' ? 'Review' : 'Quest'} ${i + 1}`,
+    ctxLabel: `Breakout Math · Grade ${grade}`,
+    locks,
+    onWin: ({ attempts }) => {
+      const key = nodeKey(grade, i);
+      const stars = attempts <= count ? 3 : attempts <= count + 1 ? 2 : 1;
+      state.mathStars[key] = Math.max(state.mathStars[key] || 0, stars);
+      state.mathAttempts[key] = attempts;
+      const rewards = { core: { keys: 12, xp: 30, arcade: 4 }, review: { keys: 6, xp: 15, arcade: 2 }, challenge: { keys: 20, xp: 50, arcade: 8 }, boss: { keys: 35, xp: 90, arcade: 12 } }[type];
+      grant(rewards);
+      if (type === 'challenge' || type === 'boss') awardBadge('challenge');
+      if (attempts > count + 1) toast(`+${rewards.keys} 🔑! Tip: the Review stop on the trail is a great warm-up. 💙`);
+      else toast(`${'⭐'.repeat(stars)} +${rewards.keys} 🔑 +${rewards.xp} XP +${rewards.arcade} arcade min!`);
+      renderMathMap();
+    },
+  });
+}
+
+/* ---- Teacher dashboard ---- */
+function openTeacher() {
+  showScreen('teacher');
+  const you = {
+    name: (state.player.name || 'You') + ' ⭐you', level: levelInfo().n, keys: state.totalKeys,
+    games: Object.keys(state.gamesDone).length + Object.keys(state.mathStars).length,
+    avgMin: 12.0, success: 0.9, streak: state.streak, arcade: state.perms.teacherArcade,
+  };
+  const roster = [...DATA.roster, you];
+
+  document.getElementById('t-roster').innerHTML = roster.map((s, i) => `
+    <tr>
+      <td class="t-name">${s.name}</td>
+      <td>${s.level}</td>
+      <td>${s.games}</td>
+      <td>${s.avgMin.toFixed(1)}</td>
+      <td><span class="pill ${s.success >= .85 ? 'good' : s.success >= .7 ? 'mid' : 'low'}">${Math.round(s.success * 100)}%</span></td>
+      <td>${s.streak}🔥</td>
+      <td><label class="switch"><input type="checkbox" data-arcade="${i}" ${s.arcade ? 'checked' : ''}><span></span></label></td>
+    </tr>`).join('');
+
+  document.querySelectorAll('[data-arcade]').forEach(cb => {
+    cb.onchange = () => {
+      const i = parseInt(cb.dataset.arcade, 10);
+      if (i === roster.length - 1) { state.perms.teacherArcade = cb.checked; saveState(); }
+      toast(cb.checked ? 'Arcade time enabled 🕹️' : 'Arcade time paused');
+    };
+  });
+
+  // comparison chart: avg minutes to breakout — class vs school vs all players (age group)
+  const C = DATA.chartColors;
+  const maxV = Math.max(...DATA.comparisons.flatMap(c => [c.class, c.school, c.global])) * 1.15;
+  document.getElementById('t-chart').innerHTML = `
+    <div class="legend">
+      <span><i style="background:${C.class}"></i>Your class</span>
+      <span><i style="background:${C.school}"></i>Whole school</span>
+      <span><i style="background:${C.global}"></i>All players, ages 8–10</span>
+    </div>
+    ${DATA.comparisons.map(c => `
+      <div class="cmp-group">
+        <div class="cmp-label">${c.game}</div>
+        <div class="cmp-bars">
+          ${[['class', c.class], ['school', c.school], ['global', c.global]].map(([k, v]) => `
+            <div class="cmp-row">
+              <div class="cmp-bar" style="width:${(v / maxV) * 100}%;background:${C[k]}" title="${v.toFixed(1)} min"></div>
+              <span class="cmp-val">${v.toFixed(1)}m</span>
+            </div>`).join('')}
+        </div>
+      </div>`).join('')}
+    <p class="chart-note">Average minutes to breakout — lower is faster. Your class is beating the global average on 2 of 3 games. 🎉</p>`;
+
+  // assignment buttons
+  document.getElementById('t-assign').innerHTML = DATA.games.map(g => `
+    <div class="assign-row">
+      <span><strong>${g.name}</strong> <span class="meta">· ${g.subject}</span></span>
+      <button class="btn-small" data-assign="${g.id}" ${state.assigned.includes(g.id) ? 'disabled' : ''}>
+        ${state.assigned.includes(g.id) ? 'Assigned ✓' : 'Assign to class'}
+      </button>
+    </div>`).join('');
+  document.querySelectorAll('[data-assign]').forEach(b => {
+    b.onclick = () => {
+      state.assigned.push(b.dataset.assign); saveState();
+      toast('Assigned! It’s live in every student’s Game Hall.');
+      openTeacher();
+    };
+  });
+
+  const plusCb = document.getElementById('t-plus');
+  plusCb.checked = state.plus;
+  plusCb.onchange = () => { state.plus = plusCb.checked; saveState(); toast(state.plus ? 'Breakout+ active for your class ✨' : 'Breakout+ paused'); };
+}
+
+/* ---- Parent portal ---- */
+function openParent() {
+  showScreen('parent');
+  const li = levelInfo();
+  const name = state.player.name || 'Your explorer';
+  document.getElementById('p-summary').innerHTML = `
+    <div class="p-stat"><strong>${li.n}</strong><span>Level — ${li.name}</span></div>
+    <div class="p-stat"><strong>${state.streak}🔥</strong><span>Daily streak</span></div>
+    <div class="p-stat"><strong>${Object.keys(state.gamesDone).length + Object.keys(state.mathStars).length}</strong><span>Games broken out</span></div>
+    <div class="p-stat"><strong>${state.badges.length}</strong><span>Badges earned</span></div>`;
+  document.getElementById('p-name').textContent = name;
+
+  // avatar
+  const cv = document.getElementById('p-avatar');
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  drawAvatar(ctx, cv.width / 2, cv.height - 10, 1.0, state.player, 0, false, 1);
+
+  // 4Cs + SEL — grows with actual play (base + earned)
+  const solved = Object.keys(state.mathStars).length + Object.keys(state.gamesDone).length * 2;
+  const firstTries = state.badges.includes('thinker') ? 12 : 0;
+  const persist = state.badges.includes('persistent') ? 14 : 0;
+  const skills = [
+    ['Critical Thinking', Math.min(96, 38 + solved * 6 + firstTries)],
+    ['Persistence',       Math.min(96, 34 + solved * 5 + persist)],
+    ['Creativity',        Math.min(96, 30 + solved * 5)],
+    ['Collaboration',     Math.min(96, 42 + solved * 3)],
+    ['Communication',     Math.min(96, 36 + solved * 4)],
+  ];
+  document.getElementById('p-skills').innerHTML = skills.map(([label, v]) => `
+    <div class="skill-row">
+      <span class="skill-label">${label}</span>
+      <div class="skill-track"><div class="skill-fill" style="width:${v}%"></div></div>
+      <span class="skill-val">${v}</span>
+    </div>`).join('');
+
+  // week chart (single series)
+  const maxMin = Math.max(...DATA.parentWeek.map(d => d.min), 1);
+  document.getElementById('p-week').innerHTML = DATA.parentWeek.map(d => `
+    <div class="wk-col" title="${d.min} min">
+      <span class="wk-val">${d.min || ''}</span>
+      <div class="wk-bar" style="height:${(d.min / maxMin) * 72 + 2}px"></div>
+      <span class="wk-day">${d.day}</span>
+    </div>`).join('');
+
+  const badges = state.badges.slice(-4).map(id => DATA.badges.find(b => b.id === id)).filter(Boolean);
+  document.getElementById('p-badges').innerHTML = badges.length
+    ? badges.map(b => `<div class="badge got small"><div class="badge-icon">${badgeGlyph(b.icon)}</div><strong>${b.name}</strong></div>`).join('')
+    : '<p class="muted">Badges will appear here as they’re earned.</p>';
+
+  const cb = document.getElementById('p-arcade');
+  cb.checked = state.perms.parentArcade;
+  cb.onchange = () => {
+    state.perms.parentArcade = cb.checked; saveState();
+    toast(cb.checked ? 'Arcade time approved 🕹️' : 'Arcade time paused');
+  };
+  const lim = document.getElementById('p-limit');
+  lim.value = state.perms.weeklyLimitMin;
+  document.getElementById('p-limit-val').textContent = `${state.perms.weeklyLimitMin} min/week`;
+  lim.oninput = () => {
+    state.perms.weeklyLimitMin = parseInt(lim.value, 10); saveState();
+    document.getElementById('p-limit-val').textContent = `${state.perms.weeklyLimitMin} min/week`;
+  };
+}
+
+
+/* Breakout Land — boot & title wiring */
+
+function boot() {
+  loadState();
+
+  // title buttons
+  document.getElementById('t-student').onclick = () => {
+    blip(700);
+    state.created ? enterWorld() : openAvatarCreator(false);
+  };
+  document.getElementById('t-teacher').onclick = () => { blip(700); openTeacher(); };
+  document.getElementById('t-parent').onclick = () => { blip(700); openParent(); };
+
+  // avatar creator done
+  document.getElementById('av-done').onclick = finishAvatar;
+
+  // HUD buttons
+  document.getElementById('hud-closet').onclick = () => openAvatarCreator(true);
+  document.getElementById('hud-home').onclick = () => showScreen('title');
+  document.getElementById('hud-mute').onclick = (e) => {
+    muted = !muted;
+    e.currentTarget.textContent = muted ? '🔇' : '🔊';
+  };
+
+  // back-to-world buttons
+  document.querySelectorAll('[data-back-world]').forEach(b => b.onclick = () => enterWorld());
+  document.querySelectorAll('[data-back-title]').forEach(b => b.onclick = () => showScreen('title'));
+
+  // modal close buttons
+  document.getElementById('bm-close').onclick = closeBuildingModal;
+  document.getElementById('pz-close').onclick = closePuzzle;
+  document.getElementById('building-modal').addEventListener('pointerdown', e => {
+    if (e.target === e.currentTarget) closeBuildingModal();
+  });
+
+  // demo reset
+  document.getElementById('t-reset').onclick = () => {
+    resetState();
+    toast('Demo progress reset — fresh start!');
+  };
+
+  // Esc closes modals
+  addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeBuildingModal();
+      closePuzzle();
+      document.getElementById('cel-modal').classList.remove('open');
+    }
+  });
+
+  // title avatar parade
+  const cv = document.getElementById('title-canvas');
+  if (cv) {
+    const ctx = cv.getContext('2d');
+    const cast = [
+      { skin: DATA.skins[1], hairStyle: 'puff', hairColor: DATA.hairColors[0], outfit: 'tee-teal', accessory: 'none', pet: 'nopet' },
+      { skin: DATA.skins[3], hairStyle: 'spiky', hairColor: DATA.hairColors[4], outfit: 'tee-gold', accessory: 'cap', pet: 'nopet' },
+      { skin: DATA.skins[0], hairStyle: 'pony', hairColor: DATA.hairColors[3], outfit: 'tee-purple', accessory: 'none', pet: 'fox' },
+      { skin: DATA.skins[4], hairStyle: 'swoop', hairColor: DATA.hairColors[1], outfit: 'tee-coral', accessory: 'glasses', pet: 'nopet' },
+    ];
+    const t0 = performance.now();
+    (function loop(t) {
+      const sec = (t - t0) / 1000;
+      const W = cv.width = cv.clientWidth, H = cv.height = cv.clientHeight;
+      ctx.clearRect(0, 0, W, H);
+      cast.forEach((c, i) => {
+        const x = W * (0.18 + i * 0.21) + Math.sin(sec * 1.4 + i * 2) * 6;
+        drawAvatar(ctx, x, H - 14, 0.86, c, sec + i, true, i % 2 ? -1 : 1);
+        if (c.pet !== 'nopet') drawPet(ctx, x + 34, H - 12, 0.8, c.pet, sec + i);
+      });
+      if (screenIs('title')) requestAnimationFrame(loop);
+      else setTimeout(() => requestAnimationFrame(loop), 400);
+    })(t0);
+  }
+
+  showScreen('title');
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+
+</script>

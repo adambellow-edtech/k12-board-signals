@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Breakout Land — a Breakout EDU world</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%90%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ============ TITLE ============ -->
+<section class="screen" id="screen-title">
+  <div class="title-wrap">
+    <span class="title-lock">🔐</span>
+    <h1 class="title-logo">BREAKOUT <span class="land">LAND</span></h1>
+    <p class="title-tag">Think hard. Break out. Play on! ✦ A Breakout EDU world</p>
+    <canvas id="title-canvas" aria-hidden="true"></canvas>
+    <div class="role-row">
+      <button class="role-btn role-student" id="t-student">I'm a Student<small>Explore the island!</small></button>
+      <button class="role-btn role-teacher" id="t-teacher">I'm a Teacher<small>Class dashboard</small></button>
+      <button class="role-btn role-parent" id="t-parent">I'm a Parent<small>Progress &amp; approvals</small></button>
+    </div>
+    <p class="title-foot">Interactive concept prototype · progress saves on this device · <button id="t-reset">reset demo</button></p>
+  </div>
+</section>
+
+<!-- ============ AVATAR CREATOR ============ -->
+<section class="screen" id="screen-avatar">
+  <div class="av-wrap board">
+    <div class="av-left">
+      <h2 id="av-title">Create Your Explorer</h2>
+      <canvas id="av-canvas" width="240" height="300"></canvas>
+      <button class="btn-big" id="av-done">Start Exploring!</button>
+    </div>
+    <div class="av-right">
+      <h3>Explorer name</h3>
+      <input id="av-name" maxlength="16" placeholder="e.g. Sam the Solver" autocomplete="off">
+      <h3>Skin</h3><div class="swatch-row" id="av-skin"></div>
+      <h3>Hair style</h3><div class="chip-row" id="av-hair"></div>
+      <h3>Hair color</h3><div class="swatch-row" id="av-haircolor"></div>
+      <h3>Outfit</h3><div class="chip-row" id="av-outfit"></div>
+      <h3>Accessory</h3><div class="chip-row" id="av-acc"></div>
+      <h3>Sidekick pet</h3><div class="chip-row" id="av-pet"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WORLD ============ -->
+<section class="screen" id="screen-world">
+  <canvas id="world-canvas"></canvas>
+  <div class="world-hint">Walk with WASD / arrows — or tap where you want to go</div>
+  <button id="enter-btn">Enter</button>
+</section>
+
+<!-- ============ HUD ============ -->
+<div id="hud">
+  <div class="hud-left">
+    <div class="hud-card">
+      <button id="hud-closet" title="Open the Closet (edit your look)">
+        <canvas id="hud-avatar" width="48" height="48"></canvas>
+        <span class="hud-id">
+          <strong id="hud-name">Explorer</strong>
+          <span id="hud-level">Lv 1 · Rookie Solver</span>
+          <span class="hud-xp"><div id="hud-xpbar" style="width:0%"></div></span>
+        </span>
+      </button>
+    </div>
+  </div>
+  <div class="hud-right">
+    <div class="hud-card hud-stat" title="Keys — earn them by breaking out, spend them in the Style Shop"><span class="em">🔑</span><span id="hud-keys">0</span></div>
+    <div class="hud-card hud-stat" title="Arcade minutes earned"><span class="em">🕹️</span><span id="hud-arcade">0m</span></div>
+    <div class="hud-card hud-stat" title="Lock of the Day streak"><span class="em">🔥</span><span id="hud-streak">0</span></div>
+    <button class="hud-btn" id="hud-mute" title="Sound on/off">🔊</button>
+    <button class="hud-btn" id="hud-home" title="Back to title">🏠</button>
+  </div>
+</div>
+
+<!-- ============ MATH MAP ============ -->
+<section class="screen" id="screen-math">
+  <div class="math-wrap">
+    <div class="math-head">
+      <div>
+        <h2>🧮 <span id="math-unit">Multiplication Meadow</span></h2>
+        <div class="skills" id="math-skills"></div>
+      </div>
+      <div id="grade-pills"></div>
+      <button class="back-btn" data-back-world>← Back to the island</button>
+    </div>
+    <div class="board math-board">
+      <svg id="math-svg" viewBox="0 0 900 460" role="img" aria-label="Breakout Math adventure trail"></svg>
+    </div>
+    <div class="math-legend">
+      <span><i style="background:#57c26b"></i>Quest — your math path</span>
+      <span><i style="background:#4cc9f0"></i>Review — warm-up, always open</span>
+      <span><i style="background:#9b5de5"></i>Challenge — unlock by beating a quest in ≤2 tries</span>
+      <span><i style="background:#ffb627"></i>Boss lock — end of unit</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TEACHER ============ -->
+<section class="screen" id="screen-teacher">
+  <div class="dash">
+    <div class="dash-head">
+      <div>
+        <h2>Ms. Rivera's Class — Room 12</h2>
+        <div class="sub">Breakout Land teacher dashboard · Grade 3 · 7 explorers</div>
+      </div>
+      <button class="back-btn" data-back-title>← Sign out</button>
+    </div>
+    <div class="dash-grid">
+      <div class="board span2">
+        <h3>Class roster</h3>
+        <p class="note">The demo player appears in this roster as “⭐you” — play as a student and watch your row update.</p>
+        <div class="t-table-wrap">
+          <table class="t-table">
+            <thead><tr><th>Explorer</th><th>Level</th><th>Games</th><th>Avg min</th><th>Success</th><th>Streak</th><th>Arcade</th></tr></thead>
+            <tbody id="t-roster"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="board">
+        <h3>How your class compares</h3>
+        <p class="note">Average minutes to breakout, per game — vs. your school and all players in the same age group.</p>
+        <div id="t-chart"></div>
+      </div>
+      <div class="board">
+        <h3>Assign games</h3>
+        <p class="note">Assignments appear instantly in every student's Game Hall on the island.</p>
+        <div id="t-assign"></div>
+        <div class="t-plus-row">
+          <span>✨ Breakout+ for this class</span>
+          <label class="switch"><input type="checkbox" id="t-plus"><span></span></label>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PARENT ============ -->
+<section class="screen" id="screen-parent">
+  <div class="dash">
+    <div class="dash-head">
+      <div>
+        <h2>Family Portal</h2>
+        <div class="sub">Following <strong id="p-name">your explorer</strong>'s adventure in Breakout Land</div>
+      </div>
+      <button class="back-btn" data-back-title>← Sign out</button>
+    </div>
+    <div class="dash-grid">
+      <div class="board">
+        <div class="p-head">
+          <canvas id="p-avatar" width="84" height="104"></canvas>
+          <p class="muted">Breakout games build the skills tests can't measure — critical thinking, teamwork and stick-with-it grit. Here's how those are growing.</p>
+        </div>
+        <div class="p-summary" id="p-summary"></div>
+      </div>
+      <div class="board">
+        <h3>4Cs &amp; SEL skill growth</h3>
+        <p class="note">Signals from gameplay: first-try solves, hint use, retries and collaboration games.</p>
+        <div id="p-skills"></div>
+      </div>
+      <div class="board">
+        <h3>This week's play</h3>
+        <p class="note">Minutes in Breakout Land per day.</p>
+        <div class="p-week" id="p-week"></div>
+      </div>
+      <div class="board">
+        <h3>Rewards you control</h3>
+        <div class="p-controls">
+          <div class="p-control-row">
+            <span>🕹️ Allow earned arcade time</span>
+            <label class="switch"><input type="checkbox" id="p-arcade"><span></span></label>
+          </div>
+          <div class="p-control-row">
+            <span>Weekly limit: <span id="p-limit-val">120 min/week</span></span>
+            <input type="range" id="p-limit" min="30" max="300" step="15">
+          </div>
+        </div>
+        <h3 style="margin-top:16px">Newest badges</h3>
+        <div class="badge-grid" id="p-badges"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BUILDING MODAL ============ -->
+<div class="modal" id="building-modal">
+  <div class="modal-card board">
+    <button class="modal-close" id="bm-close" aria-label="Close">✕</button>
+    <h2 id="bm-title"></h2>
+    <div id="bm-body"></div>
+  </div>
+</div>
+
+<!-- ============ PUZZLE MODAL ============ -->
+<div class="modal" id="puzzle-modal">
+  <div class="modal-card board">
+    <button class="modal-close" id="pz-close" aria-label="Close puzzle">✕</button>
+    <div id="pz-ctx"></div>
+    <h2 id="pz-title"></h2>
+    <div id="pz-step"></div>
+    <div class="pz-lock-zone">
+      <div id="pz-lock"><div class="shackle"></div><div class="body"></div><div class="hole"></div></div>
+    </div>
+    <p id="pz-clue"></p>
+    <div id="pz-hint"></div>
+    <div id="pz-display"></div>
+    <div id="pz-pad"></div>
+  </div>
+</div>
+
+<!-- ============ CELEBRATION ============ -->
+<div class="modal" id="cel-modal">
+  <div class="modal-card board">
+    <div class="big-emoji">🔓</div>
+    <div id="cel-title">YOU BROKE OUT!</div>
+    <p id="cel-sub"></p>
+    <div id="cel-stats"></div>
+    <button class="btn-big" id="cel-btn">Collect rewards! 🔑</button>
+  </div>
+</div>
+
+<!-- ============ KEY CATCHER ============ -->
+<div class="modal" id="kc-modal">
+  <div class="modal-card board">
+    <h2>🕹️ Key Catcher</h2>
+    <p class="muted">Move with your mouse, finger, or ◀ ▶ keys. Catch keys, dodge anvils!</p>
+    <canvas id="kc-canvas"></canvas>
+    <button class="btn-small" id="kc-quit">Quit round</button>
+  </div>
+</div>
+
+<canvas id="confetti"></canvas>
+<div id="toast" role="status"></div>
+
+<script src="js/data.js"></script>
+<script src="js/state.js"></script>
+<script src="js/puzzles.js"></script>
+<script src="js/avatar.js"></script>
+<script src="js/world.js"></script>
+<script src="js/screens.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
