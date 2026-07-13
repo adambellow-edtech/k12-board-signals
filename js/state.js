@@ -28,7 +28,7 @@ const defaultState = () => ({
   assigned: ['missing-mascot', 'space-escape'],
   perms: { teacherArcade: true, parentArcade: true, weeklyLimitMin: 120 },
   plus: true,               // teacher has Breakout+ (toggle in teacher view)
-  pos: { x: 800, y: 715 },  // avatar position in world (just south of Lock Plaza)
+  pos: { x: 990, y: 648 },  // avatar position in world (just south of Lock Plaza)
 });
 
 let state = defaultState();
