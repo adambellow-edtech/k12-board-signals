@@ -1525,21 +1525,43 @@ const WORLD = { w: 1600, h: 1100 };
 const BUILDINGS = [
   { id: 'daily',  name: 'Lock Plaza',          sub: 'Lock of the Day', x: 800,  y: 470,  w: 170, h: 150 },
   { id: 'games',  name: 'Game Hall',           sub: 'Assigned games',  x: 420,  y: 560,  w: 200, h: 150 },
-  { id: 'math',   name: 'Math Trailhead',      sub: 'Breakout Math',   x: 1180, y: 400,  w: 190, h: 140 },
+  { id: 'math',   name: 'Math Trailhead',      sub: 'Breakout Math',   x: 1122, y: 438,  w: 190, h: 140 },
   { id: 'arcade', name: 'The Arcade',          sub: 'Earned play time',x: 1220, y: 760,  w: 190, h: 150 },
   { id: 'shop',   name: 'Style Shop',          sub: 'Spend your keys', x: 430,  y: 870,  w: 170, h: 135 },
   { id: 'badges', name: 'Badge Hall',          sub: 'Your trophies',   x: 640,  y: 330,  w: 170, h: 125 },
   { id: 'plus',   name: 'Breakout+ Clubhouse', sub: 'Bonus content',   x: 880,  y: 880,  w: 175, h: 140 },
 ];
 
+/* Organic island geometry — a soft blob floating in open water (diorama style) */
+const ISLAND = { cx: 800, cy: 620, R: 585, sy: 0.74 };
+function islandR(th) {
+  return ISLAND.R * (1 + .055 * Math.sin(2 * th + 1.3) + .04 * Math.sin(3 * th + 4.1) + .028 * Math.sin(5 * th + 2.2));
+}
+function blobPath(ctx, scale, dy = 0) {
+  ctx.beginPath();
+  for (let i = 0; i <= 88; i++) {
+    const th = (i / 88) * Math.PI * 2;
+    const r = islandR(th) * scale;
+    const x = ISLAND.cx + Math.cos(th) * r;
+    const y = ISLAND.cy + Math.sin(th) * r * ISLAND.sy + dy;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+function insideIsland(x, y, margin = 1) {
+  const dx = x - ISLAND.cx, dy = (y - ISLAND.cy) / ISLAND.sy;
+  const th = Math.atan2(dy, dx);
+  return Math.hypot(dx, dy) < islandR(th) * margin;
+}
+
 const TREES = [
-  [200, 300], [280, 220], [1380, 250], [1470, 340], [180, 700], [240, 1000], [1440, 980],
-  [1500, 620], [700, 180], [1000, 200], [560, 1020], [1080, 1020], [130, 480], [960, 320],
+  [350, 390], [430, 300], [700, 258], [980, 268], [1175, 330], [1258, 480], [1262, 700],
+  [1160, 895], [900, 945], [620, 945], [408, 828], [338, 600], [1052, 598], [540, 340],
 ];
 const BUSHES = [
-  [340, 420], [520, 250], [1300, 560], [1030, 640], [640, 760], [300, 780], [1360, 880], [880, 240],
+  [524, 424], [880, 318], [1146, 522], [1006, 818], [560, 758], [724, 878], [368, 700], [1236, 608],
 ];
-const ROCKS = [[460, 700], [1120, 300], [980, 960], [220, 560]];
+const ROCKS = [[470, 652], [1118, 382], [948, 928], [388, 476]];
 const FLOWERS = Array.from({ length: 46 }, (_, i) => [
   170 + ((i * 173) % 1290), 255 + ((i * 271) % 770), ['#ff6b5b', '#ffd75e', '#e75480', '#9b5de5', '#fff'][i % 5],
 ]);
@@ -1650,8 +1672,15 @@ function stepPlayer() {
     world.walking = false;
   }
 
-  state.pos.x = Math.max(130, Math.min(WORLD.w - 130, state.pos.x));
-  state.pos.y = Math.max(240, Math.min(WORLD.h - 100, state.pos.y));
+  // keep the explorer on the grass (radial island bounds)
+  if (!insideIsland(state.pos.x, state.pos.y, .855)) {
+    const dx = state.pos.x - ISLAND.cx, dy = (state.pos.y - ISLAND.cy) / ISLAND.sy;
+    const th = Math.atan2(dy, dx);
+    const r = islandR(th) * .855;
+    state.pos.x = ISLAND.cx + Math.cos(th) * r;
+    state.pos.y = ISLAND.cy + Math.sin(th) * r * ISLAND.sy;
+    world.target = null;
+  }
 
   world.nearBuilding = null;
   for (const b of BUILDINGS) {
@@ -1683,53 +1712,60 @@ function drawWorld(sec) {
   const cam = getCamera(scale);
   const W = cv.clientWidth, H = cv.clientHeight;
 
-  // sky
-  const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, '#79cdec'); sky.addColorStop(.6, '#a5e0f2'); sky.addColorStop(1, '#cdeef8');
-  ctx.fillStyle = sky;
+  // ---- open water fills the whole view (screen space, before camera transform) ----
+  const sea = ctx.createLinearGradient(0, 0, 0, H);
+  sea.addColorStop(0, '#37a6d4'); sea.addColorStop(.55, '#2c95c7'); sea.addColorStop(1, '#2384b8');
+  ctx.fillStyle = sea;
   ctx.fillRect(0, 0, W, H);
 
   ctx.save();
   ctx.scale(scale, scale);
   ctx.translate(-cam.x, -cam.y);
 
-  // ---- ocean ----
-  const sea = ctx.createLinearGradient(0, 100, 0, WORLD.h);
-  sea.addColorStop(0, '#2d9bcb'); sea.addColorStop(1, '#45b7e0');
-  ctx.fillStyle = sea;
-  roundRect(ctx, 14, 120, WORLD.w - 28, WORLD.h - 148, 100); ctx.fill();
-  // light bands in water
-  ctx.fillStyle = 'rgba(255,255,255,.06)';
-  for (let i = 0; i < 4; i++) {
-    roundRect(ctx, 40 + i * 12, 150 + i * 26, WORLD.w - 80 - i * 24, WORLD.h - 210 - i * 50, 90); ctx.fill();
-  }
-  // waves
+  // depth rings hugging the island contour (lighter shallows)
+  ctx.fillStyle = 'rgba(120,214,235,.5)';
+  blobPath(ctx, 1.22, 14); ctx.fill();
+  ctx.fillStyle = 'rgba(150,226,242,.55)';
+  blobPath(ctx, 1.11, 10); ctx.fill();
+  // sparkles + waves in open water
   ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
-  for (let i = 0; i < 10; i++) {
-    const wx = 110 + (i * 217) % (WORLD.w - 240), wy = 160 + (i * 313) % (WORLD.h - 250);
+  for (let i = 0; i < 12; i++) {
+    const wx = 60 + (i * 267) % (WORLD.w - 120), wy = 60 + (i * 353) % (WORLD.h - 120);
+    if (insideIsland(wx, wy, 1.12)) continue;
     const off = Math.sin(sec * 1.5 + i) * 5;
     ctx.beginPath(); ctx.arc(wx + off, wy, 11, Math.PI * .12, Math.PI * .88); ctx.stroke();
   }
 
-  // ---- island: foam, beach, grass ----
-  ctx.fillStyle = 'rgba(255,255,255,.75)';
-  roundRect(ctx, 58 - Math.sin(sec * 1.1) * 2, 178, WORLD.w - 116 + Math.sin(sec * 1.1) * 4, WORLD.h - 252, 86); ctx.fill();
-  const sand = ctx.createLinearGradient(0, 180, 0, WORLD.h);
-  sand.addColorStop(0, '#f2e0ad'); sand.addColorStop(1, '#e7cd92');
-  ctx.fillStyle = sand;
-  roundRect(ctx, 66, 186, WORLD.w - 132, WORLD.h - 264, 80); ctx.fill();
-  // wet sand line
-  ctx.strokeStyle = 'rgba(160,128,70,.28)'; ctx.lineWidth = 5;
-  roundRect(ctx, 72, 192, WORLD.w - 144, WORLD.h - 276, 76); ctx.stroke();
+  // animated foam collar
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  blobPath(ctx, 1.028 + Math.sin(sec * 1.3) * .006, 6); ctx.fill();
 
-  const grass = ctx.createRadialGradient(WORLD.w / 2, WORLD.h * .45, 120, WORLD.w / 2, WORLD.h * .55, 900);
-  grass.addColorStop(0, '#8ed172'); grass.addColorStop(.7, '#74bd5c'); grass.addColorStop(1, '#5da84c');
+  // cliff face under the island front edge (diorama depth)
+  ctx.fillStyle = '#b98e52';
+  blobPath(ctx, 1, 34); ctx.fill();
+  ctx.fillStyle = '#a87c42';
+  blobPath(ctx, 1, 22); ctx.fill();
+
+  // sandy beach top
+  const sand = ctx.createLinearGradient(0, ISLAND.cy - 460, 0, ISLAND.cy + 470);
+  sand.addColorStop(0, '#f4e3b2'); sand.addColorStop(1, '#e8cf92');
+  ctx.fillStyle = sand;
+  blobPath(ctx, 1, 0); ctx.fill();
+  // wet sand line
+  ctx.strokeStyle = 'rgba(160,128,70,.3)'; ctx.lineWidth = 5;
+  blobPath(ctx, .985, 2); ctx.stroke();
+
+  // grass plateau with soft under-shadow
+  ctx.fillStyle = '#559e46';
+  blobPath(ctx, .905, 12); ctx.fill();
+  const grass = ctx.createRadialGradient(ISLAND.cx, ISLAND.cy - 80, 120, ISLAND.cx, ISLAND.cy + 40, 720);
+  grass.addColorStop(0, '#92d476'); grass.addColorStop(.7, '#76bf5e'); grass.addColorStop(1, '#61ad4f');
   ctx.fillStyle = grass;
-  roundRect(ctx, 92, 212, WORLD.w - 184, WORLD.h - 316, 66); ctx.fill();
-  // mowed light bands
+  blobPath(ctx, .9, 0); ctx.fill();
+  // mowed light bands, clipped to the grass
   ctx.save();
-  roundRect(ctx, 92, 212, WORLD.w - 184, WORLD.h - 316, 66); ctx.clip();
-  ctx.fillStyle = 'rgba(255,255,255,.045)';
+  blobPath(ctx, .9, 0); ctx.clip();
+  ctx.fillStyle = 'rgba(255,255,255,.05)';
   for (let i = 0; i < 8; i++) {
     ctx.save();
     ctx.translate(WORLD.w / 2, WORLD.h / 2); ctx.rotate(-.35);
@@ -1737,6 +1773,9 @@ function drawWorld(sec) {
     ctx.restore();
   }
   ctx.restore();
+
+  // wooden dock + rowboat (south shore)
+  drawDock(ctx, sec);
 
   // ---- paths ----
   const drawPath = (x0, y0, x1, y1, mx, my) => {
@@ -1765,7 +1804,7 @@ function drawWorld(sec) {
   ctx.strokeStyle = '#c8a468'; ctx.lineWidth = 7;
   ctx.beginPath(); ctx.arc(800, 570, 96, 0, Math.PI * 2); ctx.stroke();
   ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(170,132,80,.55)';
+  ctx.strokeStyle = 'rgba(170,132,80,.3)';
   for (const r of [34, 58, 80]) { ctx.beginPath(); ctx.arc(800, 570, r, 0, Math.PI * 2); ctx.stroke(); }
   for (let a = 0; a < 16; a++) {
     const th = (a / 16) * Math.PI * 2;
@@ -1777,7 +1816,7 @@ function drawWorld(sec) {
 
   // flowers & grass tufts & rocks
   TUFTS.forEach(([tx, ty], i) => {
-    if (Math.hypot(tx - 800, ty - 570) < 120) return;
+    if (!insideIsland(tx, ty, .86) || Math.hypot(tx - 800, ty - 570) < 120) return;
     ctx.strokeStyle = 'rgba(58,128,52,.5)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
     const sway = Math.sin(sec * 2 + i) * 1.5;
     ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx - 3 + sway, ty - 7); ctx.stroke();
@@ -1785,7 +1824,7 @@ function drawWorld(sec) {
     ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + 5 + sway, ty - 5); ctx.stroke();
   });
   FLOWERS.forEach(([fx, fy, c], i) => {
-    if (Math.hypot(fx - 800, fy - 570) < 125) return;
+    if (!insideIsland(fx, fy, .86) || Math.hypot(fx - 800, fy - 570) < 125) return;
     const sway = Math.sin(sec * 1.8 + i) * 1.2;
     ctx.fillStyle = c;
     for (let p = 0; p < 5; p++) {
@@ -1814,8 +1853,8 @@ function drawWorld(sec) {
   // ---- y-sorted entities ----
   const drawables = [
     ...BUILDINGS.map(b => ({ y: b.y, fn: () => drawBuilding(ctx, b, sec) })),
-    ...TREES.map(([tx, ty]) => ({ y: ty, fn: () => drawTree(ctx, tx, ty, sec) })),
-    ...BUSHES.map(([bx, by]) => ({ y: by, fn: () => drawBush(ctx, bx, by, sec) })),
+    ...TREES.filter(([tx, ty]) => insideIsland(tx, ty, .84)).map(([tx, ty]) => ({ y: ty, fn: () => drawTree(ctx, tx, ty, sec) })),
+    ...BUSHES.filter(([bx, by]) => insideIsland(bx, by, .84)).map(([bx, by]) => ({ y: by, fn: () => drawBush(ctx, bx, by, sec) })),
     {
       y: state.pos.y,
       fn: () => {
@@ -1847,6 +1886,7 @@ function drawWorld(sec) {
   // floating sparkle keys
   for (let i = 0; i < 5; i++) {
     const kx = 300 + (i * 331) % 1100, ky = 280 + (i * 449) % 660;
+    if (!insideIsland(kx, ky, .88)) continue;
     const fl = Math.sin(sec * 2 + i * 1.7) * 6;
     ctx.save(); ctx.globalAlpha = .55 + Math.sin(sec * 3 + i) * .25;
     ctx.translate(kx, ky + fl); ctx.rotate(Math.sin(sec + i) * .2);
@@ -2450,6 +2490,39 @@ function drawLockStatue(ctx, x, y, sec) {
     ctx.restore();
   }
   ctx.restore();
+}
+
+function drawDock(ctx, sec) {
+  const dx = 1010, top = 995;
+  // posts in water
+  ctx.fillStyle = '#8a5f31';
+  [[dx - 20, top + 68], [dx + 20, top + 68], [dx - 20, top + 30], [dx + 20, top + 30]].forEach(([px, py]) => {
+    ctx.beginPath(); ctx.ellipse(px, py + 6, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+  });
+  // planks
+  const g = ctx.createLinearGradient(dx, top, dx, top + 84);
+  g.addColorStop(0, '#c99b5f'); g.addColorStop(1, '#a87c42');
+  ctx.fillStyle = g;
+  roundRect(ctx, dx - 26, top, 52, 84, 8); ctx.fill();
+  ctx.strokeStyle = 'rgba(90,60,20,.35)'; ctx.lineWidth = 2;
+  roundRect(ctx, dx - 26, top, 52, 84, 8); ctx.stroke();
+  for (let i = 1; i < 6; i++) {
+    ctx.beginPath(); ctx.moveTo(dx - 24, top + i * 14); ctx.lineTo(dx + 24, top + i * 14); ctx.stroke();
+  }
+  // rowboat bobbing beside the dock
+  const bob = Math.sin(sec * 1.4) * 3, bx = dx + 62, by = top + 62 + bob;
+  ctx.fillStyle = 'rgba(0,30,60,.18)';
+  ctx.beginPath(); ctx.ellipse(bx, by + 12, 34, 8, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#b34a35';
+  ctx.beginPath();
+  ctx.moveTo(bx - 34, by);
+  ctx.quadraticCurveTo(bx, by + 22, bx + 34, by);
+  ctx.lineTo(bx + 26, by - 10);
+  ctx.quadraticCurveTo(bx, by - 2, bx - 26, by - 10);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(60,20,10,.4)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#e0b070';
+  roundRect(ctx, bx - 12, by - 6, 24, 5, 2.5); ctx.fill();
 }
 
 function drawKeyGlyph(ctx, x, y, s, color) {
