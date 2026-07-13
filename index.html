@@ -61,26 +61,38 @@
   <button id="enter-btn">Enter</button>
 </section>
 
-<!-- ============ HUD ============ -->
+<!-- ============ HUD (storybook style: navy panels) ============ -->
 <div id="hud">
-  <div class="hud-left">
-    <div class="hud-card">
-      <button id="hud-closet" title="Open the Closet (edit your look)">
-        <canvas id="hud-avatar" width="48" height="48"></canvas>
-        <span class="hud-id">
-          <strong id="hud-name">Explorer</strong>
-          <span id="hud-level">Lv 1 · Rookie Solver</span>
-          <span class="hud-xp"><div id="hud-xpbar" style="width:0%"></div></span>
-        </span>
-      </button>
+  <div class="navy-panel" id="quest-panel">
+    <div class="qp-head">TODAY'S QUESTS <span id="qp-count">0/3</span></div>
+    <div class="qp-row" id="qp-daily" title="Crack the Lock of the Day">
+      <span class="qp-ico">🔐</span><div class="qp-track"><div class="qp-fill" style="background:#4c9aff"></div></div><span class="qp-check">✓</span>
+    </div>
+    <div class="qp-row" id="qp-game" title="Break out of an assigned game">
+      <span class="qp-ico">🚩</span><div class="qp-track"><div class="qp-fill" style="background:#26b59d"></div></div><span class="qp-check">✓</span>
+    </div>
+    <div class="qp-row" id="qp-math" title="Clear a Breakout Math quest">
+      <span class="qp-ico">➗</span><div class="qp-track"><div class="qp-fill" style="background:#a678ec"></div></div><span class="qp-check">✓</span>
     </div>
   </div>
   <div class="hud-right">
-    <div class="hud-card hud-stat" title="Keys — earn them by breaking out, spend them in the Style Shop"><span class="em">🔑</span><span id="hud-keys">0</span></div>
-    <div class="hud-card hud-stat" title="Arcade minutes earned"><span class="em">🕹️</span><span id="hud-arcade">0m</span></div>
-    <div class="hud-card hud-stat" title="Lock of the Day streak"><span class="em">🔥</span><span id="hud-streak">0</span></div>
+    <div class="navy-panel hud-capsule">
+      <span class="cap-stat" title="Keys — spend them in the Style Shop">🔑 <b id="hud-keys">0</b></span><i class="cap-div"></i>
+      <span class="cap-stat" title="Arcade minutes earned">🕹️ <b id="hud-arcade">0m</b></span><i class="cap-div"></i>
+      <span class="cap-stat" title="Lock of the Day streak">🔥 <b id="hud-streak">0</b></span>
+    </div>
     <button class="hud-btn" id="hud-mute" title="Sound on/off">🔊</button>
     <button class="hud-btn" id="hud-home" title="Back to title">🏠</button>
+  </div>
+  <div class="navy-panel" id="player-card">
+    <button id="hud-closet" title="Open the Closet (edit your look)">
+      <canvas id="hud-avatar" width="56" height="56"></canvas>
+    </button>
+    <div class="pc-info">
+      <strong id="hud-name">Explorer</strong>
+      <span id="hud-level">Lv 1 · Rookie Solver</span>
+      <span class="hud-xp"><div id="hud-xpbar" style="width:0%"></div></span>
+    </div>
   </div>
 </div>
 

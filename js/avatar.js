@@ -48,7 +48,7 @@ function drawAvatar(ctx, x, y, scale, cfg, frame = 0, walking = false, dir = 1) 
   // body
   ctx.fillStyle = outfit;
   roundRect(ctx, -13 * s, -44 * s, 26 * s, 30 * s, 10 * s); ctx.fill();
-  ctx.strokeStyle = 'rgba(45,36,60,.28)'; ctx.lineWidth = 2 * s; ctx.stroke();
+  ctx.strokeStyle = 'rgba(40,34,56,.5)'; ctx.lineWidth = 2.2 * s; ctx.stroke();
   // shirt shading
   ctx.fillStyle = 'rgba(255,255,255,.18)';
   roundRect(ctx, -13 * s, -44 * s, 26 * s, 9 * s, 8 * s); ctx.fill();
@@ -73,7 +73,7 @@ function drawAvatar(ctx, x, y, scale, cfg, frame = 0, walking = false, dir = 1) 
   // head (big, chibi)
   ctx.fillStyle = skin;
   ctx.beginPath(); ctx.arc(0, -62 * s, 19 * s, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = 'rgba(45,36,60,.28)'; ctx.lineWidth = 2 * s; ctx.stroke();
+  ctx.strokeStyle = 'rgba(40,34,56,.5)'; ctx.lineWidth = 2.2 * s; ctx.stroke();
 
   // hair styles
   ctx.fillStyle = hair;

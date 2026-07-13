@@ -23,14 +23,27 @@ function updateHUD() {
   document.getElementById('hud-arcade').textContent = `${state.arcadeMin}m`;
   document.getElementById('hud-streak').textContent = state.streak;
   document.getElementById('hud-xpbar').style.width = `${li.into}%`;
+
+  // today's quests
+  const quests = [
+    ['qp-daily', state.lastDaily === todayKey()],
+    ['qp-game', Object.keys(state.gamesDone).length > 0],
+    ['qp-math', Object.keys(state.mathStars).length > 0],
+  ];
+  let done = 0;
+  quests.forEach(([id, ok]) => {
+    const row = document.getElementById(id);
+    if (row) row.classList.toggle('done', ok);
+    if (ok) done++;
+  });
+  const count = document.getElementById('qp-count');
+  if (count) count.textContent = `${done}/3`;
+
+  // portrait
   const chip = document.getElementById('hud-avatar');
   const ctx = chip.getContext('2d');
   ctx.clearRect(0, 0, chip.width, chip.height);
-  ctx.save();
-  ctx.beginPath(); ctx.arc(24, 24, 24, 0, Math.PI * 2); ctx.clip();
-  ctx.fillStyle = '#bfe9f5'; ctx.fillRect(0, 0, 48, 48);
-  drawAvatar(ctx, 24, 66, .62, state.player, 0, false, 1);
-  ctx.restore();
+  drawAvatar(ctx, 28, 76, .72, state.player, 0, false, 1);
 }
 
 /* ---- building router ---- */
