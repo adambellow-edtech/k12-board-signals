@@ -12,7 +12,23 @@
 <!-- ============ TITLE ============ -->
 <section class="screen" id="screen-title">
   <div class="title-wrap">
-    <span class="title-lock">🔐</span>
+    <svg class="title-lock" viewBox="0 0 120 132" width="104" height="114" aria-hidden="true">
+      <defs>
+        <linearGradient id="lk-body" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#ff9a3d"/><stop offset=".5" stop-color="#f5731f"/><stop offset="1" stop-color="#d94f12"/>
+        </linearGradient>
+        <linearGradient id="lk-shackle" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffd257"/><stop offset="1" stop-color="#d98e00"/>
+        </linearGradient>
+      </defs>
+      <path d="M32 62 V42 a28 28 0 0 1 56 0 V62" fill="none" stroke="url(#lk-shackle)" stroke-width="14" stroke-linecap="round"/>
+      <path d="M32 62 V42 a28 28 0 0 1 56 0 V62" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="4" stroke-linecap="round" transform="translate(-3,-3)"/>
+      <rect x="14" y="56" width="92" height="70" rx="18" fill="url(#lk-body)" stroke="rgba(45,36,60,.35)" stroke-width="3"/>
+      <rect x="22" y="63" width="22" height="56" rx="11" fill="rgba(255,255,255,.28)"/>
+      <circle cx="60" cy="86" r="11" fill="#5a2604"/>
+      <rect x="55" y="90" width="10" height="22" rx="5" fill="#5a2604"/>
+      <circle cx="60" cy="86" r="4.5" fill="#ffd257" opacity=".9"/>
+    </svg>
     <h1 class="title-logo">BREAKOUT <span class="land">LAND</span></h1>
     <p class="title-tag">Think hard. Break out. Play on! ✦ A Breakout EDU world</p>
     <canvas id="title-canvas" aria-hidden="true"></canvas>
