@@ -390,7 +390,7 @@ function renderMathMap() {
     return state.mathStars[nodeKey(grade, prevCore.j)] ? 'open' : 'locked';
   };
 
-  const typeColor = { core: '#57c26b', review: '#4cc9f0', challenge: '#9b5de5', boss: '#ffb627' };
+  const typeColor = { core: '#26b59d', review: '#0068ff', challenge: '#5c25b7', boss: '#ffb627' };
   const typeLabel = { core: 'Quest', review: 'Review', challenge: 'Challenge', boss: 'BOSS' };
 
   const nodes = DATA.mathTrail.map((type, i) => {

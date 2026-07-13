@@ -159,7 +159,9 @@ const DATA = {
     { game: 'Space Escape',     class: 17.2, school: 16.5, global: 18.9 },
     { game: 'Mult. Meadow 1–5', class: 8.1,  school: 9.4,  global: 10.2 },
   ],
-  chartColors: { class: '#00907F', school: '#B26A00', global: '#7A44C9' },
+  // Brand-derived series colors (validated for CVD + contrast):
+  // class = Breakout Blue Light, school = Gamer Green (darkened step), global = Puzzling Purple
+  chartColors: { class: '#0068ff', school: '#1c9a85', global: '#5c25b7' },
 
   parentWeek: [
     { day: 'Mon', min: 22 }, { day: 'Tue', min: 15 }, { day: 'Wed', min: 30 },

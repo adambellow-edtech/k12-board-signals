@@ -12,24 +12,16 @@
 <!-- ============ TITLE ============ -->
 <section class="screen" id="screen-title">
   <div class="title-wrap">
-    <svg class="title-lock" viewBox="0 0 120 132" width="104" height="114" aria-hidden="true">
-      <defs>
-        <linearGradient id="lk-body" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#ff9a3d"/><stop offset=".5" stop-color="#f5731f"/><stop offset="1" stop-color="#d94f12"/>
-        </linearGradient>
-        <linearGradient id="lk-shackle" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#ffd257"/><stop offset="1" stop-color="#d98e00"/>
-        </linearGradient>
-      </defs>
-      <path d="M32 62 V42 a28 28 0 0 1 56 0 V62" fill="none" stroke="url(#lk-shackle)" stroke-width="14" stroke-linecap="round"/>
-      <path d="M32 62 V42 a28 28 0 0 1 56 0 V62" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="4" stroke-linecap="round" transform="translate(-3,-3)"/>
-      <rect x="14" y="56" width="92" height="70" rx="18" fill="url(#lk-body)" stroke="rgba(45,36,60,.35)" stroke-width="3"/>
-      <rect x="22" y="63" width="22" height="56" rx="11" fill="rgba(255,255,255,.28)"/>
-      <circle cx="60" cy="86" r="11" fill="#5a2604"/>
-      <rect x="55" y="90" width="10" height="22" rx="5" fill="#5a2604"/>
-      <circle cx="60" cy="86" r="4.5" fill="#ffd257" opacity=".9"/>
+    <!-- Breakout EDU logomark (white, per brand guide: white logo over dark blue) -->
+    <svg class="title-lock" viewBox="0 0 100 100" width="96" height="96" aria-hidden="true">
+      <g fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M50 33 L50 27.5 Q50 21 56.5 22.2 L72 25 Q78 26.2 78 32.5 L78 67.5 Q78 73.8 72 75 L56.5 77.8 Q50 79 50 72.5 L50 67"/>
+      </g>
+      <g fill="#ffffff">
+        <path d="M14 50 L36 31.5 L36 42 L62 42 Q66 42 66 46 L66 54 Q66 58 62 58 L36 58 L36 68.5 Z"/>
+      </g>
     </svg>
-    <h1 class="title-logo">BREAKOUT <span class="land">LAND</span></h1>
+    <h1 class="title-logo">Breakout<span class="land">LAND</span></h1>
     <p class="title-tag">Think hard. Break out. Play on! ✦ A Breakout EDU world</p>
     <canvas id="title-canvas" aria-hidden="true"></canvas>
     <div class="role-row">
@@ -107,9 +99,9 @@
       <svg id="math-svg" viewBox="0 0 900 460" role="img" aria-label="Breakout Math adventure trail"></svg>
     </div>
     <div class="math-legend">
-      <span><i style="background:#57c26b"></i>Quest — your math path</span>
-      <span><i style="background:#4cc9f0"></i>Review — warm-up, always open</span>
-      <span><i style="background:#9b5de5"></i>Challenge — unlock by beating a quest in ≤2 tries</span>
+      <span><i style="background:#26b59d"></i>Quest — your math path</span>
+      <span><i style="background:#0068ff"></i>Review — warm-up, always open</span>
+      <span><i style="background:#5c25b7"></i>Challenge — unlock by beating a quest in ≤2 tries</span>
       <span><i style="background:#ffb627"></i>Boss lock — end of unit</span>
     </div>
   </div>

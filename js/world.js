@@ -304,7 +304,7 @@ function drawWorld(sec) {
         ctx.font = '700 13px system-ui, sans-serif';
         const nm = state.player.name || 'Explorer';
         const tw = ctx.measureText(nm).width;
-        ctx.fillStyle = 'rgba(29,42,77,.78)';
+        ctx.fillStyle = 'rgba(0,45,114,.8)';
         roundRect(ctx, state.pos.x - tw / 2 - 9, state.pos.y - 120, tw + 18, 21, 10.5); ctx.fill();
         ctx.fillStyle = '#fff';
         ctx.textAlign = 'center';
