@@ -49,14 +49,10 @@ function canWalk(x, y) {
 
 /* Idle NPCs living in the painting (name pills in brand colors) */
 const NPCS = [
-  { name: 'Leo', color: '#0068ff', mode: 'fish', x: 560, y: 812, dir: -1,
-    cfg: { skin: '#8c5a33', hairStyle: 'buzz', hairColor: '#2b2118', outfit: 'tee-teal', accessory: 'cap', pet: 'nopet' } },
-  { name: 'Maya', color: '#c914a7', mode: 'read', x: 1268, y: 600, dir: -1,
-    cfg: { skin: '#d99a6c', hairStyle: 'long', hairColor: '#5c3b1e', outfit: 'tee-purple', accessory: 'none', pet: 'nopet' } },
-  { name: 'Zoe', color: '#26b59d', mode: 'wander', cx: 990, cy: 622, r: 95, speed: .3, dir: 1,
-    cfg: { skin: '#ffd9b3', hairStyle: 'pony', hairColor: '#c94f30', outfit: 'tee-gold', accessory: 'none', pet: 'nopet' } },
-  { name: 'Kai', color: '#5c25b7', mode: 'sit', x: 590, y: 390, dir: -1,
-    cfg: { skin: '#b5764a', hairStyle: 'spiky', hairColor: '#2b2118', outfit: 'tee-coral', accessory: 'none', pet: 'nopet' } },
+  { name: 'Leo',  color: '#0068ff', mode: 'fish',   x: 560, y: 812, dir: -1, cfg: { hero: 7, accessory: 'none' } },
+  { name: 'Maya', color: '#c914a7', mode: 'read',   x: 1268, y: 600, dir: -1, cfg: { hero: 0, accessory: 'none' } },
+  { name: 'Zoe',  color: '#26b59d', mode: 'wander', cx: 990, cy: 622, r: 95, speed: .3, dir: 1, cfg: { hero: 11, accessory: 'none' } },
+  { name: 'Kai',  color: '#5c25b7', mode: 'sit',    x: 590, y: 390, dir: -1, cfg: { hero: 9, accessory: 'none' } },
 ];
 
 const SPARKLE_KEYS = [[865, 300], [1245, 565], [770, 705], [1445, 618], [1085, 862]];
@@ -64,7 +60,7 @@ const SPARKLE_KEYS = [[865, 300], [1245, 565], [770, 705], [1445, 618], [1085, 8
 const world = {
   cv: null, ctx: null, raf: null,
   keysDown: {}, target: null, nearBuilding: null,
-  dir: 1, walking: false, t0: 0, clouds: [], birds: [],
+  dir: 1, walking: false, t0: 0, clouds: [], birds: [], trailFx: [],
 };
 
 function enterWorld() {
@@ -224,6 +220,28 @@ function drawWorld(sec) {
     ctx.save(); ctx.globalAlpha = .6 + Math.sin(sec * 3 + i) * .25;
     ctx.translate(kx, ky + fl); ctx.rotate(Math.sin(sec + i) * .2);
     drawKeyGlyph(ctx, 0, 0, .85, '#ffe27a');
+    ctx.restore();
+  });
+
+  // walk-trail particles (Style Shop unlockable)
+  if (world.walking && state.player.trail && state.player.trail !== 'no-trail' && ((sec * 30) | 0) % 3 === 0) {
+    world.trailFx.push({ x: state.pos.x + (Math.random() - .5) * 16, y: state.pos.y + (Math.random() - .5) * 6, t: sec, kind: state.player.trail });
+    if (world.trailFx.length > 40) world.trailFx.shift();
+  }
+  world.trailFx = world.trailFx.filter(p => sec - p.t < 1.1);
+  world.trailFx.forEach(p => {
+    const a = 1 - (sec - p.t) / 1.1;
+    ctx.save(); ctx.globalAlpha = a * .85;
+    if (p.kind === 'sparkle') {
+      ctx.fillStyle = '#ffd75e';
+      drawStar(ctx, p.x, p.y - (sec - p.t) * 18, 4, 6 * a + 2, 2.4 * a + .8); ctx.fill();
+    } else if (p.kind === 'bubbles') {
+      ctx.strokeStyle = '#8fdcf5'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(p.x, p.y - (sec - p.t) * 26, 4 + a * 4, 0, Math.PI * 2); ctx.stroke();
+    } else {
+      ctx.fillStyle = ['#ff6b5b', '#ffd75e', '#26b59d', '#0068ff', '#9b5de5'][((p.t * 10) | 0) % 5];
+      ctx.beginPath(); ctx.arc(p.x, p.y - (sec - p.t) * 14, 3 + a * 3, 0, Math.PI * 2); ctx.fill();
+    }
     ctx.restore();
   });
 

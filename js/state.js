@@ -1,17 +1,15 @@
 /* Breakout Land — game state, economy, persistence */
 
-const SAVE_KEY = 'breakoutLandSave.v1';
+const SAVE_KEY = 'breakoutLandSave.v2';
 
 const defaultState = () => ({
   created: false,
   player: {
     name: '',
-    skin: DATA.skins[1],
-    hairStyle: 'puff',
-    hairColor: DATA.hairColors[0],
-    outfit: 'tee-teal',
+    hero: 4,
     accessory: 'none',
     pet: 'nopet',
+    trail: 'no-trail',
   },
   keys: 15,
   totalKeys: 15,

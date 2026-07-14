@@ -1,25 +1,17 @@
 /* Breakout Land — content data (mock content standing in for the Breakout EDU catalog) */
 
 const DATA = {
-  skins: ['#ffd9b3', '#f0b98d', '#d99a6c', '#b5764a', '#8c5a33', '#6b4226'],
-  hairColors: ['#2b2118', '#5c3b1e', '#a86a2f', '#e8c15a', '#c94f30', '#7a4fd0', '#2ec4b6', '#e75480'],
-  hairStyles: [
-    { id: 'spiky',   name: 'Spiky' },
-    { id: 'puff',    name: 'Curly Puff' },
-    { id: 'long',    name: 'Long' },
-    { id: 'buzz',    name: 'Buzz' },
-    { id: 'pony',    name: 'Ponytail' },
-    { id: 'swoop',   name: 'Swoop' },
+  // The painted cast (assets/heroes.webp, 6x2 grid — index = sheet position)
+  heroes: [
+    { name: 'Nova' }, { name: 'Miles' }, { name: 'Pip' }, { name: 'Blaze' },
+    { name: 'Sunny' }, { name: 'Ash' }, { name: 'Rio' }, { name: 'Specs' },
+    { name: 'Buzz' }, { name: 'Skye' }, { name: 'Scout' }, { name: 'Ziggy' },
   ],
-  outfits: [
-    { id: 'tee-teal',    name: 'Teal Tee',      color: '#2ec4b6', free: true },
-    { id: 'tee-coral',   name: 'Coral Tee',     color: '#ff6b5b', free: true },
-    { id: 'tee-gold',    name: 'Sunny Tee',     color: '#ffb627', free: true },
-    { id: 'tee-purple',  name: 'Berry Tee',     color: '#9b5de5', free: true },
-    { id: 'hoodie-navy', name: 'Navy Hoodie',   color: '#27406e', price: 30 },
-    { id: 'inventor',    name: 'Inventor Coat', color: '#f2f0e9', price: 45 },
-    { id: 'explorer',    name: 'Explorer Vest', color: '#7a5230', price: 45 },
-    { id: 'star-suit',   name: 'Star Suit',     color: '#3b2a6b', price: 80 },
+  trails: [
+    { id: 'no-trail', name: 'No Trail', free: true },
+    { id: 'sparkle',  name: 'Sparkle Trail', price: 35 },
+    { id: 'bubbles',  name: 'Bubble Trail',  price: 45 },
+    { id: 'rainbow',  name: 'Rainbow Trail', price: 80 },
   ],
   accessories: [
     { id: 'none',     name: 'None',          free: true },

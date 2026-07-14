@@ -4,7 +4,9 @@
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + id).classList.add('active');
-  document.getElementById('hud').style.display = (id === 'world' || id === 'math') ? 'flex' : 'none';
+  const hud = document.getElementById('hud');
+  hud.style.display = (id === 'world' || id === 'math') ? 'block' : 'none';
+  hud.classList.toggle('math-mode', id === 'math');
 }
 function screenIs(id) {
   const el = document.getElementById('screen-' + id);
@@ -41,9 +43,7 @@ function updateHUD() {
 
   // portrait
   const chip = document.getElementById('hud-avatar');
-  const ctx = chip.getContext('2d');
-  ctx.clearRect(0, 0, chip.width, chip.height);
-  drawAvatar(ctx, 28, 76, .72, state.player, 0, false, 1);
+  drawHeroPortrait(chip.getContext('2d'), chip.width, state.player.hero || 0);
 }
 
 /* ---- building router ---- */
@@ -265,14 +265,14 @@ function renderShop(title, body) {
       }).join('')}
     </div>`;
   body.innerHTML = `
-    <p class="muted">Spend your hard-earned keys! Equip anything you own in <strong>The Closet</strong> (avatar button, top left).</p>
+    <p class="muted">Spend your hard-earned keys! Equip anything you own in <strong>The Closet</strong> (avatar card, bottom left).</p>
     <div class="reward-row"><span>Your keys: <strong>${state.keys} 🔑</strong></span></div>
-    ${section('Outfits', DATA.outfits, 'outfit')}
     ${section('Accessories', DATA.accessories, 'accessory')}
-    ${section('Pets', DATA.pets, 'pet')}`;
+    ${section('Sidekick pets', DATA.pets, 'pet')}
+    ${section('Walk trails', DATA.trails, 'trail')}`;
   body.querySelectorAll('[data-buy]').forEach(btn => {
     btn.onclick = () => {
-      const all = [...DATA.outfits, ...DATA.accessories, ...DATA.pets];
+      const all = [...DATA.trails, ...DATA.accessories, ...DATA.pets];
       const item = all.find(i => i.id === btn.dataset.buy);
       if (itemOwned(item)) {
         state.player[btn.dataset.kind] = item.id;
@@ -372,19 +372,11 @@ function renderMathMap() {
     gp.appendChild(b);
   });
 
-  // trail
-  const svgW = 900, svgH = 460;
-  const pts = DATA.mathTrail.map((_, i) => {
-    const t = i / (DATA.mathTrail.length - 1);
-    const x = 70 + t * (svgW - 140);
-    const y = svgH / 2 + Math.sin(t * Math.PI * 2.2) * 130 + (i % 2 ? 26 : -26);
-    return [x, y];
-  });
-  let path = `M ${pts[0][0]} ${pts[0][1]}`;
-  for (let i = 1; i < pts.length; i++) {
-    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
-    path += ` C ${(x0 + x1) / 2} ${y0}, ${(x0 + x1) / 2} ${y1}, ${x1} ${y1}`;
-  }
+  // node positions along the painted trail (assets/trail.jpg, 1920x1080)
+  const pts = [
+    [500, 1000], [715, 905], [985, 815], [1155, 680], [1090, 545],
+    [905, 455], [830, 330], [950, 225], [1115, 165], [1480, 255],
+  ];
 
   const nodeState = i => {
     const key = nodeKey(grade, i);
@@ -411,22 +403,26 @@ function renderMathMap() {
     const st = nodeState(i);
     const key = nodeKey(grade, i);
     const stars = state.mathStars[key] || 0;
-    const r = type === 'boss' ? 34 : 26;
+    const r = type === 'boss' ? 58 : 44;
     const locked = st === 'locked' || st === 'locked-challenge';
     return `
       <g class="mnode ${st}" data-node="${i}" transform="translate(${x},${y})" tabindex="${locked ? -1 : 0}" role="button" aria-label="${typeLabel[type]} ${i + 1}">
-        ${st === 'open' && type !== 'review' ? `<circle r="${r + 8}" fill="${typeColor[type]}" opacity=".25"><animate attributeName="r" values="${r + 4};${r + 12};${r + 4}" dur="1.6s" repeatCount="indefinite"/></circle>` : ''}
-        <circle r="${r}" fill="${locked ? '#b8c4c9' : typeColor[type]}" stroke="#fff" stroke-width="4"/>
-        <text y="6" text-anchor="middle" font-size="${type === 'boss' ? 20 : 16}" font-weight="900" fill="#fff">${locked ? '🔒' : (st === 'done' ? '✓' : i + 1)}</text>
-        <text y="${r + 18}" text-anchor="middle" font-size="11" font-weight="800" fill="#27406e">${typeLabel[type]}</text>
-        ${stars ? `<text y="${-r - 8}" text-anchor="middle" font-size="13">${'⭐'.repeat(stars)}</text>` : ''}
+        ${st === 'open' && type !== 'review' ? `<circle r="${r + 12}" fill="${typeColor[type]}" opacity=".3"><animate attributeName="r" values="${r + 6};${r + 18};${r + 6}" dur="1.6s" repeatCount="indefinite"/></circle>` : ''}
+        <circle r="${r}" fill="${locked ? '#a9b6bc' : typeColor[type]}" stroke="#fff" stroke-width="7"/>
+        <circle r="${r}" fill="none" stroke="rgba(30,40,30,.35)" stroke-width="2.5" transform="translate(0,3)"/>
+        <text y="10" text-anchor="middle" font-size="${type === 'boss' ? 34 : 28}" font-weight="900" fill="#fff">${locked ? '🔒' : (st === 'done' ? '✓' : i + 1)}</text>
+        <text y="${r + 30}" text-anchor="middle" font-size="20" font-weight="800" fill="#fff" stroke="rgba(20,50,25,.65)" stroke-width="4" paint-order="stroke">${typeLabel[type]}</text>
+        ${stars ? `<text y="${-r - 14}" text-anchor="middle" font-size="26">${'⭐'.repeat(stars)}</text>` : ''}
       </g>`;
   }).join('');
 
-  document.getElementById('math-svg').innerHTML = `
-    <path d="${path}" fill="none" stroke="#e6c98f" stroke-width="22" stroke-linecap="round"/>
-    <path d="${path}" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="2 16" stroke-linecap="round"/>
-    ${nodes}`;
+  // dashed hop-line between consecutive stops (the painted path carries the rest)
+  let links = '';
+  for (let i = 1; i < pts.length; i++) {
+    links += `<line x1="${pts[i - 1][0]}" y1="${pts[i - 1][1]}" x2="${pts[i][0]}" y2="${pts[i][1]}"
+      stroke="rgba(255,255,255,.55)" stroke-width="5" stroke-dasharray="2 18" stroke-linecap="round"/>`;
+  }
+  document.getElementById('math-svg').innerHTML = links + nodes;
 
   document.querySelectorAll('.mnode').forEach(g => {
     const i = parseInt(g.dataset.node, 10);

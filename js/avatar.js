@@ -1,154 +1,109 @@
-/* Breakout Land — chibi avatar renderer (canvas) + avatar creator UI */
+/* Breakout Land — painted hero sprites (AI-generated cast) + creator UI.
+   The 12 explorers live in assets/heroes.webp (6x2 grid, 300x470 cells,
+   feet anchored 10px above each cell's bottom). Accessories, pets and
+   walk trails are drawn as overlays so the keys economy stays alive. */
 
-function outfitColor(id) {
-  const o = DATA.outfits.find(o => o.id === id);
-  return o ? o.color : '#2ec4b6';
-}
+const HERO_CELL = { w: 300, h: 470, cols: 6 };
+const heroImg = new Image();
+let heroReady = false;
+heroImg.onload = () => { heroReady = true; };
+heroImg.src = (typeof window !== 'undefined' && window.ASSETS && window.ASSETS.heroes) ? window.ASSETS.heroes : 'assets/heroes.webp';
 
 /**
- * Draw the avatar centered at (x, y = feet), height ≈ 86 * scale.
- * frame: animation time in seconds; walking: bool; dir: -1 left / 1 right.
+ * Draw a hero sprite centered at x with feet at y.
+ * cfg: { hero, accessory, ... } — height ≈ 118 * scale.
  */
 function drawAvatar(ctx, x, y, scale, cfg, frame = 0, walking = false, dir = 1) {
-  const s = scale;
+  const hero = cfg && Number.isInteger(cfg.hero) ? Math.max(0, Math.min(11, cfg.hero)) : 0;
+  const dh = 126 * scale;
+  const dw = dh * (HERO_CELL.w / HERO_CELL.h);
+  const col = hero % HERO_CELL.cols, row = (hero / HERO_CELL.cols) | 0;
+
+  const bob = walking ? Math.abs(Math.sin(frame * 9)) * 5 * scale : Math.sin(frame * 2.2) * 1.6 * scale;
+  const lean = walking ? Math.sin(frame * 9) * .05 : 0;
+
+  // soft ground shadow (baked shadows were stripped from the sheet)
+  ctx.fillStyle = 'rgba(20,35,25,.22)';
+  ctx.beginPath(); ctx.ellipse(x, y + 2 * scale, 20 * scale, 6 * scale, 0, 0, Math.PI * 2); ctx.fill();
+
   ctx.save();
-  ctx.translate(x, y);
+  ctx.translate(x, y - bob);
+  ctx.rotate(lean);
   ctx.scale(dir, 1);
 
-  const bob = walking ? Math.sin(frame * 12) * 2.2 * s : Math.sin(frame * 2.4) * 1.1 * s;
-  const legSwing = walking ? Math.sin(frame * 12) * 7 * s : 0;
-  const skin = cfg.skin, hair = cfg.hairColor, outfit = outfitColor(cfg.outfit);
+  // head geometry for accessory overlays (chibi grid is uniform enough)
+  const headCY = -dh * .655;
+  const headR = dh * .21;
 
-  // shadow
-  ctx.fillStyle = 'rgba(20,35,25,.18)';
-  ctx.beginPath(); ctx.ellipse(0, 2 * s, 17 * s, 5 * s, 0, 0, Math.PI * 2); ctx.fill();
-
-  ctx.translate(0, bob);
-
-  // cape (behind)
-  if (cfg.accessory === 'cape') {
+  if (cfg && cfg.accessory === 'cape') {
     ctx.fillStyle = '#d63e2e';
     ctx.beginPath();
-    ctx.moveTo(-11 * s, -46 * s);
-    ctx.quadraticCurveTo(-20 * s, -20 * s, -14 * s + legSwing * .4, -2 * s);
-    ctx.lineTo(10 * s, -6 * s);
-    ctx.quadraticCurveTo(14 * s, -26 * s, 11 * s, -46 * s);
+    ctx.moveTo(-dw * .22, -dh * .48);
+    ctx.quadraticCurveTo(-dw * .48, -dh * .22, -dw * .34 - lean * 40, -dh * .03);
+    ctx.lineTo(dw * .26, -dh * .06);
+    ctx.quadraticCurveTo(dw * .34, -dh * .28, dw * .22, -dh * .48);
     ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(40,34,56,.4)'; ctx.lineWidth = 2 * scale; ctx.stroke();
   }
 
-  // legs
-  ctx.strokeStyle = '#3a3f52'; ctx.lineCap = 'round'; ctx.lineWidth = 6 * s;
-  ctx.beginPath(); ctx.moveTo(-6 * s, -16 * s); ctx.lineTo(-6 * s + legSwing, 0); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(6 * s, -16 * s); ctx.lineTo(6 * s - legSwing, 0); ctx.stroke();
-  // shoes
-  ctx.fillStyle = '#faf6ee';
-  ctx.beginPath(); ctx.ellipse(-6 * s + legSwing, 0, 5 * s, 3 * s, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(6 * s - legSwing, 0, 5 * s, 3 * s, 0, 0, Math.PI * 2); ctx.fill();
-
-  // body
-  ctx.fillStyle = outfit;
-  roundRect(ctx, -13 * s, -44 * s, 26 * s, 30 * s, 10 * s); ctx.fill();
-  ctx.strokeStyle = 'rgba(40,34,56,.5)'; ctx.lineWidth = 2.2 * s; ctx.stroke();
-  // shirt shading
-  ctx.fillStyle = 'rgba(255,255,255,.18)';
-  roundRect(ctx, -13 * s, -44 * s, 26 * s, 9 * s, 8 * s); ctx.fill();
-  if (cfg.outfit === 'star-suit') {
-    ctx.fillStyle = '#ffd75e';
-    drawStar(ctx, 0, -30 * s, 5, 5 * s, 2.4 * s); ctx.fill();
-  }
-  if (cfg.outfit === 'inventor') {
-    ctx.strokeStyle = '#c9c2b2'; ctx.lineWidth = 1.6 * s;
-    ctx.beginPath(); ctx.moveTo(0, -44 * s); ctx.lineTo(0, -16 * s); ctx.stroke();
+  if (heroReady) {
+    ctx.drawImage(heroImg, col * HERO_CELL.w, row * HERO_CELL.h, HERO_CELL.w, HERO_CELL.h, -dw / 2, -dh, dw, dh);
+  } else {
+    // loading fallback: simple silhouette
+    ctx.fillStyle = '#7da8d8';
+    ctx.beginPath(); ctx.arc(0, headCY, headR, 0, Math.PI * 2); ctx.fill();
+    roundRect(ctx, -dw * .18, -dh * .5, dw * .36, dh * .42, 8 * scale); ctx.fill();
   }
 
-  // arms
-  ctx.strokeStyle = outfit; ctx.lineWidth = 5.5 * s;
-  const armSwing = walking ? Math.sin(frame * 12 + Math.PI) * 6 * s : 0;
-  ctx.beginPath(); ctx.moveTo(-12 * s, -38 * s); ctx.lineTo(-16 * s + armSwing * .5, -22 * s); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(12 * s, -38 * s); ctx.lineTo(16 * s - armSwing * .5, -22 * s); ctx.stroke();
-  ctx.fillStyle = skin;
-  ctx.beginPath(); ctx.arc(-16 * s + armSwing * .5, -21 * s, 3.4 * s, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(16 * s - armSwing * .5, -21 * s, 3.4 * s, 0, Math.PI * 2); ctx.fill();
-
-  // head (big, chibi)
-  ctx.fillStyle = skin;
-  ctx.beginPath(); ctx.arc(0, -62 * s, 19 * s, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = 'rgba(40,34,56,.5)'; ctx.lineWidth = 2.2 * s; ctx.stroke();
-
-  // hair styles
-  ctx.fillStyle = hair;
-  const hs = cfg.hairStyle;
-  if (hs === 'spiky') {
-    for (let i = -2; i <= 2; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * 7 * s - 4 * s, -72 * s);
-      ctx.lineTo(i * 7 * s, -88 * s - Math.abs(i) * -2 * s);
-      ctx.lineTo(i * 7 * s + 4 * s, -72 * s);
-      ctx.closePath(); ctx.fill();
-    }
-    ctx.beginPath(); ctx.arc(0, -68 * s, 18 * s, Math.PI, 0); ctx.fill();
-  } else if (hs === 'puff') {
-    ctx.beginPath(); ctx.arc(0, -76 * s, 15 * s, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(-12 * s, -70 * s, 10 * s, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(12 * s, -70 * s, 10 * s, 0, Math.PI * 2); ctx.fill();
-  } else if (hs === 'long') {
-    ctx.beginPath(); ctx.arc(0, -66 * s, 19.5 * s, Math.PI * .95, Math.PI * 2.05); ctx.fill();
-    roundRect(ctx, -19 * s, -68 * s, 8 * s, 28 * s, 4 * s); ctx.fill();
-    roundRect(ctx, 11 * s, -68 * s, 8 * s, 28 * s, 4 * s); ctx.fill();
-  } else if (hs === 'buzz') {
-    ctx.beginPath(); ctx.arc(0, -64 * s, 19 * s, Math.PI * 1.05, Math.PI * 1.95); ctx.fill();
-  } else if (hs === 'pony') {
-    ctx.beginPath(); ctx.arc(0, -66 * s, 19 * s, Math.PI * .95, Math.PI * 2.05); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(-16 * s, -78 * s, 6 * s, 12 * s, .6, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ffb627';
-    ctx.beginPath(); ctx.arc(-13 * s, -72 * s, 2.6 * s, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = hair;
-  } else { // swoop
-    ctx.beginPath(); ctx.arc(0, -66 * s, 19 * s, Math.PI, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(8 * s, -76 * s, 12 * s, 7 * s, -.35, 0, Math.PI * 2); ctx.fill();
-  }
-
-  // face
-  ctx.fillStyle = '#22252e';
-  ctx.beginPath(); ctx.arc(-6.5 * s, -62 * s, 2.4 * s, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(6.5 * s, -62 * s, 2.4 * s, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#22252e'; ctx.lineWidth = 1.8 * s; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.arc(0, -57 * s, 5 * s, Math.PI * .15, Math.PI * .85); ctx.stroke();
-  // cheeks
-  ctx.fillStyle = 'rgba(255,120,110,.35)';
-  ctx.beginPath(); ctx.arc(-11 * s, -56 * s, 3 * s, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(11 * s, -56 * s, 3 * s, 0, Math.PI * 2); ctx.fill();
-
-  // accessories (front)
-  const acc = cfg.accessory;
+  // accessory overlays
+  const acc = cfg && cfg.accessory;
+  ctx.lineWidth = 2.4 * scale;
   if (acc === 'cap') {
     ctx.fillStyle = '#2f6fdb';
-    ctx.beginPath(); ctx.arc(0, -70 * s, 17 * s, Math.PI, 0); ctx.fill();
-    roundRect(ctx, 2 * s, -74 * s, 22 * s, 5 * s, 2.5 * s); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, headCY - headR * .34, headR * .92, Math.PI, 0); ctx.fill();
+    roundRect(ctx, headR * .1, headCY - headR * .62, headR * 1.35, headR * .3, headR * .15); ctx.fill();
+    ctx.strokeStyle = 'rgba(40,34,56,.45)'; ctx.stroke();
   } else if (acc === 'glasses') {
-    ctx.strokeStyle = '#1d2a4d'; ctx.lineWidth = 2 * s;
-    ctx.beginPath(); ctx.arc(-6.5 * s, -62 * s, 5.5 * s, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(6.5 * s, -62 * s, 5.5 * s, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-1 * s, -62 * s); ctx.lineTo(1 * s, -62 * s); ctx.stroke();
+    ctx.strokeStyle = '#173a6b';
+    ctx.beginPath(); ctx.arc(-headR * .38, headCY + headR * .1, headR * .3, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(headR * .38, headCY + headR * .1, headR * .3, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-headR * .08, headCY + headR * .1); ctx.lineTo(headR * .08, headCY + headR * .1); ctx.stroke();
   } else if (acc === 'crown') {
+    const ty = headCY - headR * .92;
     ctx.fillStyle = '#ffb627';
     ctx.beginPath();
-    ctx.moveTo(-12 * s, -78 * s); ctx.lineTo(-12 * s, -90 * s); ctx.lineTo(-6 * s, -82 * s);
-    ctx.lineTo(0, -92 * s); ctx.lineTo(6 * s, -82 * s); ctx.lineTo(12 * s, -90 * s); ctx.lineTo(12 * s, -78 * s);
+    ctx.moveTo(-headR * .62, ty); ctx.lineTo(-headR * .62, ty - headR * .55); ctx.lineTo(-headR * .3, ty - headR * .22);
+    ctx.lineTo(0, ty - headR * .62); ctx.lineTo(headR * .3, ty - headR * .22); ctx.lineTo(headR * .62, ty - headR * .55);
+    ctx.lineTo(headR * .62, ty);
     ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(40,34,56,.45)'; ctx.stroke();
     ctx.fillStyle = '#ff6b5b';
-    ctx.beginPath(); ctx.arc(0, -84 * s, 2.2 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, ty - headR * .18, headR * .12, 0, Math.PI * 2); ctx.fill();
   } else if (acc === 'wizard') {
+    const ty = headCY - headR * .8;
     ctx.fillStyle = '#5b3fbf';
-    ctx.beginPath(); ctx.moveTo(-16 * s, -74 * s); ctx.lineTo(16 * s, -74 * s); ctx.lineTo(3 * s, -102 * s); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-headR * .95, ty); ctx.lineTo(headR * .95, ty); ctx.lineTo(headR * .18, ty - headR * 1.5);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(40,34,56,.45)'; ctx.stroke();
     ctx.fillStyle = '#ffd75e';
-    drawStar(ctx, 2 * s, -86 * s, 5, 3 * s, 1.4 * s); ctx.fill();
+    drawStar(ctx, headR * .1, ty - headR * .7, 5, headR * .16, headR * .075); ctx.fill();
   } else if (acc === 'headband') {
     ctx.fillStyle = '#ff6b5b';
-    roundRect(ctx, -18 * s, -74 * s, 36 * s, 5 * s, 2.5 * s); ctx.fill();
+    roundRect(ctx, -headR * .95, headCY - headR * .55, headR * 1.9, headR * .26, headR * .13); ctx.fill();
+    ctx.strokeStyle = 'rgba(40,34,56,.35)'; ctx.stroke();
   }
 
   ctx.restore();
+}
+
+/* Head-and-shoulders portrait crop for HUD chips */
+function drawHeroPortrait(ctx, size, hero) {
+  const col = (hero % HERO_CELL.cols) * HERO_CELL.w, row = ((hero / HERO_CELL.cols) | 0) * HERO_CELL.h;
+  ctx.clearRect(0, 0, size, size);
+  if (heroReady) {
+    ctx.drawImage(heroImg, col + 35, row + 15, 230, 230, 0, 0, size, size);
+  }
 }
 
 function drawPet(ctx, x, y, scale, petId, frame) {
@@ -160,9 +115,9 @@ function drawPet(ctx, x, y, scale, petId, frame) {
   ctx.fillStyle = 'rgba(20,35,25,.15)';
   ctx.beginPath(); ctx.ellipse(0, hop, 8 * s, 2.5 * s, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = pet.color;
-  ctx.beginPath(); ctx.arc(0, -8 * s, 7 * s, 0, Math.PI * 2); ctx.fill();      // body
-  ctx.beginPath(); ctx.arc(0, -17 * s, 5.5 * s, 0, Math.PI * 2); ctx.fill();   // head
-  if (petId === 'fox' || petId === 'owl') { // ears
+  ctx.beginPath(); ctx.arc(0, -8 * s, 7 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, -17 * s, 5.5 * s, 0, Math.PI * 2); ctx.fill();
+  if (petId === 'fox' || petId === 'owl') {
     ctx.beginPath(); ctx.moveTo(-5 * s, -20 * s); ctx.lineTo(-3 * s, -26 * s); ctx.lineTo(-1 * s, -20 * s); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.moveTo(1 * s, -20 * s); ctx.lineTo(3 * s, -26 * s); ctx.lineTo(5 * s, -20 * s); ctx.closePath(); ctx.fill();
   }
@@ -206,15 +161,13 @@ function openAvatarCreator(isEdit) {
   showScreen('avatar');
   const p = state.player;
   document.getElementById('av-name').value = p.name;
-  document.getElementById('av-title').textContent = isEdit ? 'The Closet' : 'Create Your Explorer';
+  document.getElementById('av-title').textContent = isEdit ? 'The Closet' : 'Choose Your Explorer';
   document.getElementById('av-done').textContent = isEdit ? 'Save Look' : 'Start Exploring!';
 
-  buildSwatchRow('av-skin', DATA.skins.map(c => ({ id: c, color: c })), p.skin, v => { p.skin = v; });
-  buildSwatchRow('av-haircolor', DATA.hairColors.map(c => ({ id: c, color: c })), p.hairColor, v => { p.hairColor = v; });
-  buildChipRow('av-hair', DATA.hairStyles, p.hairStyle, v => { p.hairStyle = v; });
-  buildItemRow('av-outfit', DATA.outfits, p.outfit, v => { p.outfit = v; });
+  buildHeroGrid(p);
   buildItemRow('av-acc', DATA.accessories, p.accessory, v => { p.accessory = v; });
   buildItemRow('av-pet', DATA.pets, p.pet, v => { p.pet = v; });
+  buildItemRow('av-trail', DATA.trails, p.trail, v => { p.trail = v; });
 
   const cv = document.getElementById('av-canvas');
   const ctx = cv.getContext('2d');
@@ -223,39 +176,42 @@ function openAvatarCreator(isEdit) {
   (function loop(t) {
     const sec = (t - t0) / 1000;
     ctx.clearRect(0, 0, cv.width, cv.height);
-    // podium
-    ctx.fillStyle = 'rgba(29,42,77,.08)';
+    ctx.fillStyle = 'rgba(0,45,114,.08)';
     ctx.beginPath(); ctx.ellipse(cv.width / 2, cv.height - 26, 74, 16, 0, 0, Math.PI * 2); ctx.fill();
-    drawAvatar(ctx, cv.width / 2, cv.height - 30, 1.9, state.player, sec, false, 1);
-    drawPet(ctx, cv.width / 2 + 78, cv.height - 30, 1.6, state.player.pet, sec);
+    drawAvatar(ctx, cv.width / 2, cv.height - 30, 1.75, state.player, sec, false, 1);
+    drawPet(ctx, cv.width / 2 + 82, cv.height - 30, 1.6, state.player.pet, sec);
     if (document.getElementById('screen-avatar').classList.contains('active')) {
       creatorRAF = requestAnimationFrame(loop);
     }
   })(t0);
 }
 
-function buildSwatchRow(elId, items, current, onPick) {
-  const el = document.getElementById(elId);
+function buildHeroGrid(p) {
+  const el = document.getElementById('av-heroes');
   el.innerHTML = '';
-  items.forEach(it => {
+  DATA.heroes.forEach((h, i) => {
     const b = document.createElement('button');
-    b.className = 'swatch' + (it.id === current ? ' sel' : '');
-    b.style.background = it.color;
-    b.setAttribute('aria-label', it.color);
-    b.onclick = () => { onPick(it.id); [...el.children].forEach(c => c.classList.remove('sel')); b.classList.add('sel'); blip(620); };
+    b.className = 'hero-card' + (i === p.hero ? ' sel' : '');
+    const cv = document.createElement('canvas');
+    cv.width = 74; cv.height = 104;
+    b.appendChild(cv);
+    const nm = document.createElement('span');
+    nm.textContent = h.name;
+    b.appendChild(nm);
+    b.onclick = () => {
+      p.hero = i;
+      [...el.children].forEach(c => c.classList.remove('sel'));
+      b.classList.add('sel');
+      blip(620);
+    };
     el.appendChild(b);
-  });
-}
-
-function buildChipRow(elId, items, current, onPick) {
-  const el = document.getElementById(elId);
-  el.innerHTML = '';
-  items.forEach(it => {
-    const b = document.createElement('button');
-    b.className = 'chip' + (it.id === current ? ' sel' : '');
-    b.textContent = it.name;
-    b.onclick = () => { onPick(it.id); [...el.children].forEach(c => c.classList.remove('sel')); b.classList.add('sel'); blip(620); };
-    el.appendChild(b);
+    const paint = () => {
+      const c = cv.getContext('2d');
+      c.clearRect(0, 0, 74, 104);
+      drawAvatar(c, 37, 99, .78, { hero: i, accessory: 'none' }, 0, false, 1);
+    };
+    if (heroReady) paint();
+    else heroImg.addEventListener('load', paint, { once: true });
   });
 }
 

@@ -23,7 +23,6 @@
     </svg>
     <h1 class="title-logo">Breakout<span class="land">LAND</span></h1>
     <p class="title-tag">Think hard. Break out. Play on! ✦ A Breakout EDU world</p>
-    <canvas id="title-canvas" aria-hidden="true"></canvas>
     <div class="role-row">
       <button class="role-btn role-student" id="t-student">I'm a Student<small>Explore the island!</small></button>
       <button class="role-btn role-teacher" id="t-teacher">I'm a Teacher<small>Class dashboard</small></button>
@@ -44,12 +43,10 @@
     <div class="av-right">
       <h3>Explorer name</h3>
       <input id="av-name" maxlength="16" placeholder="e.g. Sam the Solver" autocomplete="off">
-      <h3>Skin</h3><div class="swatch-row" id="av-skin"></div>
-      <h3>Hair style</h3><div class="chip-row" id="av-hair"></div>
-      <h3>Hair color</h3><div class="swatch-row" id="av-haircolor"></div>
-      <h3>Outfit</h3><div class="chip-row" id="av-outfit"></div>
+      <h3>Pick your explorer</h3><div class="hero-grid" id="av-heroes"></div>
       <h3>Accessory</h3><div class="chip-row" id="av-acc"></div>
       <h3>Sidekick pet</h3><div class="chip-row" id="av-pet"></div>
+      <h3>Walk trail</h3><div class="chip-row" id="av-trail"></div>
     </div>
   </div>
 </section>
@@ -108,7 +105,7 @@
       <button class="back-btn" data-back-world>← Back to the island</button>
     </div>
     <div class="board math-board">
-      <svg id="math-svg" viewBox="0 0 900 460" role="img" aria-label="Breakout Math adventure trail"></svg>
+      <svg id="math-svg" viewBox="0 0 1920 1080" role="img" aria-label="Breakout Math adventure trail"></svg>
     </div>
     <div class="math-legend">
       <span><i style="background:#26b59d"></i>Quest — your math path</span>

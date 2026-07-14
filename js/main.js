@@ -3,6 +3,14 @@
 function boot() {
   loadState();
 
+  // painted art assets (inlined as data URIs in the single-file build)
+  const A = (typeof window !== 'undefined' && window.ASSETS) || {};
+  const abs = (p) => p.startsWith('data:') ? p : new URL(p, document.baseURI).href;
+  const rootStyle = document.documentElement.style;
+  rootStyle.setProperty('--img-title', `url("${abs(A.title || 'assets/title.jpg')}")`);
+  rootStyle.setProperty('--img-desk', `url("${abs(A.desk || 'assets/desk.jpg')}")`);
+  rootStyle.setProperty('--img-trail', `url("${abs(A.trail || 'assets/trail.jpg')}")`);
+
   // title buttons
   document.getElementById('t-student').onclick = () => {
     blip(700);
@@ -47,31 +55,6 @@ function boot() {
       document.getElementById('cel-modal').classList.remove('open');
     }
   });
-
-  // title avatar parade
-  const cv = document.getElementById('title-canvas');
-  if (cv) {
-    const ctx = cv.getContext('2d');
-    const cast = [
-      { skin: DATA.skins[1], hairStyle: 'puff', hairColor: DATA.hairColors[0], outfit: 'tee-teal', accessory: 'none', pet: 'nopet' },
-      { skin: DATA.skins[3], hairStyle: 'spiky', hairColor: DATA.hairColors[4], outfit: 'tee-gold', accessory: 'cap', pet: 'nopet' },
-      { skin: DATA.skins[0], hairStyle: 'pony', hairColor: DATA.hairColors[3], outfit: 'tee-purple', accessory: 'none', pet: 'fox' },
-      { skin: DATA.skins[4], hairStyle: 'swoop', hairColor: DATA.hairColors[1], outfit: 'tee-coral', accessory: 'glasses', pet: 'nopet' },
-    ];
-    const t0 = performance.now();
-    (function loop(t) {
-      const sec = (t - t0) / 1000;
-      const W = cv.width = cv.clientWidth, H = cv.height = cv.clientHeight;
-      ctx.clearRect(0, 0, W, H);
-      cast.forEach((c, i) => {
-        const x = W * (0.18 + i * 0.21) + Math.sin(sec * 1.4 + i * 2) * 6;
-        drawAvatar(ctx, x, H - 14, 0.86, c, sec + i, true, i % 2 ? -1 : 1);
-        if (c.pet !== 'nopet') drawPet(ctx, x + 34, H - 12, 0.8, c.pet, sec + i);
-      });
-      if (screenIs('title')) requestAnimationFrame(loop);
-      else setTimeout(() => requestAnimationFrame(loop), 400);
-    })(t0);
-  }
 
   showScreen('title');
 }

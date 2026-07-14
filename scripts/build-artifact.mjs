@@ -16,7 +16,13 @@ body = body.replace(/^<script src="[^"]+"><\/script>\s*$/gm, '').trimEnd();
 const css = read('css/styles.css');
 const js = ['js/data.js', 'js/state.js', 'js/puzzles.js', 'js/avatar.js', 'js/world.js', 'js/screens.js', 'js/main.js']
   .map(read).join('\n\n');
-const mapB64 = readFileSync(join(root, 'assets/world-map.jpg')).toString('base64');
+const b64 = (p, mime) => `data:${mime};base64,${readFileSync(join(root, p)).toString('base64')}`;
+const assets = {
+  heroes: b64('assets/heroes.webp', 'image/webp'),
+  title: b64('assets/title.jpg', 'image/jpeg'),
+  desk: b64('assets/desk.jpg', 'image/jpeg'),
+  trail: b64('assets/trail.jpg', 'image/jpeg'),
+};
 
 const out = `<title>Breakout Land — a Breakout EDU world</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -24,7 +30,10 @@ const out = `<title>Breakout Land — a Breakout EDU world</title>
 ${css}
 </style>
 ${body}
-<script>window.WORLD_MAP_SRC = 'data:image/jpeg;base64,${mapB64}';</script>
+<script>
+window.WORLD_MAP_SRC = '${b64('assets/world-map.jpg', 'image/jpeg')}';
+window.ASSETS = ${JSON.stringify(assets)};
+</script>
 <script>
 ${js}
 </script>
