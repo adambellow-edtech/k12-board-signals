@@ -11,6 +11,14 @@ function boot() {
   rootStyle.setProperty('--img-desk', `url("${abs(A.desk || 'assets/desk.jpg')}")`);
   rootStyle.setProperty('--img-trail', `url("${abs(A.trail || 'assets/trail.jpg')}")`);
 
+  // new Breakout Land logo (swaps in automatically once assets/logo.webp exists)
+  const logoImg = document.getElementById('logo-img');
+  if (logoImg) {
+    logoImg.onload = () => document.querySelector('.title-wrap').classList.add('has-logo');
+    logoImg.onerror = () => logoImg.remove();
+    logoImg.src = A.logo || 'assets/logo.webp';
+  }
+
   // title buttons
   document.getElementById('t-student').onclick = () => {
     blip(700);

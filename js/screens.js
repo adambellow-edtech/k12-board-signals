@@ -165,15 +165,16 @@ function renderArcade(title, body) {
   if (go && state.arcadeMin >= 5) go.onclick = () => { closeBuildingModal(); startKeyCatcher(); };
 }
 
-/* Key Catcher minigame */
-const kc = { raf: null, score: 0, tLeft: 30, px: .5, items: [], last: 0 };
+/* Key Catcher minigame — neon arcade juice: spinning keys, catch bursts,
+   floating scores, combo multiplier, rolling cart */
+const kc = { raf: null, score: 0, tLeft: 30, px: .5, items: [], fx: [], pops: [], combo: 0, best: 0, last: 0, lastPx: .5 };
 function startKeyCatcher() {
   state.arcadeMin -= 5; saveState(); updateHUD();
   const modal = document.getElementById('kc-modal');
   modal.classList.add('open');
   const cv = document.getElementById('kc-canvas');
   const ctx = cv.getContext('2d');
-  Object.assign(kc, { score: 0, tLeft: 30, px: .5, items: [], last: performance.now() });
+  Object.assign(kc, { score: 0, tLeft: 30, px: .5, items: [], fx: [], pops: [], combo: 0, best: 0, last: performance.now(), lastPx: .5 });
   const move = (clientX) => {
     const r = cv.getBoundingClientRect();
     kc.px = Math.max(.06, Math.min(.94, (clientX - r.left) / r.width));
@@ -181,56 +182,133 @@ function startKeyCatcher() {
   cv.onpointermove = e => move(e.clientX);
   cv.onpointerdown = e => move(e.clientX);
   const keyHandler = e => {
-    if (e.key === 'ArrowLeft' || e.key === 'a') kc.px = Math.max(.06, kc.px - .045);
-    if (e.key === 'ArrowRight' || e.key === 'd') kc.px = Math.min(.94, kc.px + .045);
+    if (e.key === 'ArrowLeft' || e.key === 'a') kc.px = Math.max(.06, kc.px - .05);
+    if (e.key === 'ArrowRight' || e.key === 'd') kc.px = Math.min(.94, kc.px + .05);
   };
   addEventListener('keydown', keyHandler);
+
+  const burst = (x, y, color, n = 8) => {
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      kc.fx.push({ x, y, vx: Math.cos(a) * (60 + Math.random() * 60), vy: Math.sin(a) * (60 + Math.random() * 60) - 40, t: 0, color });
+    }
+  };
 
   cancelAnimationFrame(kc.raf);
   (function loop(t) {
     const dt = Math.min(.05, (t - kc.last) / 1000); kc.last = t;
     kc.tLeft -= dt;
     const W = cv.width = cv.clientWidth, H = cv.height = cv.clientHeight;
+    const sec = t / 1000;
+    const vx = (kc.px - kc.lastPx) / Math.max(dt, .001); kc.lastPx = kc.px;
 
-    // spawn
-    if (Math.random() < dt * 2.2) kc.items.push({ x: .08 + Math.random() * .84, y: -.05, v: .25 + Math.random() * .3, bad: Math.random() < .22 });
+    if (Math.random() < dt * 2.3) kc.items.push({ x: .08 + Math.random() * .84, y: -.05, v: .25 + Math.random() * .32, bad: Math.random() < .22, rot: Math.random() * 6 });
 
-    ctx.fillStyle = '#1d2a4d'; ctx.fillRect(0, 0, W, H);
-    // stars
+    // neon night backdrop
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#101c3d'); bg.addColorStop(.72, '#1d2a5c'); bg.addColorStop(1, '#2b1c5e');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = 'rgba(255,255,255,.5)';
-    for (let i = 0; i < 24; i++) ctx.fillRect((i * 137) % W, (i * 211) % (H * .7), 2, 2);
+    for (let i = 0; i < 26; i++) {
+      const twk = .3 + Math.abs(Math.sin(sec * 2 + i)) * .7;
+      ctx.globalAlpha = twk * .7;
+      ctx.fillRect((i * 137) % W, (i * 211) % (H * .6), 2, 2);
+    }
+    ctx.globalAlpha = 1;
+    // scrolling neon floor grid
+    ctx.strokeStyle = 'rgba(76,201,240,.35)'; ctx.lineWidth = 1.5;
+    const horizon = H * .78;
+    for (let i = -6; i <= 6; i++) {
+      ctx.beginPath(); ctx.moveTo(W / 2 + i * W * .09, horizon); ctx.lineTo(W / 2 + i * W * .28, H); ctx.stroke();
+    }
+    for (let r = 0; r < 4; r++) {
+      const gy = horizon + ((sec * 60 + r * (H - horizon) / 4) % (H - horizon));
+      ctx.globalAlpha = .18 + .4 * (gy - horizon) / (H - horizon);
+      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
 
-    // items
-    kc.items.forEach(it => { it.y += it.v * dt; });
+    // items (spinning keys / tumbling anvils)
+    kc.items.forEach(it => { it.y += it.v * dt; it.rot += dt * 3; });
     kc.items = kc.items.filter(it => {
       const ix = it.x * W, iy = it.y * H;
-      const caught = it.y > .86 && it.y < .96 && Math.abs(it.x - kc.px) < .07;
+      const caught = it.y > .84 && it.y < .96 && Math.abs(it.x - kc.px) < .075;
       if (caught) {
-        if (it.bad) { kc.score = Math.max(0, kc.score - 3); buzz(); }
-        else { kc.score += 1; blip(900); }
+        if (it.bad) {
+          kc.score = Math.max(0, kc.score - 3); kc.combo = 0; buzz();
+          burst(ix, iy, '#8d99ae', 10);
+          kc.pops.push({ x: ix, y: iy, t: 0, txt: '-3', color: '#ff8fa3' });
+        } else {
+          kc.combo++; kc.best = Math.max(kc.best, kc.combo);
+          const mult = kc.combo >= 5 ? 2 : 1;
+          kc.score += mult;
+          blip(800 + Math.min(kc.combo, 8) * 60);
+          burst(ix, iy, '#ffd75e');
+          kc.pops.push({ x: ix, y: iy, t: 0, txt: `+${mult}`, color: '#ffe08a' });
+          if (kc.combo === 5) kc.pops.push({ x: W / 2, y: H * .34, t: 0, txt: 'COMBO x2!', color: '#4cc9f0', big: true });
+        }
         return false;
       }
-      if (it.y > 1.05) return false;
+      if (it.y > 1.05) { if (!it.bad) kc.combo = 0; return false; }
+      ctx.save(); ctx.translate(ix, iy); ctx.rotate(Math.sin(it.rot) * .6);
       if (it.bad) {
         ctx.fillStyle = '#8d99ae';
-        ctx.beginPath(); ctx.moveTo(ix - 12, iy); ctx.lineTo(ix + 12, iy); ctx.lineTo(ix + 7, iy + 12); ctx.lineTo(ix - 7, iy + 12); ctx.closePath(); ctx.fill();
-        ctx.fillRect(ix - 4, iy - 8, 8, 8);
+        ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(12, 0); ctx.lineTo(7, 12); ctx.lineTo(-7, 12); ctx.closePath(); ctx.fill();
+        ctx.fillRect(-4, -8, 8, 8);
+        ctx.strokeStyle = 'rgba(20,20,40,.5)'; ctx.lineWidth = 2; ctx.stroke();
       } else {
-        drawKeyGlyph(ctx, ix, iy, 1.1, '#ffd75e');
+        drawKeyGlyph(ctx, -6, 0, 1.15, '#ffd75e');
       }
+      ctx.restore();
       return true;
     });
 
-    // catcher (player's avatar head on a cart)
+    // particles + score pops
+    kc.fx = kc.fx.filter(p => (p.t += dt) < .6);
+    kc.fx.forEach(p => {
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 260 * dt;
+      ctx.save(); ctx.globalAlpha = 1 - p.t / .6;
+      ctx.fillStyle = p.color;
+      drawStar(ctx, p.x, p.y, 4, 5, 2); ctx.fill();
+      ctx.restore();
+    });
+    kc.pops = kc.pops.filter(p => (p.t += dt) < (p.big ? 1.1 : .8));
+    kc.pops.forEach(p => {
+      ctx.save(); ctx.globalAlpha = 1 - p.t / (p.big ? 1.1 : .8);
+      ctx.fillStyle = p.color;
+      ctx.font = p.big ? '900 34px system-ui' : '900 20px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.txt, p.x, p.y - p.t * 46);
+      ctx.restore(); ctx.textAlign = 'left';
+    });
+
+    // rolling cart + rider
     const cx = kc.px * W, cy = H * .93;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.max(-.16, Math.min(.16, vx * .25)));
     ctx.fillStyle = '#ffb627';
-    roundRect(ctx, cx - 34, cy - 8, 68, 16, 8); ctx.fill();
-    drawAvatar(ctx, cx, cy - 4, .55, state.player, t / 1000, true, 1);
+    roundRect(ctx, -36, -10, 72, 18, 9); ctx.fill();
+    ctx.strokeStyle = 'rgba(40,34,56,.5)'; ctx.lineWidth = 2.5; ctx.stroke();
+    for (const wx of [-20, 20]) {
+      ctx.fillStyle = '#27406e';
+      ctx.beginPath(); ctx.arc(wx, 10, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#9cc4ff'; ctx.lineWidth = 2;
+      const wr = kc.px * W * .12;
+      ctx.beginPath(); ctx.moveTo(wx - Math.cos(wr) * 5, 10 - Math.sin(wr) * 5); ctx.lineTo(wx + Math.cos(wr) * 5, 10 + Math.sin(wr) * 5); ctx.stroke();
+    }
+    drawAvatar(ctx, 0, -6, .55, state.player, sec, true, vx >= 0 ? 1 : -1);
+    ctx.restore();
 
     // HUD
     ctx.fillStyle = '#fff'; ctx.font = '800 20px system-ui'; ctx.textAlign = 'left';
     ctx.fillText(`🔑 ${kc.score}`, 14, 30);
-    ctx.textAlign = 'right';
+    if (kc.combo >= 2) {
+      ctx.fillStyle = kc.combo >= 5 ? '#4cc9f0' : '#ffe08a';
+      ctx.font = '900 16px system-ui';
+      ctx.fillText(`combo ${kc.combo}${kc.combo >= 5 ? ' ×2' : ''}`, 14, 54);
+    }
+    ctx.fillStyle = '#fff'; ctx.font = '800 20px system-ui'; ctx.textAlign = 'right';
     ctx.fillText(`⏱ ${Math.max(0, Math.ceil(kc.tLeft))}s`, W - 14, 30);
     ctx.textAlign = 'left';
 
@@ -242,8 +320,8 @@ function startKeyCatcher() {
         modal.classList.remove('open');
         const bonus = Math.min(10, Math.floor(kc.score / 3));
         grant({ keys: bonus, xp: kc.score });
-        fanfare();
-        toast(`Key Catcher: ${kc.score} keys caught! Bonus: +${bonus} 🔑 +${kc.score} XP`);
+        fanfare(); confetti();
+        toast(`Key Catcher: ${kc.score} pts, best combo ${kc.best}! Bonus: +${bonus} 🔑 +${kc.score} XP`);
       }
     }
   })(performance.now());

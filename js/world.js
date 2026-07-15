@@ -61,6 +61,15 @@ const world = {
   cv: null, ctx: null, raf: null,
   keysDown: {}, target: null, nearBuilding: null,
   dir: 1, walking: false, t0: 0, clouds: [], birds: [], trailFx: [],
+  cam: null, dustFx: [], lastDust: 0,
+};
+
+/* NPC chatter — bubbles cycle on a stagger; greeting overrides when close */
+const NPC_LINES = {
+  Leo: ['The fish love math jokes. 🎣', 'Caught anything? Me neither.', 'Crack the Lock of the Day yet?'],
+  Maya: ['This mystery book is SO good!', 'The Badge Hall has new trophies!', 'Reading = brain superpowers.'],
+  Zoe: ['Race you to the Arcade!', 'Ooh, I love your trail!', 'The Math Trail boss is TOUGH.'],
+  Kai: ['Cocoa + puzzles = best day.', 'Breakout+ has secret games!', 'Stay curious, explorer.'],
 };
 
 function enterWorld() {
@@ -116,18 +125,30 @@ function getViewScale() {
   const vw = world.cv.clientWidth, vh = world.cv.clientHeight;
   return Math.max(vw / 1240, vh / 880, .62);
 }
-function getCamera(scale) {
+function cameraTarget(scale) {
   const vw = world.cv.clientWidth / scale, vh = world.cv.clientHeight / scale;
-  let x = state.pos.x - vw / 2, y = state.pos.y - vh / 2;
-  x = Math.max(0, Math.min(WORLD.w - vw, x));
-  y = Math.max(0, Math.min(WORLD.h - vh, y));
-  return { x, y, vw, vh };
+  let tx = state.pos.x - vw / 2, ty = state.pos.y - vh / 2;
+  tx = Math.max(0, Math.min(WORLD.w - vw, tx));
+  ty = Math.max(0, Math.min(WORLD.h - vh, ty));
+  return { tx, ty, vw, vh };
+}
+function getCamera(scale) {
+  const { tx, ty, vw, vh } = cameraTarget(scale);
+  if (!world.cam) world.cam = { x: tx, y: ty };
+  return { x: world.cam.x, y: world.cam.y, vw, vh };
+}
+function updateCamera(scale) {
+  const { tx, ty } = cameraTarget(scale);
+  if (!world.cam) world.cam = { x: tx, y: ty };
+  world.cam.x += (tx - world.cam.x) * .085;
+  world.cam.y += (ty - world.cam.y) * .085;
 }
 
 function worldLoop(t) {
   if (!screenIs('world')) return;
   const sec = (t - world.t0) / 1000;
   stepPlayer();
+  updateCamera(getViewScale());
   drawWorld(sec);
   world.raf = requestAnimationFrame(worldLoop);
 }
@@ -203,6 +224,57 @@ function drawWorld(sec) {
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(mapImg, 0, 0, WORLD.w, WORLD.h);
   }
+
+  // drifting cloud shadows over the island
+  ctx.fillStyle = 'rgba(10,30,60,.07)';
+  for (let i = 0; i < 3; i++) {
+    const sx = ((sec * (14 + i * 5) + i * 700) % (WORLD.w + 700)) - 350;
+    const sy = 260 + i * 260;
+    ctx.beginPath(); ctx.ellipse(sx, sy, 210, 90, .2, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // shoreline glints
+  const GLINTS = [[760, 940], [1310, 890], [1620, 560], [330, 640], [700, 150], [1490, 300]];
+  GLINTS.forEach(([gx, gy], i) => {
+    const tw = Math.max(0, Math.sin(sec * 2.2 + i * 1.9));
+    if (tw < .55) return;
+    ctx.save(); ctx.globalAlpha = (tw - .55) * 1.8;
+    ctx.fillStyle = '#ffffff';
+    drawStar(ctx, gx, gy, 4, 7 * tw, 2.4 * tw); ctx.fill();
+    ctx.restore();
+  });
+
+  // bees looping near the meadow flowers
+  for (let i = 0; i < 2; i++) {
+    const t = sec * (1.1 + i * .3) + i * 3;
+    const bx = 830 + i * 380 + Math.sin(t) * 60;
+    const by = 700 - i * 340 + Math.sin(t * 2) * 26;
+    ctx.save(); ctx.translate(bx, by);
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    const wf = Math.sin(sec * 30 + i) * 3;
+    ctx.beginPath(); ctx.ellipse(-2, -5, 4, 2.2 + wf * .3, -.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffd75e';
+    ctx.beginPath(); ctx.ellipse(0, 0, 5, 3.6, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#3a3348'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(-1.5, -3); ctx.lineTo(-1.5, 3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(1.8, -2.6); ctx.lineTo(1.8, 2.6); ctx.stroke();
+    ctx.restore();
+  }
+
+  // footstep dust
+  if (world.walking && sec - world.lastDust > .16) {
+    world.lastDust = sec;
+    world.dustFx.push({ x: state.pos.x - world.dir * 10 + (Math.random() - .5) * 8, y: state.pos.y + 2, t: sec });
+    if (world.dustFx.length > 14) world.dustFx.shift();
+  }
+  world.dustFx = world.dustFx.filter(p => sec - p.t < .55);
+  world.dustFx.forEach(p => {
+    const k = (sec - p.t) / .55;
+    ctx.save(); ctx.globalAlpha = (1 - k) * .4;
+    ctx.fillStyle = '#e8d9b2';
+    ctx.beginPath(); ctx.arc(p.x, p.y - k * 6, 3 + k * 7, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  });
 
   // near-building ground glow
   if (world.nearBuilding) {
@@ -374,15 +446,34 @@ function drawNPC(ctx, n, sec) {
   }
   drawAvatar(ctx, p.x, p.y, .98, n.cfg, sec + p.x, walking, dir);
   if (n.mode === 'fish') {
+    // a fish jumps every ~9s; the bobber dips hard during the bite
+    const cycle = sec % 9;
+    const bite = cycle > 7.6 && cycle < 8.2;
     ctx.strokeStyle = '#6f4a22'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(p.x - 14, p.y - 26); ctx.lineTo(p.x - 48, p.y - 62); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p.x - 14, p.y - 26); ctx.lineTo(p.x - 48, p.y - 62 + (bite ? 4 : 0)); ctx.stroke();
     ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1.5;
-    const bobY = p.y + 30 + Math.sin(sec * 2.2) * 3;
-    ctx.beginPath(); ctx.moveTo(p.x - 48, p.y - 62); ctx.lineTo(p.x - 56, bobY); ctx.stroke();
+    const bobY = p.y + 30 + (bite ? 9 : Math.sin(sec * 2.2) * 3);
+    ctx.beginPath(); ctx.moveTo(p.x - 48, p.y - 62 + (bite ? 4 : 0)); ctx.lineTo(p.x - 56, bobY); ctx.stroke();
     ctx.fillStyle = '#ff6b5b';
     ctx.beginPath(); ctx.arc(p.x - 56, bobY, 4, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(p.x - 56, bobY + 2, 8 + (sec * 14 % 10), 0, Math.PI * 2); ctx.stroke();
+    if (cycle > 7.4 && cycle < 8.1) {
+      // silver fish arcs out of the water
+      const ft = (cycle - 7.4) / .7;
+      const fx = p.x - 56 - ft * 30, fy = p.y + 26 - Math.sin(ft * Math.PI) * 34;
+      ctx.save(); ctx.translate(fx, fy); ctx.rotate(-.8 + ft * 1.6);
+      ctx.fillStyle = '#bcd8e8';
+      ctx.beginPath(); ctx.ellipse(0, 0, 9, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(14, -4); ctx.lineTo(14, 4); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      for (let s = 0; s < 3; s++) {
+        ctx.save(); ctx.globalAlpha = (1 - ft) * .8;
+        ctx.fillStyle = '#dff2fb';
+        ctx.beginPath(); ctx.arc(p.x - 56 + (s - 1) * 8, p.y + 26 - ft * 20 - s * 4, 2.2, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+    }
   }
   if (n.mode === 'read') {
     ctx.fillStyle = '#0068ff';
@@ -400,6 +491,36 @@ function drawNPC(ctx, n, sec) {
     ctx.beginPath(); ctx.moveTo(p.x - 16, p.y - 34); ctx.quadraticCurveTo(p.x - 14 + st, p.y - 40, p.x - 16, p.y - 46); ctx.stroke();
   }
   namePill(ctx, p.x, p.y - 118, n.name, n.color);
+
+  // chatter: proximity greeting wins, otherwise staggered rotating lines
+  const i = NPCS.indexOf(n);
+  const nearPlayer = Math.hypot(state.pos.x - p.x, state.pos.y - p.y) < 135;
+  const cycle = (sec + i * 5.5) % 22;
+  let line = null;
+  if (nearPlayer) line = `Hi, ${state.player.name || 'Explorer'}! 👋`;
+  else if (cycle < 3.4) {
+    const lines = NPC_LINES[n.name] || [];
+    line = lines[(((sec + i * 5.5) / 22) | 0) % lines.length];
+  }
+  if (line) speechBubble(ctx, p.x, p.y - 146, line);
+}
+
+function speechBubble(ctx, x, y, text) {
+  ctx.font = '600 12.5px system-ui, sans-serif';
+  const tw = Math.min(ctx.measureText(text).width, 190);
+  const w = tw + 20, h = 26;
+  ctx.fillStyle = 'rgba(255,255,255,.96)';
+  roundRect(ctx, x - w / 2, y - h, w, h, 12); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,45,114,.35)'; ctx.lineWidth = 2;
+  roundRect(ctx, x - w / 2, y - h, w, h, 12); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.96)';
+  ctx.beginPath();
+  ctx.moveTo(x - 6, y - 1); ctx.lineTo(x + 6, y - 1); ctx.lineTo(x, y + 7);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#002d72';
+  ctx.textAlign = 'center';
+  ctx.fillText(text, x, y - 8, 190);
+  ctx.textAlign = 'left';
 }
 
 function namePill(ctx, x, y, text, color) {

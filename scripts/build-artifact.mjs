@@ -2,7 +2,7 @@
    (no doctype/html/head/body wrapper) suitable for claude.ai Artifact
    publishing or pasting into any host page. `node scripts/build-artifact.mjs` */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -23,6 +23,7 @@ const assets = {
   desk: b64('assets/desk.jpg', 'image/jpeg'),
   trail: b64('assets/trail.jpg', 'image/jpeg'),
 };
+if (existsSync(join(root, 'assets/logo.webp'))) assets.logo = b64('assets/logo.webp', 'image/webp');
 
 const out = `<title>Breakout Land — a Breakout EDU world</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
