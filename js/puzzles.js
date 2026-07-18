@@ -74,6 +74,11 @@ const COLOR_SET = [
 const DIR_SET = [
   { id: 'up', g: '▲' }, { id: 'down', g: '▼' }, { id: 'left', g: '◀' }, { id: 'right', g: '▶' },
 ];
+const SHAPE_SET = [
+  { id: 'triangle', g: '▲', c: '#ff6b5b' }, { id: 'square', g: '■', c: '#0068ff' },
+  { id: 'circle', g: '●', c: '#26b59d' }, { id: 'diamond', g: '◆', c: '#ffb627' },
+  { id: 'star', g: '★', c: '#9b5de5' },
+];
 
 function startPuzzle({ title, ctxLabel, locks, onWin }) {
   Object.assign(puzzle, { locks, idx: 0, attempts: 0, lockAttempts: 0, t0: Date.now(), onWin, title, ctxLabel, entry: [] });
@@ -119,7 +124,10 @@ function renderLock() {
   } else if (lk.type === 'word') {
     disp.dataset.slots = String(lk.answer.length);
     updateEntryDisplay('letter');
-    const letters = shuffle((lk.answer + pickExtraLetters(lk.answer)).split('')).slice(0, Math.max(10, lk.answer.length + 3));
+    // every answer letter must stay on the pad — only pad out with extras
+    const extras = pickExtraLetters(lk.answer);
+    const padCount = Math.max(0, Math.max(10, lk.answer.length + 2) - lk.answer.length);
+    const letters = shuffle((lk.answer + extras.slice(0, padCount)).split(''));
     letters.forEach(ch =>
       addKey(ch, () => { if (puzzle.entry.length < lk.answer.length) { puzzle.entry.push(ch); blip(520 + puzzle.entry.length * 40); updateEntryDisplay('letter'); } }));
     addKey('⌫', () => { puzzle.entry.pop(); updateEntryDisplay('letter'); blip(300); }, 'wide');
@@ -142,6 +150,28 @@ function renderLock() {
       }, 'dirkey'));
     addKey('⌫', () => { puzzle.entry.pop(); updateEntryDisplay('dir'); blip(300); }, 'wide');
     addKey('TRY IT', () => submitEntry(lk, puzzle.entry.join(',')), 'go wide');
+  } else if (lk.type === 'shape') {
+    disp.dataset.slots = String(lk.answer.length);
+    updateEntryDisplay('shape');
+    SHAPE_SET.forEach(ss =>
+      addKey(`<span style="color:${ss.c}">${ss.g}</span>`, () => {
+        if (puzzle.entry.length < lk.answer.length) { puzzle.entry.push(ss.id); blip(500 + puzzle.entry.length * 70); updateEntryDisplay('shape'); }
+      }, 'shapekey'));
+    addKey('⌫', () => { puzzle.entry.pop(); updateEntryDisplay('shape'); blip(300); }, 'wide');
+    addKey('TRY IT', () => submitEntry(lk, puzzle.entry.join(',')), 'go wide');
+  } else if (lk.type === 'switch') {
+    // a row of toggles; flip the right ones ON
+    puzzle.entry = Array(lk.answer.length).fill('0');
+    disp.dataset.slots = String(lk.answer.length);
+    updateEntryDisplay('switch');
+    for (let i = 0; i < lk.answer.length; i++) {
+      addKey(`SW ${i + 1}`, () => {
+        puzzle.entry[i] = puzzle.entry[i] === '1' ? '0' : '1';
+        blip(puzzle.entry[i] === '1' ? 760 : 420);
+        updateEntryDisplay('switch');
+      }, 'switchkey');
+    }
+    addKey('TRY IT', () => submitEntry(lk, puzzle.entry.join('')), 'go wide');
   }
 }
 
@@ -153,10 +183,15 @@ function updateEntryDisplay(kind) {
     const s = document.createElement('span');
     s.className = 'slot';
     const v = puzzle.entry[i];
-    if (v !== undefined) {
+    if (kind === 'switch') {
+      s.classList.add('filled', 'sw');
+      s.classList.toggle('on', puzzle.entry[i] === '1');
+      s.textContent = puzzle.entry[i] === '1' ? 'ON' : 'OFF';
+    } else if (v !== undefined) {
       s.classList.add('filled');
       if (kind === 'color') { s.innerHTML = `<span class="dot" style="background:${COLOR_SET.find(c => c.id === v).c}"></span>`; }
       else if (kind === 'dir') { s.textContent = DIR_SET.find(d => d.id === v).g; }
+      else if (kind === 'shape') { const sh = SHAPE_SET.find(t => t.id === v); s.innerHTML = `<span style="color:${sh.c}">${sh.g}</span>`; }
       else { s.textContent = v; }
     }
     disp.appendChild(s);
@@ -188,8 +223,8 @@ function submitEntry(lk, entered) {
     buzz();
     const lockEl = document.getElementById('pz-lock');
     lockEl.classList.remove('shake'); void lockEl.offsetWidth; lockEl.classList.add('shake');
-    puzzle.entry = [];
-    updateEntryDisplay(lk.type === 'number' ? 'digit' : lk.type === 'word' ? 'letter' : lk.type === 'color' ? 'color' : 'dir');
+    puzzle.entry = lk.type === 'switch' ? Array(lk.answer.length).fill('0') : [];
+    updateEntryDisplay({ number: 'digit', word: 'letter', color: 'color', direction: 'dir', shape: 'shape', switch: 'switch' }[lk.type]);
     if (puzzle.lockAttempts >= 2 && lk.hint) {
       const h = document.getElementById('pz-hint');
       h.textContent = '💡 Hint: ' + lk.hint;

@@ -176,6 +176,9 @@ function stepPlayer() {
 
   world.walking = !!(vx || vy);
   if (vx) world.dir = vx > 0 ? 1 : -1;
+  // eased facing: characters turn instead of snapping
+  if (world.face === undefined) world.face = world.dir;
+  world.face += (world.dir - world.face) * .28;
 
   // slide along coastline: try full move, then each axis
   const nx = state.pos.x + vx, ny = state.pos.y + vy;
@@ -323,8 +326,9 @@ function drawWorld(sec) {
     {
       y: state.pos.y,
       fn: () => {
+        const nearNPC = NPCS.some(n => { const p = npcPos(n, sec); return Math.hypot(state.pos.x - p.x, state.pos.y - p.y) < 135; });
         drawPet(ctx, state.pos.x - 36 * world.dir, state.pos.y + 2, 1.05, state.player.pet, sec);
-        drawAvatar(ctx, state.pos.x, state.pos.y, 1.08, state.player, sec, world.walking, world.dir);
+        drawAvatar(ctx, state.pos.x, state.pos.y, 1.08, state.player, sec, world.walking, world.face || world.dir, nearNPC && !world.walking);
         namePill(ctx, state.pos.x, state.pos.y - 126, state.player.name || 'Explorer', '#002d72');
       },
     },
@@ -430,7 +434,7 @@ function drawLocationPin(ctx, b, sec, i) {
 
 function npcPos(n, sec) {
   if (n.mode === 'wander') {
-    const a = sec * n.speed + 1.4;
+    const a = (n._clock !== undefined ? n._clock : sec) * n.speed + 1.4;
     return { x: n.cx + Math.cos(a) * n.r, y: n.cy + Math.sin(a) * n.r * .5 };
   }
   return { x: n.x, y: n.y };
@@ -439,12 +443,20 @@ function npcPos(n, sec) {
 function drawNPC(ctx, n, sec) {
   const p = npcPos(n, sec);
   let dir = n.dir || 1, walking = false;
+  const nearPlayerNow = Math.hypot(state.pos.x - p.x, state.pos.y - p.y) < 135;
   if (n.mode === 'wander') {
-    const a = sec * n.speed + 1.4;
+    // the stroll clock only advances while nobody's chatting
+    if (n._clock === undefined) { n._clock = sec; n._lastSec = sec; }
+    if (!nearPlayerNow) n._clock += sec - n._lastSec;
+    n._lastSec = sec;
+    const a = n._clock * n.speed + 1.4;
     dir = -Math.sin(a) >= 0 ? -1 : 1;
-    walking = true;
+    walking = !nearPlayerNow;
   }
-  drawAvatar(ctx, p.x, p.y, .98, n.cfg, sec + p.x, walking, dir);
+  if (nearPlayerNow) dir = state.pos.x >= p.x ? 1 : -1; // turn toward the player
+  if (n._face === undefined) n._face = dir;
+  n._face += (dir - n._face) * .22;
+  drawAvatar(ctx, p.x, p.y, .98, n.cfg, sec + p.x, walking, n._face, nearPlayerNow);
   if (n.mode === 'fish') {
     // a fish jumps every ~9s; the bobber dips hard during the bite
     const cycle = sec % 9;

@@ -9,27 +9,50 @@ let heroReady = false;
 heroImg.onload = () => { heroReady = true; };
 heroImg.src = (typeof window !== 'undefined' && window.ASSETS && window.ASSETS.heroes) ? window.ASSETS.heroes : 'assets/heroes.webp';
 
+/* per-hero forehead tone (sampled from the sheet) for blink eyelids */
+let heroTones = null;
+function sampleHeroTones() {
+  if (heroTones || !heroReady) return;
+  try {
+    const cv = document.createElement('canvas');
+    cv.width = heroImg.width; cv.height = heroImg.height;
+    const c = cv.getContext('2d');
+    c.drawImage(heroImg, 0, 0);
+    heroTones = [];
+    for (let k = 0; k < 12; k++) {
+      const px = (k % 6) * HERO_CELL.w + 150, py = ((k / 6) | 0) * HERO_CELL.h + 132;
+      const d = c.getImageData(px, py, 1, 1).data;
+      heroTones.push(d[3] > 100 ? `rgb(${d[0]},${d[1]},${d[2]})` : '#e8b48c');
+    }
+  } catch (e) { heroTones = Array(12).fill('#e8b48c'); }
+}
+
 /**
  * Draw a hero sprite centered at x with feet at y.
  * cfg: { hero, accessory, ... } — height ≈ 118 * scale.
+ * dir may be fractional (eased turn); wave=true raises a greeting hand.
  */
-function drawAvatar(ctx, x, y, scale, cfg, frame = 0, walking = false, dir = 1) {
+function drawAvatar(ctx, x, y, scale, cfg, frame = 0, walking = false, dir = 1, wave = false) {
   const hero = cfg && Number.isInteger(cfg.hero) ? Math.max(0, Math.min(11, cfg.hero)) : 0;
   const dh = 126 * scale;
   const dw = dh * (HERO_CELL.w / HERO_CELL.h);
   const col = hero % HERO_CELL.cols, row = (hero / HERO_CELL.cols) | 0;
 
+  // eased gait: bob + tiny squash-and-stretch, gentle idle breathing
   const bob = walking ? Math.abs(Math.sin(frame * 9)) * 5 * scale : Math.sin(frame * 2.2) * 1.6 * scale;
   const lean = walking ? Math.sin(frame * 9) * .05 : 0;
+  const squash = walking ? 1 + Math.sin(frame * 18) * .035 : 1 + Math.sin(frame * 2.2) * .012;
+  const face = Math.abs(dir) < .22 ? (dir < 0 ? -.22 : .22) : dir; // never fully flat mid-turn
 
-  // soft ground shadow (baked shadows were stripped from the sheet)
+  // soft ground shadow syncs with the hop
+  const shScale = 1 - (bob / (14 * scale));
   ctx.fillStyle = 'rgba(20,35,25,.22)';
-  ctx.beginPath(); ctx.ellipse(x, y + 2 * scale, 20 * scale, 6 * scale, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x, y + 2 * scale, 20 * scale * shScale, 6 * scale * shScale, 0, 0, Math.PI * 2); ctx.fill();
 
   ctx.save();
   ctx.translate(x, y - bob);
   ctx.rotate(lean);
-  ctx.scale(dir, 1);
+  ctx.scale(face, squash);
 
   // head geometry for accessory overlays (chibi grid is uniform enough)
   const headCY = -dh * .655;
@@ -48,6 +71,31 @@ function drawAvatar(ctx, x, y, scale, cfg, frame = 0, walking = false, dir = 1) 
 
   if (heroReady) {
     ctx.drawImage(heroImg, col * HERO_CELL.w, row * HERO_CELL.h, HERO_CELL.w, HERO_CELL.h, -dw / 2, -dh, dw, dh);
+    // blink: skin-tone eyelids sweep down every few seconds
+    sampleHeroTones();
+    const bcycle = (frame * .9 + hero * 1.37) % 3.8;
+    if (bcycle < .13 && heroTones) {
+      ctx.fillStyle = heroTones[hero];
+      const eyeY = headCY + headR * .08, eyeDX = headR * .36;
+      ctx.beginPath(); ctx.ellipse(-eyeDX, eyeY, headR * .22, headR * .15, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(eyeDX, eyeY, headR * .22, headR * .15, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    // wave: a friendly raised hand wiggling hello
+    if (wave) {
+      const wa = -2.2 + Math.sin(frame * 9) * .45;
+      const sx = dw * .34, sy = -dh * .42;
+      ctx.strokeStyle = heroTones ? heroTones[hero] : '#e8b48c';
+      ctx.lineWidth = 7 * scale; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + Math.cos(wa) * headR * 1.15, sy + Math.sin(wa) * headR * 1.15);
+      ctx.stroke();
+      ctx.fillStyle = heroTones ? heroTones[hero] : '#e8b48c';
+      ctx.beginPath();
+      ctx.arc(sx + Math.cos(wa) * headR * 1.3, sy + Math.sin(wa) * headR * 1.3, 5.5 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(40,34,56,.35)'; ctx.lineWidth = 1.6 * scale; ctx.stroke();
+    }
   } else {
     // loading fallback: simple silhouette
     ctx.fillStyle = '#7da8d8';
@@ -129,6 +177,20 @@ function drawPet(ctx, x, y, scale, petId, frame) {
   ctx.fillStyle = '#22252e';
   ctx.beginPath(); ctx.arc(-2 * s, -17.5 * s, 1 * s, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(2 * s, -17.5 * s, 1 * s, 0, Math.PI * 2); ctx.fill();
+  // every so often the pet floats a little heart
+  const hc = (frame * .8 + x * .01) % 7;
+  if (hc < 1.1) {
+    const t = hc / 1.1;
+    ctx.save(); ctx.globalAlpha = (1 - t) * .9;
+    ctx.fillStyle = '#ff7d9c';
+    const hy = -26 * s - t * 22 * s, hs = (2.6 + t * 1.4) * s;
+    ctx.beginPath();
+    ctx.arc(-hs * .5, hy, hs * .55, 0, Math.PI * 2);
+    ctx.arc(hs * .5, hy, hs * .55, 0, Math.PI * 2);
+    ctx.moveTo(-hs, hy + hs * .2); ctx.lineTo(0, hy + hs * 1.4); ctx.lineTo(hs, hy + hs * .2);
+    ctx.fill();
+    ctx.restore();
+  }
   ctx.restore();
 }
 

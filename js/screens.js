@@ -158,11 +158,81 @@ function renderArcade(title, body) {
         <button class="btn-big" id="kc-go" ${state.arcadeMin < 5 ? 'disabled' : ''}>${state.arcadeMin < 5 ? 'Need 5 min' : 'Play (−5 min)'}</button>
       </div>
     </div>
-    <div class="card game-card soon">
-      <div class="game-info"><h3>Puzzle Kart</h3><p class="story">Coming soon to the Arcade…</p></div>
+    <div class="card game-card">
+      <div class="game-info">
+        <h3>Memory Match</h3>
+        <p class="story">Flip the cards, find the pairs, beat the clock. Sharp eyes win keys!</p>
+      </div>
+      <div class="game-side">
+        <button class="btn-big" id="mm-go" ${state.arcadeMin < 5 ? 'disabled' : ''}>${state.arcadeMin < 5 ? 'Need 5 min' : 'Play (−5 min)'}</button>
+      </div>
     </div>`;
   const go = document.getElementById('kc-go');
   if (go && state.arcadeMin >= 5) go.onclick = () => { closeBuildingModal(); startKeyCatcher(); };
+  const mm = document.getElementById('mm-go');
+  if (mm && state.arcadeMin >= 5) mm.onclick = () => { closeBuildingModal(); startMemoryMatch(); };
+}
+
+/* Memory Match minigame — DOM cards with 3D flips */
+function startMemoryMatch() {
+  state.arcadeMin -= 5; saveState(); updateHUD();
+  const modal = document.getElementById('mm-modal');
+  const grid = document.getElementById('mm-grid');
+  const status = document.getElementById('mm-status');
+  modal.classList.add('open');
+
+  const icons = ['🔑', '🔒', '⭐', '🧪', '📘', '⚙️'];
+  const deck = shuffle([...icons, ...icons].map((ic, i) => ({ ic, id: i })));
+  let flipped = [], matched = 0, misses = 0, lock = false;
+  const t0 = Date.now();
+
+  const tick = setInterval(() => {
+    if (!modal.classList.contains('open')) { clearInterval(tick); return; }
+    status.textContent = `⏱ ${Math.floor((Date.now() - t0) / 1000)}s · pairs ${matched}/6 · misses ${misses}`;
+  }, 250);
+
+  grid.innerHTML = '';
+  deck.forEach((card) => {
+    const el = document.createElement('button');
+    el.className = 'mm-card';
+    el.innerHTML = `<span class="mm-inner"><span class="mm-front">🔐</span><span class="mm-back">${card.ic}</span></span>`;
+    el.onclick = () => {
+      if (lock || el.classList.contains('flip') || el.classList.contains('done')) return;
+      blip(640);
+      el.classList.add('flip');
+      flipped.push({ el, ic: card.ic });
+      if (flipped.length === 2) {
+        lock = true;
+        const [a, b] = flipped;
+        if (a.ic === b.ic) {
+          setTimeout(() => {
+            a.el.classList.add('done'); b.el.classList.add('done');
+            matched++; blip(900); flipped = []; lock = false;
+            if (matched === 6) {
+              clearInterval(tick);
+              const secs = Math.floor((Date.now() - t0) / 1000);
+              const bonus = 8 + (secs <= 45 ? 4 : 0) + Math.max(0, 4 - Math.floor(misses / 2));
+              setTimeout(() => {
+                modal.classList.remove('open');
+                grant({ keys: bonus, xp: 24 });
+                fanfare(); confetti();
+                toast(`Memory Match: all pairs in ${secs}s, ${misses} misses! +${bonus} 🔑 +24 XP`);
+              }, 500);
+            }
+          }, 420);
+        } else {
+          misses++;
+          setTimeout(() => {
+            a.el.classList.remove('flip'); b.el.classList.remove('flip');
+            buzz(); flipped = []; lock = false;
+          }, 750);
+        }
+      }
+    };
+    grid.appendChild(el);
+  });
+
+  document.getElementById('mm-quit').onclick = () => { clearInterval(tick); modal.classList.remove('open'); };
 }
 
 /* Key Catcher minigame — neon arcade juice: spinning keys, catch bursts,
