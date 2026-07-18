@@ -1442,9 +1442,9 @@ function sampleHeroTones() {
 /**
  * Draw a hero sprite centered at x with feet at y.
  * cfg: { hero, accessory, ... } — height ≈ 118 * scale.
- * dir may be fractional (eased turn); wave=true raises a greeting hand.
+ * dir may be fractional (eased turn).
  */
-function drawAvatar(ctx, x, y, scale, cfg, frame = 0, walking = false, dir = 1, wave = false) {
+function drawAvatar(ctx, x, y, scale, cfg, frame = 0, walking = false, dir = 1) {
   const hero = cfg && Number.isInteger(cfg.hero) ? Math.max(0, Math.min(11, cfg.hero)) : 0;
   const dh = 126 * scale;
   const dw = dh * (HERO_CELL.w / HERO_CELL.h);
@@ -1491,22 +1491,6 @@ function drawAvatar(ctx, x, y, scale, cfg, frame = 0, walking = false, dir = 1, 
       const eyeY = headCY + headR * .08, eyeDX = headR * .36;
       ctx.beginPath(); ctx.ellipse(-eyeDX, eyeY, headR * .22, headR * .15, 0, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.ellipse(eyeDX, eyeY, headR * .22, headR * .15, 0, 0, Math.PI * 2); ctx.fill();
-    }
-    // wave: a friendly raised hand wiggling hello
-    if (wave) {
-      const wa = -2.2 + Math.sin(frame * 9) * .45;
-      const sx = dw * .34, sy = -dh * .42;
-      ctx.strokeStyle = heroTones ? heroTones[hero] : '#e8b48c';
-      ctx.lineWidth = 7 * scale; ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(sx + Math.cos(wa) * headR * 1.15, sy + Math.sin(wa) * headR * 1.15);
-      ctx.stroke();
-      ctx.fillStyle = heroTones ? heroTones[hero] : '#e8b48c';
-      ctx.beginPath();
-      ctx.arc(sx + Math.cos(wa) * headR * 1.3, sy + Math.sin(wa) * headR * 1.3, 5.5 * scale, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(40,34,56,.35)'; ctx.lineWidth = 1.6 * scale; ctx.stroke();
     }
   } else {
     // loading fallback: simple silhouette
@@ -2045,9 +2029,8 @@ function drawWorld(sec) {
     {
       y: state.pos.y,
       fn: () => {
-        const nearNPC = NPCS.some(n => { const p = npcPos(n, sec); return Math.hypot(state.pos.x - p.x, state.pos.y - p.y) < 135; });
         drawPet(ctx, state.pos.x - 36 * world.dir, state.pos.y + 2, 1.05, state.player.pet, sec);
-        drawAvatar(ctx, state.pos.x, state.pos.y, 1.08, state.player, sec, world.walking, world.face || world.dir, nearNPC && !world.walking);
+        drawAvatar(ctx, state.pos.x, state.pos.y, 1.08, state.player, sec, world.walking, world.face || world.dir);
         namePill(ctx, state.pos.x, state.pos.y - 126, state.player.name || 'Explorer', '#002d72');
       },
     },
@@ -2175,7 +2158,7 @@ function drawNPC(ctx, n, sec) {
   if (nearPlayerNow) dir = state.pos.x >= p.x ? 1 : -1; // turn toward the player
   if (n._face === undefined) n._face = dir;
   n._face += (dir - n._face) * .22;
-  drawAvatar(ctx, p.x, p.y, .98, n.cfg, sec + p.x, walking, n._face, nearPlayerNow);
+  drawAvatar(ctx, p.x, p.y, .98, n.cfg, sec + p.x, walking, n._face);
   if (n.mode === 'fish') {
     // a fish jumps every ~9s; the bobber dips hard during the bite
     const cycle = sec % 9;

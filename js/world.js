@@ -326,9 +326,8 @@ function drawWorld(sec) {
     {
       y: state.pos.y,
       fn: () => {
-        const nearNPC = NPCS.some(n => { const p = npcPos(n, sec); return Math.hypot(state.pos.x - p.x, state.pos.y - p.y) < 135; });
         drawPet(ctx, state.pos.x - 36 * world.dir, state.pos.y + 2, 1.05, state.player.pet, sec);
-        drawAvatar(ctx, state.pos.x, state.pos.y, 1.08, state.player, sec, world.walking, world.face || world.dir, nearNPC && !world.walking);
+        drawAvatar(ctx, state.pos.x, state.pos.y, 1.08, state.player, sec, world.walking, world.face || world.dir);
         namePill(ctx, state.pos.x, state.pos.y - 126, state.player.name || 'Explorer', '#002d72');
       },
     },
@@ -456,7 +455,7 @@ function drawNPC(ctx, n, sec) {
   if (nearPlayerNow) dir = state.pos.x >= p.x ? 1 : -1; // turn toward the player
   if (n._face === undefined) n._face = dir;
   n._face += (dir - n._face) * .22;
-  drawAvatar(ctx, p.x, p.y, .98, n.cfg, sec + p.x, walking, n._face, nearPlayerNow);
+  drawAvatar(ctx, p.x, p.y, .98, n.cfg, sec + p.x, walking, n._face);
   if (n.mode === 'fish') {
     // a fish jumps every ~9s; the bobber dips hard during the bite
     const cycle = sec % 9;

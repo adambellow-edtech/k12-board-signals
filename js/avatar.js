@@ -30,9 +30,9 @@ function sampleHeroTones() {
 /**
  * Draw a hero sprite centered at x with feet at y.
  * cfg: { hero, accessory, ... } — height ≈ 118 * scale.
- * dir may be fractional (eased turn); wave=true raises a greeting hand.
+ * dir may be fractional (eased turn).
  */
-function drawAvatar(ctx, x, y, scale, cfg, frame = 0, walking = false, dir = 1, wave = false) {
+function drawAvatar(ctx, x, y, scale, cfg, frame = 0, walking = false, dir = 1) {
   const hero = cfg && Number.isInteger(cfg.hero) ? Math.max(0, Math.min(11, cfg.hero)) : 0;
   const dh = 126 * scale;
   const dw = dh * (HERO_CELL.w / HERO_CELL.h);
@@ -79,22 +79,6 @@ function drawAvatar(ctx, x, y, scale, cfg, frame = 0, walking = false, dir = 1, 
       const eyeY = headCY + headR * .08, eyeDX = headR * .36;
       ctx.beginPath(); ctx.ellipse(-eyeDX, eyeY, headR * .22, headR * .15, 0, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.ellipse(eyeDX, eyeY, headR * .22, headR * .15, 0, 0, Math.PI * 2); ctx.fill();
-    }
-    // wave: a friendly raised hand wiggling hello
-    if (wave) {
-      const wa = -2.2 + Math.sin(frame * 9) * .45;
-      const sx = dw * .34, sy = -dh * .42;
-      ctx.strokeStyle = heroTones ? heroTones[hero] : '#e8b48c';
-      ctx.lineWidth = 7 * scale; ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(sx + Math.cos(wa) * headR * 1.15, sy + Math.sin(wa) * headR * 1.15);
-      ctx.stroke();
-      ctx.fillStyle = heroTones ? heroTones[hero] : '#e8b48c';
-      ctx.beginPath();
-      ctx.arc(sx + Math.cos(wa) * headR * 1.3, sy + Math.sin(wa) * headR * 1.3, 5.5 * scale, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(40,34,56,.35)'; ctx.lineWidth = 1.6 * scale; ctx.stroke();
     }
   } else {
     // loading fallback: simple silhouette
