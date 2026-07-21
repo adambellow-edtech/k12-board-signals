@@ -229,6 +229,21 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
   padding: 6px 14px; border-radius: 999px; pointer-events: none;
 }
 
+/* tutorial coach banner (Ollie the owl) */
+#tut-banner {
+  position: fixed; left: 50%; top: 112px; transform: translate(-50%, -16px);
+  display: none; align-items: center; gap: 12px; max-width: min(560px, 88vw);
+  background: linear-gradient(180deg, #fffef8, #fff2d4);
+  border: 3px solid var(--gold); border-radius: 20px; padding: 12px 18px;
+  box-shadow: 0 8px 0 rgba(180,130,10,.35), 0 18px 34px rgba(0,20,60,.28);
+  z-index: 45; opacity: 0; transition: transform .35s cubic-bezier(.2,1.5,.4,1), opacity .35s ease;
+}
+#tut-banner.show { display: flex; opacity: 1; transform: translate(-50%, 0); }
+#tut-guide { font-size: 34px; flex: 0 0 auto; animation: tutbob 1.8s ease-in-out infinite; }
+@keyframes tutbob { 50% { transform: translateY(-5px) rotate(-4deg); } }
+#tut-say { margin: 0; font-weight: 700; font-size: 14.5px; color: var(--navy); line-height: 1.3; text-align: left; }
+#tut-banner.finale { border-color: var(--purple); }
+
 /* ---------- HUD: chunky navy game panels (storybook style) ---------- */
 #hud { position: fixed; inset: 0; display: none; pointer-events: none; z-index: 40; }
 #hud > * { pointer-events: auto; }
@@ -288,6 +303,33 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .pc-info span { font-size: 11px; color: #9cc4ff; font-weight: 700; }
 .hud-xp { width: 110px; height: 8px; border-radius: 99px; background: rgba(4,20,55,.65); overflow: hidden; border: 1.5px solid rgba(255,255,255,.14); }
 .hud-xp > div { height: 100%; background: linear-gradient(90deg, var(--green), #4c9aff); border-radius: 99px; transition: width .5s ease; }
+
+/* ---- Five Keys of Knowledge story panel ---- */
+#key-quest-panel {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+  padding: 8px 16px 10px; text-align: center;
+}
+#hud.math-mode #key-quest-panel { display: none; }
+.kq-head {
+  font-family: var(--display); font-weight: 800; font-size: 11px; letter-spacing: 1.1px;
+  color: #9cc4ff; margin-bottom: 6px;
+}
+.kq-slots { display: flex; gap: 9px; }
+.lk-slot {
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 16px; background: rgba(4,20,55,.6); border: 2px solid rgba(255,255,255,.16);
+  color: rgba(255,255,255,.5); transition: transform .3s ease;
+}
+.lk-slot.lit {
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--kc) 55%, #fff) 0%, var(--kc) 75%);
+  border-color: #fff; color: #fff;
+  box-shadow: 0 0 10px 1px color-mix(in srgb, var(--kc) 70%, transparent), inset 0 1px 2px rgba(255,255,255,.5);
+  animation: keyglow 2.2s ease-in-out infinite;
+}
+@keyframes keyglow {
+  0%, 100% { box-shadow: 0 0 8px 1px color-mix(in srgb, var(--kc) 55%, transparent), inset 0 1px 2px rgba(255,255,255,.5); }
+  50% { box-shadow: 0 0 16px 4px color-mix(in srgb, var(--kc) 80%, transparent), inset 0 1px 2px rgba(255,255,255,.6); transform: translateY(-1px); }
+}
 
 /* ---------- modals ---------- */
 .modal {
@@ -562,6 +604,7 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
 }
 .mm-front { background: linear-gradient(180deg, #1c56ad, #0d3271); box-shadow: inset 0 2px 0 rgba(255,255,255,.25); font-size: 22px; }
 .mm-back { background: linear-gradient(180deg, #fffdf4, #ffeccf); transform: rotateY(180deg); }
+.mm-back.mm-text { font-size: 17px; font-weight: 800; font-family: var(--display); color: var(--navy); padding: 2px; text-align: center; line-height: 1.05; }
 .mm-card.done .mm-inner { animation: mmpop .45s cubic-bezier(.2, 2, .4, 1); }
 .mm-card.done .mm-back { background: linear-gradient(180deg, #dff7e6, #b9ecc9); border-color: #1c9a56; }
 @keyframes mmpop { 30% { transform: rotateY(180deg) scale(1.14); } 100% { transform: rotateY(180deg) scale(1); } }
@@ -645,6 +688,7 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
   <canvas id="world-canvas"></canvas>
   <div class="world-hint">Walk with WASD / arrows — or tap where you want to go</div>
   <button id="enter-btn">Enter</button>
+  <div id="tut-banner"><span id="tut-guide">🦉</span><p id="tut-say"></p></div>
 </section>
 
 <!-- ============ HUD (storybook style: navy panels) ============ -->
@@ -679,6 +723,10 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
       <span id="hud-level">Lv 1 · Rookie Solver</span>
       <span class="hud-xp"><div id="hud-xpbar" style="width:0%"></div></span>
     </div>
+  </div>
+  <div class="navy-panel" id="key-quest-panel" title="The Five Keys of Knowledge">
+    <div class="kq-head">THE FIVE KEYS OF KNOWLEDGE</div>
+    <div class="kq-slots" id="kq-slots"></div>
   </div>
 </div>
 
@@ -896,20 +944,66 @@ const DATA = {
     { id: 'stylist',        name: 'Style Star',       desc: 'Buy your first Style Shop item',      icon: 'star' },
     { id: 'thinker',        name: 'Critical Thinker', desc: 'Solve a lock on the first try',       icon: 'bulb' },
     { id: 'persistent',     name: 'Never Give Up',    desc: 'Solve a lock after 3+ tries',         icon: 'heart' },
+    { id: 'star-seeker',    name: 'Star Seeker',      desc: 'Collect all 5 Sparkle Keys in one day', icon: 'star' },
+    { id: 'quest-hero',     name: 'Quest Hero',       desc: 'Finish all 4 island quests in one day', icon: 'trophy' },
+  ],
+
+  // The Five Keys of Knowledge — legendary milestone keys that tell the island's story
+  legendaryKeys: [
+    { id: 'math',       name: 'Key of Numbers',    color: '#0068ff', icon: '🔢', desc: 'Awarded for conquering a Breakout Math boss.' },
+    { id: 'logic',      name: 'Key of Logic',      color: '#26b59d', icon: '🧩', desc: 'Awarded for cracking every lock in a game.' },
+    { id: 'words',      name: 'Key of Words',      color: '#c914a7', icon: '📜', desc: 'Awarded for helping all island friends in a day.' },
+    { id: 'explore',    name: 'Key of Discovery',  color: '#f4a11e', icon: '🧭', desc: 'Awarded for finding all Sparkle Keys in a day.' },
+    { id: 'creativity', name: 'Key of Creativity', color: '#5c25b7', icon: '🎨', desc: 'Awarded for making the island your own.' },
   ],
 
   // Lock of the Day pool — rotates by date
   dailyLocks: [
-    { type: 'number', clue: 'I am a two-digit number. My tens digit is double my ones digit, and my digits add up to 9. Open the lock!', answer: '63', hint: 'Try digits that add to 9 where the first is twice the second.' },
-    { type: 'word', clue: 'I have keys but open no locks, I have space but no room, you can enter but not go inside. What am I?', answer: 'KEYBOARD', hint: 'You might be using one right now…' },
-    { type: 'color', clue: 'Mix-up at the paint shop! Enter the colors of: the sun, the ocean, grass, and a strawberry — in that order.', answer: ['yellow', 'blue', 'green', 'red'], hint: 'Sun → Ocean → Grass → Strawberry.' },
-    { type: 'direction', clue: 'The treasure map says: toward the sunrise, then toward the mountains at the top, then sunrise again, then down the waterfall.', answer: ['right', 'up', 'right', 'down'], hint: 'Sunrise = East (right). Top of a map = up.' },
-    { type: 'number', clue: 'Three friends share 24 cookies equally, then each eats 2. How many cookies does each friend have left?', answer: '6', hint: '24 ÷ 3 first, then subtract.' },
-    { type: 'word', clue: 'The more you take, the more you leave behind. What are they?', answer: 'STEPS', hint: 'Think about walking.' },
-    { type: 'number', clue: 'A clock shows 3:15. How many minutes until 4 o’clock?', answer: '45', hint: '60 minutes in an hour.' },
-    { type: 'shape', clue: 'The wizard’s door whispers: “First 3 sides, then 4 sides, then no sides at all!”', answer: ['triangle', 'square', 'circle'], hint: 'Count each shape’s sides.' },
-    { type: 'switch', clue: 'The power panel hums: “Flip ON only the ODD-numbered switches.”', answer: '10101', hint: 'Odd numbers: 1, 3, 5.' },
+    { type: 'number', subject: 'Math · Number Sense', clue: 'I am a two-digit number. My tens digit is double my ones digit, and my digits add up to 9. Open the lock!', answer: '63', hint: 'Try digits that add to 9 where the first is twice the second.' },
+    { type: 'word', subject: 'ELA · Riddles', clue: 'I have keys but open no locks, I have space but no room, you can enter but not go inside. What am I?', answer: 'KEYBOARD', hint: 'You might be using one right now…' },
+    { type: 'color', subject: 'Science · Observation', clue: 'Mix-up at the paint shop! Enter the colors of: the sun, the ocean, grass, and a strawberry — in that order.', answer: ['yellow', 'blue', 'green', 'red'], hint: 'Sun → Ocean → Grass → Strawberry.' },
+    { type: 'direction', subject: 'Geography · Map Skills', clue: 'The treasure map says: toward the sunrise, then toward the mountains at the top, then sunrise again, then down the waterfall.', answer: ['right', 'up', 'right', 'down'], hint: 'Sunrise = East (right). Top of a map = up.' },
+    { type: 'number', subject: 'Math · Division', clue: 'Three friends share 24 cookies equally, then each eats 2. How many cookies does each friend have left?', answer: '6', hint: '24 ÷ 3 first, then subtract.' },
+    { type: 'word', subject: 'ELA · Riddles', clue: 'The more you take, the more you leave behind. What are they?', answer: 'STEPS', hint: 'Think about walking.' },
+    { type: 'number', subject: 'Math · Time', clue: 'A clock shows 3:15. How many minutes until 4 o’clock?', answer: '45', hint: '60 minutes in an hour.' },
+    { type: 'shape', subject: 'Math · Geometry', clue: 'The wizard’s door whispers: “First 3 sides, then 4 sides, then no sides at all!”', answer: ['triangle', 'square', 'circle'], hint: 'Count each shape’s sides.' },
+    { type: 'switch', subject: 'Math · Odd & Even', clue: 'The power panel hums: “Flip ON only the ODD-numbered switches.”', answer: '10101', hint: 'Odd numbers: 1, 3, 5.' },
   ],
+
+  // Daily side quests from the island NPCs
+  npcQuests: [
+    {
+      npc: 'Leo', icon: '🎣', title: "Leo's Riddle",
+      intro: "Hey explorer! I found this locked bait box. Help me crack it and I'll share the catch!",
+      lock: { type: 'number', subject: 'Math · Multiplication', clue: 'I have 6 rods and catch 4 fish per rod. How many fish is that?', answer: '24', hint: 'Multiply the rods by the fish per rod.' },
+      reward: { keys: 8, xp: 20, arcade: 3 },
+    },
+    {
+      npc: 'Maya', icon: '📖', title: "Maya's Cipher",
+      intro: "I found a secret message in Chapter 7! It's in code — help me decode it!",
+      lock: { type: 'word', subject: 'ELA · Word Play', clue: 'Take the LAST letter of each word to spell the secret: "Book Table Sunny Grass."', answer: 'KEYS', hint: 'Last letter of Book… Table… Sunny… Grass.' },
+      reward: { keys: 8, xp: 20, arcade: 3 },
+    },
+    {
+      npc: 'Zoe', icon: '🏃', title: "Zoe's Challenge",
+      intro: "I hid a key somewhere on the island! Follow my directions to find it.",
+      lock: { type: 'direction', subject: 'Geography · Directions', clue: 'From the dock: go toward the sunrise, then up the hill, then toward the sunset, then down to the shore.', answer: ['right', 'up', 'left', 'down'], hint: 'Sunrise = East = right. Sunset = West = left.' },
+      reward: { keys: 10, xp: 25, arcade: 5 },
+    },
+    {
+      npc: 'Kai', icon: '☕', title: "Kai's Puzzle",
+      intro: "Ah, an explorer! I've been contemplating this lock all morning. Perhaps two minds are better than one?",
+      lock: { type: 'color', subject: 'Science · Observation', clue: 'Kai says: "I see the colors of fire, then sky, then leaves — enter them in that order."', answer: ['red', 'blue', 'green'], hint: 'Fire = red. Sky = blue. Leaves = green.' },
+      reward: { keys: 8, xp: 20, arcade: 3 },
+    },
+  ],
+
+  // Grade-aligned Memory Match decks (label pairs); K-2 keep the emoji deck
+  memoryDecks: {
+    3: [['7 × 8', '56'], ['9 × 6', '54'], ['4 × 7', '28'], ['6 × 6', '36'], ['8 × 3', '24'], ['5 × 9', '45']],
+    4: [['1/2', '4/8'], ['3/4', '6/8'], ['1/3', '2/6'], ['2/5', '4/10'], ['1/4', '3/12'], ['2/3', '8/12']],
+    5: [['2.5 + 1.5', '4.0'], ['10²', '100'], ['(6+2) ÷ 2', '4'], ['0.75', '3/4'], ['2×3×4', '24'], ['0.5', '50%']],
+  },
 
   // Assigned games — in production these embed the breakoutedu.com digital game player
   games: [
@@ -1051,6 +1145,10 @@ const defaultState = () => ({
   perms: { teacherArcade: true, parentArcade: true, weeklyLimitMin: 120 },
   plus: true,               // teacher has Breakout+ (toggle in teacher view)
   pos: { x: 990, y: 648 },  // avatar position in world (just south of Lock Plaza)
+  sparkleKeys: {},          // dateKey -> [collected star indexes] for the day
+  npcQuests: {},            // dateKey -> [completed npc names] for the day
+  legendaryKeys: [],        // ids of the Five Keys of Knowledge earned
+  tutorialStep: 0,          // 0=not started, 1..4 in progress, 5=done
 });
 
 let state = defaultState();
@@ -1105,6 +1203,61 @@ function checkBadges() {
   const mathDone = Object.keys(state.mathStars).length;
   if (mathDone >= 3) awardBadge('mathlete');
   if (state.unlocked.length >= 1) awardBadge('stylist');
+  if (sparkleKeysToday().length >= 5) awardBadge('star-seeker');
+  if (npcQuestsToday().length >= DATA.npcQuests.length) awardBadge('quest-hero');
+  if (state.unlocked.length >= 1 && state.badges.length >= 3) awardLegendaryKey('creativity');
+}
+
+/* ---- sparkle keys (daily hidden collectibles) ---- */
+
+function sparkleKeysToday() {
+  return state.sparkleKeys[todayKey()] || [];
+}
+function sparkleKeyFound(idx) {
+  return sparkleKeysToday().includes(idx);
+}
+function collectSparkleKey(idx) {
+  const today = todayKey();
+  const list = state.sparkleKeys[today] || (state.sparkleKeys[today] = []);
+  if (list.includes(idx)) return false;
+  list.push(idx);
+  grant({ keys: 12, xp: 15 });
+  if (list.length >= 5) awardLegendaryKey('explore');
+  saveState();
+  return true;
+}
+
+/* ---- NPC daily side quests ---- */
+
+function npcQuestsToday() {
+  return state.npcQuests[todayKey()] || [];
+}
+function npcQuestDone(name) {
+  return npcQuestsToday().includes(name);
+}
+function completeNpcQuest(name, reward) {
+  const today = todayKey();
+  const list = state.npcQuests[today] || (state.npcQuests[today] = []);
+  if (list.includes(name)) return false;
+  list.push(name);
+  grant(reward || { keys: 8, xp: 20, arcade: 3 });
+  if (list.length >= DATA.npcQuests.length) awardLegendaryKey('words');
+  saveState();
+  return true;
+}
+
+/* ---- Five Keys of Knowledge (legendary milestone keys) ---- */
+
+function hasLegendaryKey(id) {
+  return state.legendaryKeys.includes(id);
+}
+function awardLegendaryKey(id) {
+  if (state.legendaryKeys.includes(id)) return false;
+  state.legendaryKeys.push(id);
+  saveState();
+  if (typeof updateHUD === 'function') updateHUD();
+  if (typeof showLegendaryKeyMoment === 'function') showLegendaryKeyMoment(id);
+  return true;
 }
 
 function todayKey() {
@@ -1217,7 +1370,7 @@ function confetti() {
 /* ---- lock puzzle engine ----
    Runs a sequence of locks; calls onWin({attempts, seconds}) when all open. */
 
-const puzzle = { locks: [], idx: 0, attempts: 0, lockAttempts: 0, t0: 0, onWin: null, title: '', ctxLabel: '', entry: [] };
+const puzzle = { locks: [], idx: 0, attempts: 0, lockAttempts: 0, t0: 0, onWin: null, title: '', ctxLabel: '', celType: 'standard', entry: [] };
 
 const COLOR_SET = [
   { id: 'red', c: '#e63946' }, { id: 'orange', c: '#f77f2f' }, { id: 'yellow', c: '#ffd75e' },
@@ -1232,8 +1385,8 @@ const SHAPE_SET = [
   { id: 'star', g: '★', c: '#9b5de5' },
 ];
 
-function startPuzzle({ title, ctxLabel, locks, onWin }) {
-  Object.assign(puzzle, { locks, idx: 0, attempts: 0, lockAttempts: 0, t0: Date.now(), onWin, title, ctxLabel, entry: [] });
+function startPuzzle({ title, ctxLabel, locks, onWin, celType = 'standard' }) {
+  Object.assign(puzzle, { locks, idx: 0, attempts: 0, lockAttempts: 0, t0: Date.now(), onWin, title, ctxLabel, celType, entry: [] });
   document.getElementById('pz-title').textContent = title;
   document.getElementById('pz-ctx').textContent = ctxLabel || '';
   document.getElementById('puzzle-modal').classList.add('open');
@@ -1251,6 +1404,9 @@ function renderLock() {
   document.getElementById('pz-step').textContent =
     puzzle.locks.length > 1 ? `Lock ${puzzle.idx + 1} of ${puzzle.locks.length}` : 'One lock stands in your way';
   document.getElementById('pz-clue').textContent = lk.clue;
+  // curriculum tag: base context plus this lock's subject (Priority 6)
+  const ctxEl = document.getElementById('pz-ctx');
+  if (ctxEl) ctxEl.textContent = [puzzle.ctxLabel, lk.subject].filter(Boolean).join(' · ');
   document.getElementById('pz-hint').textContent = '';
   document.getElementById('pz-hint').classList.remove('show');
   const lockEl = document.getElementById('pz-lock');
@@ -1368,7 +1524,10 @@ function submitEntry(lk, entered) {
       } else {
         const seconds = Math.round((Date.now() - puzzle.t0) / 1000);
         closePuzzle();
-        celebration(puzzle.title, puzzle.attempts, seconds, () => puzzle.onWin({ attempts: puzzle.attempts, seconds }));
+        // resolve the tier: an explicit type wins; otherwise a no-miss run is Flawless
+        let type = puzzle.celType || 'standard';
+        if (type === 'standard' && puzzle.attempts === 1) type = 'flawless';
+        celebration(puzzle.title, puzzle.attempts, seconds, () => puzzle.onWin({ attempts: puzzle.attempts, seconds }), type);
       }
     }, 750);
   } else {
@@ -1386,9 +1545,22 @@ function submitEntry(lk, entered) {
   }
 }
 
-function celebration(title, attempts, seconds, onDone) {
-  confetti(); fanfare();
-  document.getElementById('cel-title').textContent = 'YOU BROKE OUT!';
+// Tiered celebration copy — the headline/emoji scale with the achievement
+const CEL_TYPES = {
+  standard:   { headline: 'YOU BROKE OUT!',    emoji: '🎉', fanfare: [523, 659, 784, 1047] },
+  firstBreak: { headline: 'YOUR FIRST BREAKOUT!', emoji: '🥳', fanfare: [523, 659, 784, 1047, 1319] },
+  flawless:   { headline: 'FLAWLESS SOLVE!',   emoji: '⭐', fanfare: [659, 784, 988, 1319] },
+  streak3:    { headline: '3-DAY STREAK!',     emoji: '🔥', fanfare: [523, 659, 784, 1047] },
+  streak7:    { headline: '7-DAY STREAK!',     emoji: '🏆', fanfare: [523, 659, 784, 1047, 1319, 1568] },
+  boss:       { headline: 'BOSS DEFEATED!',    emoji: '👑', fanfare: [392, 523, 659, 784, 1047, 1319] },
+  npc:        { headline: 'QUEST COMPLETE!',   emoji: '🤝', fanfare: [587, 740, 880, 1175] },
+};
+
+function celebration(title, attempts, seconds, onDone, type = 'standard') {
+  const cel = CEL_TYPES[type] || CEL_TYPES.standard;
+  confetti();
+  cel.fanfare.forEach((f, i) => tone(f, .18, 'triangle', .07, i * .1));
+  document.getElementById('cel-title').textContent = `${cel.emoji} ${cel.headline}`;
   document.getElementById('cel-sub').textContent = title;
   document.getElementById('cel-stats').innerHTML =
     `<span>⏱ ${Math.floor(seconds / 60)}m ${seconds % 60}s</span><span>🎯 ${attempts} ${attempts === 1 ? 'try' : 'tries'}</span>`;
@@ -1760,6 +1932,51 @@ const NPCS = [
 
 const SPARKLE_KEYS = [[865, 300], [1245, 565], [770, 705], [1445, 618], [1085, 862]];
 
+/* Guided onboarding — a friendly owl walks first-timers to their first breakout */
+const TUTORIAL_STEPS = {
+  1: { target: 'daily',  say: (n) => `Welcome to the island, ${n}! I'm Ollie. 🦉 Follow the glowing path to the Lock Plaza for your very first lock!` },
+  2: { target: 'badges', say: () => `Amazing — your first breakout! 🎉 Now follow the path to the Badge Hall to see the badge you just earned.` },
+};
+
+function startTutorial() {
+  if (state.tutorialStep === 0) { state.tutorialStep = 1; saveState(); }
+  updateTutorialBanner();
+}
+function tutorialActive() { return state.tutorialStep >= 1 && state.tutorialStep <= 2; }
+function tutorialTarget() {
+  const step = TUTORIAL_STEPS[state.tutorialStep];
+  return step ? BUILDINGS.find(b => b.id === step.target) : null;
+}
+function updateTutorialBanner() {
+  const banner = document.getElementById('tut-banner');
+  if (!banner) return;
+  const step = TUTORIAL_STEPS[state.tutorialStep];
+  if (step) {
+    document.getElementById('tut-say').textContent = step.say(state.player.name || 'Explorer');
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
+}
+function advanceTutorial(buildingId) {
+  const step = TUTORIAL_STEPS[state.tutorialStep];
+  if (!step || step.target !== buildingId) return;
+  if (state.tutorialStep === 2) {
+    state.tutorialStep = 5; // done
+    saveState();
+    const banner = document.getElementById('tut-banner');
+    if (banner) {
+      document.getElementById('tut-say').textContent = `You're all set, ${state.player.name || 'Explorer'}! Explore freely, find hidden Sparkle Keys, help your island friends, and collect the Five Keys of Knowledge. 🗝️`;
+      banner.classList.add('show', 'finale');
+      setTimeout(() => banner.classList.remove('show', 'finale'), 6500);
+    }
+  }
+  // step 1 -> 2 happens when the tutorial lock is solved (see completeTutorialLock)
+}
+function completeTutorialLock() {
+  if (state.tutorialStep === 1) { state.tutorialStep = 2; saveState(); updateTutorialBanner(); }
+}
+
 const world = {
   cv: null, ctx: null, raf: null,
   keysDown: {}, target: null, nearBuilding: null,
@@ -1781,6 +1998,7 @@ function enterWorld() {
   if (!world.cv) initWorld();
   // players saved before the painted-map update spawn inside the old island
   if (!canWalk(state.pos.x, state.pos.y)) { state.pos.x = 990; state.pos.y = 648; }
+  if (state.tutorialStep === 0) startTutorial(); else updateTutorialBanner();
   world.t0 = performance.now();
   cancelAnimationFrame(world.raf);
   worldLoop(world.t0);
@@ -1799,8 +2017,8 @@ function initWorld() {
     const tag = (document.activeElement && document.activeElement.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     world.keysDown[e.key.toLowerCase()] = true;
-    if ((e.key === 'e' || e.key === 'E' || e.key === 'Enter') && world.nearBuilding) {
-      openBuilding(world.nearBuilding.id);
+    if (e.key === 'e' || e.key === 'E' || e.key === 'Enter') {
+      if (world.nearSparkle !== null && world.nearSparkle !== undefined || world.nearNpc || world.nearBuilding) triggerNearAction();
     }
     if (e.key.startsWith('Arrow')) e.preventDefault();
   });
@@ -1819,9 +2037,7 @@ function initWorld() {
     world.target = p;
   });
 
-  document.getElementById('enter-btn').addEventListener('click', () => {
-    if (world.nearBuilding) openBuilding(world.nearBuilding.id);
-  });
+  document.getElementById('enter-btn').addEventListener('click', triggerNearAction);
 }
 
 function getViewScale() {
@@ -1850,6 +2066,7 @@ function updateCamera(scale) {
 function worldLoop(t) {
   if (!screenIs('world')) return;
   const sec = (t - world.t0) / 1000;
+  world.sec = sec;
   stepPlayer();
   updateCamera(getViewScale());
   drawWorld(sec);
@@ -1894,13 +2111,70 @@ function stepPlayer() {
   for (const b of BUILDINGS) {
     if (Math.hypot(state.pos.x - b.x, state.pos.y - b.y) < 105) { world.nearBuilding = b; break; }
   }
+
+  // nearest uncollected sparkle key within reach
+  world.nearSparkle = null;
+  SPARKLE_KEYS.forEach(([kx, ky], i) => {
+    if (sparkleKeyFound(i)) return;
+    if (Math.hypot(state.pos.x - kx, state.pos.y - ky) < 66) world.nearSparkle = i;
+  });
+
+  // nearest island friend with a quest still available today
+  world.nearNpc = null;
+  const sec = world.sec || 0;
+  for (const n of NPCS) {
+    const p = npcPos(n, sec);
+    if (Math.hypot(state.pos.x - p.x, state.pos.y - p.y) < 92) { world.nearNpc = n; break; }
+  }
+
   const btn = document.getElementById('enter-btn');
-  if (world.nearBuilding) {
-    btn.classList.add('show');
-    btn.textContent = `Enter ${world.nearBuilding.name} ✦`;
+  if (world.nearSparkle !== null) {
+    btn.classList.add('show'); btn.textContent = 'Collect! ⭐';
+  } else if (world.nearNpc && npcQuestFor(world.nearNpc.name) && !npcQuestDone(world.nearNpc.name)) {
+    btn.classList.add('show'); btn.textContent = `Help ${world.nearNpc.name} 💬`;
+  } else if (world.nearBuilding) {
+    btn.classList.add('show'); btn.textContent = `Enter ${world.nearBuilding.name} ✦`;
   } else {
     btn.classList.remove('show');
   }
+}
+
+// which quest belongs to an NPC (matched by name)
+function npcQuestFor(name) {
+  return DATA.npcQuests.find(q => q.npc === name) || null;
+}
+
+// unified action for the on-screen button / E key, respecting proximity priority
+function triggerNearAction() {
+  if (world.nearSparkle !== null && world.nearSparkle !== undefined) { doCollectSparkle(world.nearSparkle); return; }
+  if (world.nearNpc) {
+    const q = npcQuestFor(world.nearNpc.name);
+    if (q && !npcQuestDone(world.nearNpc.name)) { openNpcQuest(world.nearNpc, q); return; }
+  }
+  if (world.nearBuilding) openBuilding(world.nearBuilding.id);
+}
+
+function doCollectSparkle(i) {
+  if (!collectSparkleKey(i)) return;
+  world.nearSparkle = null;
+  playSparkleChime();
+  const found = sparkleKeysToday().length;
+  toast(found >= 5 ? '✨ All 5 Sparkle Keys found today! +12 🔑' : `✨ Sparkle Key found! ${found}/5 today · +12 🔑`);
+}
+
+function playSparkleChime() {
+  try {
+    const ctxA = new (window.AudioContext || window.webkitAudioContext)();
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const o = ctxA.createOscillator(), g = ctxA.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      const t = ctxA.currentTime + i * .08;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.18, t + .02);
+      g.gain.exponentialRampToValueAtTime(.001, t + .3);
+      o.connect(g); g.connect(ctxA.destination); o.start(t); o.stop(t + .32);
+    });
+    setTimeout(() => ctxA.close(), 800);
+  } catch (e) { /* audio unavailable */ }
 }
 
 /* =============== rendering =============== */
@@ -1982,6 +2256,26 @@ function drawWorld(sec) {
     ctx.restore();
   });
 
+  // tutorial: a glowing dashed path leading to the next objective
+  if (tutorialActive()) {
+    const tgt = tutorialTarget();
+    if (tgt) {
+      const dashOff = -(sec * 40) % 40;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,203,28,.85)'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+      ctx.setLineDash([2, 26]); ctx.lineDashOffset = dashOff;
+      ctx.shadowColor = 'rgba(255,203,28,.9)'; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.moveTo(state.pos.x, state.pos.y + 8); ctx.lineTo(tgt.x, tgt.y + 14); ctx.stroke();
+      ctx.restore();
+      // pulsing ring at the destination
+      const pr = 44 + Math.sin(sec * 3) * 10;
+      ctx.save();
+      ctx.strokeStyle = `rgba(255,203,28,${.55 + Math.sin(sec * 3) * .25})`; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.ellipse(tgt.x, tgt.y + 14, pr, pr * .5, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   // near-building ground glow
   if (world.nearBuilding) {
     const b = world.nearBuilding;
@@ -1992,12 +2286,31 @@ function drawWorld(sec) {
     ctx.beginPath(); ctx.ellipse(b.x, b.y + 14, 120, 52, 0, 0, Math.PI * 2); ctx.fill();
   }
 
-  // floating sparkle keys
+  // floating sparkle keys — hidden daily collectibles that vanish once found
   SPARKLE_KEYS.forEach(([kx, ky], i) => {
+    if (sparkleKeyFound(i)) return;
     const fl = Math.sin(sec * 2 + i * 1.7) * 6;
-    ctx.save(); ctx.globalAlpha = .6 + Math.sin(sec * 3 + i) * .25;
-    ctx.translate(kx, ky + fl); ctx.rotate(Math.sin(sec + i) * .2);
-    drawKeyGlyph(ctx, 0, 0, .85, '#ffe27a');
+    const y = ky + fl;
+    // radiant halo so kids can spot them across the island
+    const halo = .3 + Math.sin(sec * 3 + i) * .18;
+    const g = ctx.createRadialGradient(kx, y, 2, kx, y, 46);
+    g.addColorStop(0, `rgba(255,226,122,${halo + .25})`);
+    g.addColorStop(1, 'rgba(255,226,122,0)');
+    ctx.save(); ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(kx, y, 46, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    // twinkle sparkles
+    for (let s = 0; s < 3; s++) {
+      const a = (sec * 1.5 + i + s * 2.1) % 3;
+      if (a > 1.6) continue;
+      const ang = (s / 3) * Math.PI * 2 + sec;
+      ctx.save(); ctx.globalAlpha = (1 - a / 1.6) * .9; ctx.fillStyle = '#fff6cf';
+      drawStar(ctx, kx + Math.cos(ang) * (18 + a * 10), y + Math.sin(ang) * (14 + a * 8), 4, 3.2, 1.2); ctx.fill();
+      ctx.restore();
+    }
+    ctx.save(); ctx.globalAlpha = .85 + Math.sin(sec * 3 + i) * .15;
+    ctx.translate(kx, y); ctx.rotate(Math.sin(sec + i) * .2);
+    drawKeyGlyph(ctx, 0, 0, .9, '#ffe27a');
     ctx.restore();
   });
 
@@ -2206,17 +2519,40 @@ function drawNPC(ctx, n, sec) {
   }
   namePill(ctx, p.x, p.y - 118, n.name, n.color);
 
+  // quest availability marker — a bobbing "!" floats over friends who need help
+  const quest = npcQuestFor(n.name);
+  const questOpen = quest && !npcQuestDone(n.name);
+  if (questOpen) {
+    const by = p.y - 150 + Math.sin(sec * 3 + p.x) * 4;
+    ctx.save();
+    ctx.fillStyle = '#ffca1c';
+    ctx.beginPath(); ctx.arc(p.x, by, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(p.x, by, 13, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#5c25b7'; ctx.font = '900 18px system-ui, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('!', p.x, by + 6.5); ctx.textAlign = 'left';
+    ctx.restore();
+  }
+
   // chatter: proximity greeting wins, otherwise staggered rotating lines
   const i = NPCS.indexOf(n);
   const nearPlayer = Math.hypot(state.pos.x - p.x, state.pos.y - p.y) < 135;
   const cycle = (sec + i * 5.5) % 22;
   let line = null;
-  if (nearPlayer) line = `Hi, ${state.player.name || 'Explorer'}! 👋`;
+  if (nearPlayer) line = getNpcLine(n.name);
   else if (cycle < 3.4) {
     const lines = NPC_LINES[n.name] || [];
     line = lines[(((sec + i * 5.5) / 22) | 0) % lines.length];
   }
-  if (line) speechBubble(ctx, p.x, p.y - 146, line);
+  if (line) speechBubble(ctx, p.x, p.y - (questOpen ? 170 : 146), line);
+}
+
+// state-aware greeting when the player is close
+function getNpcLine(name) {
+  const quest = npcQuestFor(name);
+  if (quest && !npcQuestDone(name)) return `${quest.icon} Help me with ${quest.title}?`;
+  if (quest && npcQuestDone(name)) return `Thanks for the help today! 🎉`;
+  return `Hi, ${state.player.name || 'Explorer'}! 👋`;
 }
 
 function speechBubble(ctx, x, y, text) {
@@ -2308,6 +2644,38 @@ function updateHUD() {
   // portrait
   const chip = document.getElementById('hud-avatar');
   drawHeroPortrait(chip.getContext('2d'), chip.width, state.player.hero || 0);
+
+  // Five Keys of Knowledge story panel
+  const slots = document.getElementById('kq-slots');
+  if (slots) {
+    slots.innerHTML = (DATA.legendaryKeys || []).map(k => {
+      const got = hasLegendaryKey(k.id);
+      return `<span class="lk-slot ${got ? 'lit' : ''}" title="${k.name} — ${k.desc}"
+        style="${got ? `--kc:${k.color}` : ''}">${got ? k.icon : '🔒'}</span>`;
+    }).join('');
+  }
+}
+
+/* ---- Legendary key award moment (Priority 6) ---- */
+function showLegendaryKeyMoment(keyId) {
+  const k = (DATA.legendaryKeys || []).find(x => x.id === keyId);
+  if (!k) return;
+  confetti(); fanfare();
+  const modal = document.getElementById('cel-modal');
+  const emoji = modal.querySelector('.big-emoji');
+  const prevEmoji = emoji ? emoji.textContent : '🔓';
+  if (emoji) emoji.textContent = k.icon;
+  document.getElementById('cel-title').textContent = '⭐ LEGENDARY KEY EARNED!';
+  document.getElementById('cel-sub').textContent = k.name;
+  const owned = state.legendaryKeys.length;
+  document.getElementById('cel-stats').innerHTML =
+    `<span>${k.desc}</span><span>🗝️ ${owned}/5 Keys of Knowledge</span>`;
+  modal.classList.add('open');
+  document.getElementById('cel-btn').onclick = () => {
+    modal.classList.remove('open');
+    if (emoji) emoji.textContent = prevEmoji;
+    if (owned >= 5) setTimeout(() => toast('🎉 You have all Five Keys of Knowledge! You are a true Breakout Legend!'), 400);
+  };
 }
 
 /* ---- building router ---- */
@@ -2325,11 +2693,63 @@ function openBuilding(id) {
   else if (id === 'badges') renderBadgeHall(title, body);
   else if (id === 'plus') renderPlus(title, body);
   modal.classList.add('open');
+  if (typeof advanceTutorial === 'function') advanceTutorial(id);
+}
+
+/* ---- NPC side quests (Priority 4) ---- */
+function openNpcQuest(npc, quest) {
+  blip(720);
+  const body = document.getElementById('bm-body');
+  const title = document.getElementById('bm-title');
+  const modal = document.getElementById('building-modal');
+  title.textContent = `${quest.icon} ${quest.title}`;
+  const r = quest.reward || { keys: 8, xp: 20, arcade: 3 };
+  body.innerHTML = `
+    <p class="muted center"><em>${npc.name} says:</em></p>
+    <p class="center">${quest.intro}</p>
+    <div class="reward-row"><span>Reward: <strong>${r.keys} 🔑 · ${r.xp} XP${r.arcade ? ` · ${r.arcade} arcade min` : ''}</strong></span></div>
+    <button class="btn-big" id="npc-go">Help ${npc.name} solve it! 🔓</button>`;
+  modal.classList.add('open');
+  document.getElementById('npc-go').onclick = () => {
+    closeBuildingModal();
+    startPuzzle({
+      title: quest.title,
+      ctxLabel: `${npc.name}'s Quest`,
+      locks: [quest.lock],
+      celType: 'npc',
+      onWin: () => {
+        completeNpcQuest(npc.name, quest.reward);
+        const done = npcQuestsToday().length;
+        toast(`${npc.name} is thrilled! +${r.keys} 🔑 +${r.xp} XP` + (done >= DATA.npcQuests.length ? ' — all friends helped! 🎉' : ''));
+      },
+    });
+  };
 }
 
 /* ---- Lock Plaza: Lock of the Day ---- */
 function renderDaily(title, body) {
   title.textContent = '🔐 Lock of the Day';
+  // first-timer tutorial: a gentle 1-digit lock to teach the basics
+  if (state.tutorialStep === 1) {
+    body.innerHTML = `
+      <p class="muted">Ollie 🦉 says: <em>Every lock has a clue. Read it, tap your answer, then press TRY IT. Let's warm up with an easy one!</em></p>
+      <button class="btn-big" id="daily-go">Try my first lock! 🔓</button>`;
+    document.getElementById('daily-go').onclick = () => {
+      closeBuildingModal();
+      startPuzzle({
+        title: 'Your First Lock',
+        ctxLabel: 'Tutorial',
+        celType: 'firstBreak',
+        locks: [{ type: 'number', subject: 'Getting started', clue: 'How many days are in one week? Tap the number, then press TRY IT!', answer: '7', hint: 'Monday, Tuesday, Wednesday… count them up!' }],
+        onWin: () => {
+          completeTutorialLock();
+          grant({ keys: 5, xp: 10 });
+          toast('You did it! +5 🔑 +10 XP — now follow Ollie to the Badge Hall! 🦉');
+        },
+      });
+    };
+    return;
+  }
   const done = state.lastDaily === todayKey();
   if (done) {
     body.innerHTML = `
@@ -2344,10 +2764,16 @@ function renderDaily(title, body) {
     <button class="btn-big" id="daily-go">Take on today’s lock!</button>`;
   document.getElementById('daily-go').onclick = () => {
     closeBuildingModal();
+    // project the streak the win will produce, so the celebration tier matches
+    const y = new Date(Date.now() - 86400000);
+    const yKey = `${y.getFullYear()}-${y.getMonth() + 1}-${y.getDate()}`;
+    const projected = (state.lastDaily === yKey) ? state.streak + 1 : 1;
+    const celType = projected >= 7 ? 'streak7' : projected >= 3 ? 'streak3' : 'standard';
     startPuzzle({
       title: 'Lock of the Day',
       ctxLabel: 'Daily challenge',
       locks: [dailyLock()],
+      celType,
       onWin: () => {
         completeDaily();
         toast(`+10 🔑  +25 XP  +5 arcade minutes! Streak: ${state.streak} 🔥`);
@@ -2385,14 +2811,18 @@ function renderGameHall(title, body) {
     btn.onclick = () => {
       const g = DATA.games.find(g => g.id === btn.dataset.play);
       closeBuildingModal();
+      const firstEver = Object.keys(state.gamesDone).length === 0;
       startPuzzle({
         title: g.name,
         ctxLabel: g.subject,
         locks: g.locks,
+        celType: firstEver ? 'firstBreak' : 'standard',
         onWin: ({ attempts, seconds }) => {
           const first = !state.gamesDone[g.id];
           state.gamesDone[g.id] = { attempts, seconds };
           grant(first ? { keys: 25, xp: 60, arcade: 10 } : { keys: 5, xp: 15, arcade: 0 });
+          // cracking every lock in a game (multi-lock) earns the Key of Logic
+          if (first && g.locks.length >= 3) awardLegendaryKey('logic');
           toast(first ? '+25 🔑  +60 XP  +10 arcade minutes!' : 'Replay complete! +5 🔑 +15 XP');
         },
       });
@@ -2437,16 +2867,27 @@ function renderArcade(title, body) {
   if (mm && state.arcadeMin >= 5) mm.onclick = () => { closeBuildingModal(); startMemoryMatch(); };
 }
 
-/* Memory Match minigame — DOM cards with 3D flips */
+/* Memory Match minigame — DOM cards with 3D flips.
+   Grades 3-5 use curriculum decks (match the fact to its answer); K-2 keep emoji. */
 function startMemoryMatch() {
   state.arcadeMin -= 5; saveState(); updateHUD();
   const modal = document.getElementById('mm-modal');
   const grid = document.getElementById('mm-grid');
   const status = document.getElementById('mm-status');
+  const heading = modal.querySelector('h2');
   modal.classList.add('open');
 
-  const icons = ['🔑', '🔒', '⭐', '🧪', '📘', '⚙️'];
-  const deck = shuffle([...icons, ...icons].map((ic, i) => ({ ic, id: i })));
+  const curriculum = DATA.memoryDecks && DATA.memoryDecks[state.mathGrade];
+  let deck;
+  if (curriculum) {
+    if (heading) heading.textContent = `🃏 Memory Match — Grade ${state.mathGrade} Skills`;
+    // each pair is a fact and its answer, matched by pair id
+    deck = shuffle(curriculum.flatMap(([a, b], i) => [{ face: a, pid: i, text: true }, { face: b, pid: i, text: true }]));
+  } else {
+    if (heading) heading.textContent = '🃏 Memory Match';
+    const icons = ['🔑', '🔒', '⭐', '🧪', '📘', '⚙️'];
+    deck = shuffle(icons.flatMap((ic, i) => [{ face: ic, pid: i }, { face: ic, pid: i }]));
+  }
   let flipped = [], matched = 0, misses = 0, lock = false;
   const t0 = Date.now();
 
@@ -2459,16 +2900,16 @@ function startMemoryMatch() {
   deck.forEach((card) => {
     const el = document.createElement('button');
     el.className = 'mm-card';
-    el.innerHTML = `<span class="mm-inner"><span class="mm-front">🔐</span><span class="mm-back">${card.ic}</span></span>`;
+    el.innerHTML = `<span class="mm-inner"><span class="mm-front">🔐</span><span class="mm-back${card.text ? ' mm-text' : ''}">${card.face}</span></span>`;
     el.onclick = () => {
       if (lock || el.classList.contains('flip') || el.classList.contains('done')) return;
       blip(640);
       el.classList.add('flip');
-      flipped.push({ el, ic: card.ic });
+      flipped.push({ el, pid: card.pid });
       if (flipped.length === 2) {
         lock = true;
         const [a, b] = flipped;
-        if (a.ic === b.ic) {
+        if (a.pid === b.pid) {
           setTimeout(() => {
             a.el.classList.add('done'); b.el.classList.add('done');
             matched++; blip(900); flipped = []; lock = false;
@@ -2860,14 +3301,17 @@ function startMathNode(grade, i) {
     title: `${unit} — ${type === 'boss' ? 'BOSS Lock' : type === 'challenge' ? 'Challenge' : type === 'review' ? 'Review' : 'Quest'} ${i + 1}`,
     ctxLabel: `Breakout Math · Grade ${grade}`,
     locks,
+    celType: type === 'boss' ? 'boss' : 'standard',
     onWin: ({ attempts }) => {
       const key = nodeKey(grade, i);
+      const firstClear = !state.mathStars[key];
       const stars = attempts <= count ? 3 : attempts <= count + 1 ? 2 : 1;
       state.mathStars[key] = Math.max(state.mathStars[key] || 0, stars);
       state.mathAttempts[key] = attempts;
       const rewards = { core: { keys: 12, xp: 30, arcade: 4 }, review: { keys: 6, xp: 15, arcade: 2 }, challenge: { keys: 20, xp: 50, arcade: 8 }, boss: { keys: 35, xp: 90, arcade: 12 } }[type];
       grant(rewards);
       if (type === 'challenge' || type === 'boss') awardBadge('challenge');
+      if (type === 'boss' && firstClear) awardLegendaryKey('math');
       if (attempts > count + 1) toast(`+${rewards.keys} 🔑! Tip: the Review stop on the trail is a great warm-up. 💙`);
       else toast(`${'⭐'.repeat(stars)} +${rewards.keys} 🔑 +${rewards.xp} XP +${rewards.arcade} arcade min!`);
       renderMathMap();

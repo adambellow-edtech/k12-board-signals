@@ -57,6 +57,51 @@ const NPCS = [
 
 const SPARKLE_KEYS = [[865, 300], [1245, 565], [770, 705], [1445, 618], [1085, 862]];
 
+/* Guided onboarding — a friendly owl walks first-timers to their first breakout */
+const TUTORIAL_STEPS = {
+  1: { target: 'daily',  say: (n) => `Welcome to the island, ${n}! I'm Ollie. 🦉 Follow the glowing path to the Lock Plaza for your very first lock!` },
+  2: { target: 'badges', say: () => `Amazing — your first breakout! 🎉 Now follow the path to the Badge Hall to see the badge you just earned.` },
+};
+
+function startTutorial() {
+  if (state.tutorialStep === 0) { state.tutorialStep = 1; saveState(); }
+  updateTutorialBanner();
+}
+function tutorialActive() { return state.tutorialStep >= 1 && state.tutorialStep <= 2; }
+function tutorialTarget() {
+  const step = TUTORIAL_STEPS[state.tutorialStep];
+  return step ? BUILDINGS.find(b => b.id === step.target) : null;
+}
+function updateTutorialBanner() {
+  const banner = document.getElementById('tut-banner');
+  if (!banner) return;
+  const step = TUTORIAL_STEPS[state.tutorialStep];
+  if (step) {
+    document.getElementById('tut-say').textContent = step.say(state.player.name || 'Explorer');
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
+}
+function advanceTutorial(buildingId) {
+  const step = TUTORIAL_STEPS[state.tutorialStep];
+  if (!step || step.target !== buildingId) return;
+  if (state.tutorialStep === 2) {
+    state.tutorialStep = 5; // done
+    saveState();
+    const banner = document.getElementById('tut-banner');
+    if (banner) {
+      document.getElementById('tut-say').textContent = `You're all set, ${state.player.name || 'Explorer'}! Explore freely, find hidden Sparkle Keys, help your island friends, and collect the Five Keys of Knowledge. 🗝️`;
+      banner.classList.add('show', 'finale');
+      setTimeout(() => banner.classList.remove('show', 'finale'), 6500);
+    }
+  }
+  // step 1 -> 2 happens when the tutorial lock is solved (see completeTutorialLock)
+}
+function completeTutorialLock() {
+  if (state.tutorialStep === 1) { state.tutorialStep = 2; saveState(); updateTutorialBanner(); }
+}
+
 const world = {
   cv: null, ctx: null, raf: null,
   keysDown: {}, target: null, nearBuilding: null,
@@ -78,6 +123,7 @@ function enterWorld() {
   if (!world.cv) initWorld();
   // players saved before the painted-map update spawn inside the old island
   if (!canWalk(state.pos.x, state.pos.y)) { state.pos.x = 990; state.pos.y = 648; }
+  if (state.tutorialStep === 0) startTutorial(); else updateTutorialBanner();
   world.t0 = performance.now();
   cancelAnimationFrame(world.raf);
   worldLoop(world.t0);
@@ -96,8 +142,8 @@ function initWorld() {
     const tag = (document.activeElement && document.activeElement.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     world.keysDown[e.key.toLowerCase()] = true;
-    if ((e.key === 'e' || e.key === 'E' || e.key === 'Enter') && world.nearBuilding) {
-      openBuilding(world.nearBuilding.id);
+    if (e.key === 'e' || e.key === 'E' || e.key === 'Enter') {
+      if (world.nearSparkle !== null && world.nearSparkle !== undefined || world.nearNpc || world.nearBuilding) triggerNearAction();
     }
     if (e.key.startsWith('Arrow')) e.preventDefault();
   });
@@ -116,9 +162,7 @@ function initWorld() {
     world.target = p;
   });
 
-  document.getElementById('enter-btn').addEventListener('click', () => {
-    if (world.nearBuilding) openBuilding(world.nearBuilding.id);
-  });
+  document.getElementById('enter-btn').addEventListener('click', triggerNearAction);
 }
 
 function getViewScale() {
@@ -147,6 +191,7 @@ function updateCamera(scale) {
 function worldLoop(t) {
   if (!screenIs('world')) return;
   const sec = (t - world.t0) / 1000;
+  world.sec = sec;
   stepPlayer();
   updateCamera(getViewScale());
   drawWorld(sec);
@@ -191,13 +236,70 @@ function stepPlayer() {
   for (const b of BUILDINGS) {
     if (Math.hypot(state.pos.x - b.x, state.pos.y - b.y) < 105) { world.nearBuilding = b; break; }
   }
+
+  // nearest uncollected sparkle key within reach
+  world.nearSparkle = null;
+  SPARKLE_KEYS.forEach(([kx, ky], i) => {
+    if (sparkleKeyFound(i)) return;
+    if (Math.hypot(state.pos.x - kx, state.pos.y - ky) < 66) world.nearSparkle = i;
+  });
+
+  // nearest island friend with a quest still available today
+  world.nearNpc = null;
+  const sec = world.sec || 0;
+  for (const n of NPCS) {
+    const p = npcPos(n, sec);
+    if (Math.hypot(state.pos.x - p.x, state.pos.y - p.y) < 92) { world.nearNpc = n; break; }
+  }
+
   const btn = document.getElementById('enter-btn');
-  if (world.nearBuilding) {
-    btn.classList.add('show');
-    btn.textContent = `Enter ${world.nearBuilding.name} ✦`;
+  if (world.nearSparkle !== null) {
+    btn.classList.add('show'); btn.textContent = 'Collect! ⭐';
+  } else if (world.nearNpc && npcQuestFor(world.nearNpc.name) && !npcQuestDone(world.nearNpc.name)) {
+    btn.classList.add('show'); btn.textContent = `Help ${world.nearNpc.name} 💬`;
+  } else if (world.nearBuilding) {
+    btn.classList.add('show'); btn.textContent = `Enter ${world.nearBuilding.name} ✦`;
   } else {
     btn.classList.remove('show');
   }
+}
+
+// which quest belongs to an NPC (matched by name)
+function npcQuestFor(name) {
+  return DATA.npcQuests.find(q => q.npc === name) || null;
+}
+
+// unified action for the on-screen button / E key, respecting proximity priority
+function triggerNearAction() {
+  if (world.nearSparkle !== null && world.nearSparkle !== undefined) { doCollectSparkle(world.nearSparkle); return; }
+  if (world.nearNpc) {
+    const q = npcQuestFor(world.nearNpc.name);
+    if (q && !npcQuestDone(world.nearNpc.name)) { openNpcQuest(world.nearNpc, q); return; }
+  }
+  if (world.nearBuilding) openBuilding(world.nearBuilding.id);
+}
+
+function doCollectSparkle(i) {
+  if (!collectSparkleKey(i)) return;
+  world.nearSparkle = null;
+  playSparkleChime();
+  const found = sparkleKeysToday().length;
+  toast(found >= 5 ? '✨ All 5 Sparkle Keys found today! +12 🔑' : `✨ Sparkle Key found! ${found}/5 today · +12 🔑`);
+}
+
+function playSparkleChime() {
+  try {
+    const ctxA = new (window.AudioContext || window.webkitAudioContext)();
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const o = ctxA.createOscillator(), g = ctxA.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      const t = ctxA.currentTime + i * .08;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.18, t + .02);
+      g.gain.exponentialRampToValueAtTime(.001, t + .3);
+      o.connect(g); g.connect(ctxA.destination); o.start(t); o.stop(t + .32);
+    });
+    setTimeout(() => ctxA.close(), 800);
+  } catch (e) { /* audio unavailable */ }
 }
 
 /* =============== rendering =============== */
@@ -279,6 +381,26 @@ function drawWorld(sec) {
     ctx.restore();
   });
 
+  // tutorial: a glowing dashed path leading to the next objective
+  if (tutorialActive()) {
+    const tgt = tutorialTarget();
+    if (tgt) {
+      const dashOff = -(sec * 40) % 40;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,203,28,.85)'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+      ctx.setLineDash([2, 26]); ctx.lineDashOffset = dashOff;
+      ctx.shadowColor = 'rgba(255,203,28,.9)'; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.moveTo(state.pos.x, state.pos.y + 8); ctx.lineTo(tgt.x, tgt.y + 14); ctx.stroke();
+      ctx.restore();
+      // pulsing ring at the destination
+      const pr = 44 + Math.sin(sec * 3) * 10;
+      ctx.save();
+      ctx.strokeStyle = `rgba(255,203,28,${.55 + Math.sin(sec * 3) * .25})`; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.ellipse(tgt.x, tgt.y + 14, pr, pr * .5, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   // near-building ground glow
   if (world.nearBuilding) {
     const b = world.nearBuilding;
@@ -289,12 +411,31 @@ function drawWorld(sec) {
     ctx.beginPath(); ctx.ellipse(b.x, b.y + 14, 120, 52, 0, 0, Math.PI * 2); ctx.fill();
   }
 
-  // floating sparkle keys
+  // floating sparkle keys — hidden daily collectibles that vanish once found
   SPARKLE_KEYS.forEach(([kx, ky], i) => {
+    if (sparkleKeyFound(i)) return;
     const fl = Math.sin(sec * 2 + i * 1.7) * 6;
-    ctx.save(); ctx.globalAlpha = .6 + Math.sin(sec * 3 + i) * .25;
-    ctx.translate(kx, ky + fl); ctx.rotate(Math.sin(sec + i) * .2);
-    drawKeyGlyph(ctx, 0, 0, .85, '#ffe27a');
+    const y = ky + fl;
+    // radiant halo so kids can spot them across the island
+    const halo = .3 + Math.sin(sec * 3 + i) * .18;
+    const g = ctx.createRadialGradient(kx, y, 2, kx, y, 46);
+    g.addColorStop(0, `rgba(255,226,122,${halo + .25})`);
+    g.addColorStop(1, 'rgba(255,226,122,0)');
+    ctx.save(); ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(kx, y, 46, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    // twinkle sparkles
+    for (let s = 0; s < 3; s++) {
+      const a = (sec * 1.5 + i + s * 2.1) % 3;
+      if (a > 1.6) continue;
+      const ang = (s / 3) * Math.PI * 2 + sec;
+      ctx.save(); ctx.globalAlpha = (1 - a / 1.6) * .9; ctx.fillStyle = '#fff6cf';
+      drawStar(ctx, kx + Math.cos(ang) * (18 + a * 10), y + Math.sin(ang) * (14 + a * 8), 4, 3.2, 1.2); ctx.fill();
+      ctx.restore();
+    }
+    ctx.save(); ctx.globalAlpha = .85 + Math.sin(sec * 3 + i) * .15;
+    ctx.translate(kx, y); ctx.rotate(Math.sin(sec + i) * .2);
+    drawKeyGlyph(ctx, 0, 0, .9, '#ffe27a');
     ctx.restore();
   });
 
@@ -503,17 +644,40 @@ function drawNPC(ctx, n, sec) {
   }
   namePill(ctx, p.x, p.y - 118, n.name, n.color);
 
+  // quest availability marker — a bobbing "!" floats over friends who need help
+  const quest = npcQuestFor(n.name);
+  const questOpen = quest && !npcQuestDone(n.name);
+  if (questOpen) {
+    const by = p.y - 150 + Math.sin(sec * 3 + p.x) * 4;
+    ctx.save();
+    ctx.fillStyle = '#ffca1c';
+    ctx.beginPath(); ctx.arc(p.x, by, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(p.x, by, 13, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#5c25b7'; ctx.font = '900 18px system-ui, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('!', p.x, by + 6.5); ctx.textAlign = 'left';
+    ctx.restore();
+  }
+
   // chatter: proximity greeting wins, otherwise staggered rotating lines
   const i = NPCS.indexOf(n);
   const nearPlayer = Math.hypot(state.pos.x - p.x, state.pos.y - p.y) < 135;
   const cycle = (sec + i * 5.5) % 22;
   let line = null;
-  if (nearPlayer) line = `Hi, ${state.player.name || 'Explorer'}! 👋`;
+  if (nearPlayer) line = getNpcLine(n.name);
   else if (cycle < 3.4) {
     const lines = NPC_LINES[n.name] || [];
     line = lines[(((sec + i * 5.5) / 22) | 0) % lines.length];
   }
-  if (line) speechBubble(ctx, p.x, p.y - 146, line);
+  if (line) speechBubble(ctx, p.x, p.y - (questOpen ? 170 : 146), line);
+}
+
+// state-aware greeting when the player is close
+function getNpcLine(name) {
+  const quest = npcQuestFor(name);
+  if (quest && !npcQuestDone(name)) return `${quest.icon} Help me with ${quest.title}?`;
+  if (quest && npcQuestDone(name)) return `Thanks for the help today! 🎉`;
+  return `Hi, ${state.player.name || 'Explorer'}! 👋`;
 }
 
 function speechBubble(ctx, x, y, text) {

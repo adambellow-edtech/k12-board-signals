@@ -65,7 +65,7 @@ function confetti() {
 /* ---- lock puzzle engine ----
    Runs a sequence of locks; calls onWin({attempts, seconds}) when all open. */
 
-const puzzle = { locks: [], idx: 0, attempts: 0, lockAttempts: 0, t0: 0, onWin: null, title: '', ctxLabel: '', entry: [] };
+const puzzle = { locks: [], idx: 0, attempts: 0, lockAttempts: 0, t0: 0, onWin: null, title: '', ctxLabel: '', celType: 'standard', entry: [] };
 
 const COLOR_SET = [
   { id: 'red', c: '#e63946' }, { id: 'orange', c: '#f77f2f' }, { id: 'yellow', c: '#ffd75e' },
@@ -80,8 +80,8 @@ const SHAPE_SET = [
   { id: 'star', g: '★', c: '#9b5de5' },
 ];
 
-function startPuzzle({ title, ctxLabel, locks, onWin }) {
-  Object.assign(puzzle, { locks, idx: 0, attempts: 0, lockAttempts: 0, t0: Date.now(), onWin, title, ctxLabel, entry: [] });
+function startPuzzle({ title, ctxLabel, locks, onWin, celType = 'standard' }) {
+  Object.assign(puzzle, { locks, idx: 0, attempts: 0, lockAttempts: 0, t0: Date.now(), onWin, title, ctxLabel, celType, entry: [] });
   document.getElementById('pz-title').textContent = title;
   document.getElementById('pz-ctx').textContent = ctxLabel || '';
   document.getElementById('puzzle-modal').classList.add('open');
@@ -99,6 +99,9 @@ function renderLock() {
   document.getElementById('pz-step').textContent =
     puzzle.locks.length > 1 ? `Lock ${puzzle.idx + 1} of ${puzzle.locks.length}` : 'One lock stands in your way';
   document.getElementById('pz-clue').textContent = lk.clue;
+  // curriculum tag: base context plus this lock's subject (Priority 6)
+  const ctxEl = document.getElementById('pz-ctx');
+  if (ctxEl) ctxEl.textContent = [puzzle.ctxLabel, lk.subject].filter(Boolean).join(' · ');
   document.getElementById('pz-hint').textContent = '';
   document.getElementById('pz-hint').classList.remove('show');
   const lockEl = document.getElementById('pz-lock');
@@ -216,7 +219,10 @@ function submitEntry(lk, entered) {
       } else {
         const seconds = Math.round((Date.now() - puzzle.t0) / 1000);
         closePuzzle();
-        celebration(puzzle.title, puzzle.attempts, seconds, () => puzzle.onWin({ attempts: puzzle.attempts, seconds }));
+        // resolve the tier: an explicit type wins; otherwise a no-miss run is Flawless
+        let type = puzzle.celType || 'standard';
+        if (type === 'standard' && puzzle.attempts === 1) type = 'flawless';
+        celebration(puzzle.title, puzzle.attempts, seconds, () => puzzle.onWin({ attempts: puzzle.attempts, seconds }), type);
       }
     }, 750);
   } else {
@@ -234,9 +240,22 @@ function submitEntry(lk, entered) {
   }
 }
 
-function celebration(title, attempts, seconds, onDone) {
-  confetti(); fanfare();
-  document.getElementById('cel-title').textContent = 'YOU BROKE OUT!';
+// Tiered celebration copy — the headline/emoji scale with the achievement
+const CEL_TYPES = {
+  standard:   { headline: 'YOU BROKE OUT!',    emoji: '🎉', fanfare: [523, 659, 784, 1047] },
+  firstBreak: { headline: 'YOUR FIRST BREAKOUT!', emoji: '🥳', fanfare: [523, 659, 784, 1047, 1319] },
+  flawless:   { headline: 'FLAWLESS SOLVE!',   emoji: '⭐', fanfare: [659, 784, 988, 1319] },
+  streak3:    { headline: '3-DAY STREAK!',     emoji: '🔥', fanfare: [523, 659, 784, 1047] },
+  streak7:    { headline: '7-DAY STREAK!',     emoji: '🏆', fanfare: [523, 659, 784, 1047, 1319, 1568] },
+  boss:       { headline: 'BOSS DEFEATED!',    emoji: '👑', fanfare: [392, 523, 659, 784, 1047, 1319] },
+  npc:        { headline: 'QUEST COMPLETE!',   emoji: '🤝', fanfare: [587, 740, 880, 1175] },
+};
+
+function celebration(title, attempts, seconds, onDone, type = 'standard') {
+  const cel = CEL_TYPES[type] || CEL_TYPES.standard;
+  confetti();
+  cel.fanfare.forEach((f, i) => tone(f, .18, 'triangle', .07, i * .1));
+  document.getElementById('cel-title').textContent = `${cel.emoji} ${cel.headline}`;
   document.getElementById('cel-sub').textContent = title;
   document.getElementById('cel-stats').innerHTML =
     `<span>⏱ ${Math.floor(seconds / 60)}m ${seconds % 60}s</span><span>🎯 ${attempts} ${attempts === 1 ? 'try' : 'tries'}</span>`;

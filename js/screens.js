@@ -44,6 +44,38 @@ function updateHUD() {
   // portrait
   const chip = document.getElementById('hud-avatar');
   drawHeroPortrait(chip.getContext('2d'), chip.width, state.player.hero || 0);
+
+  // Five Keys of Knowledge story panel
+  const slots = document.getElementById('kq-slots');
+  if (slots) {
+    slots.innerHTML = (DATA.legendaryKeys || []).map(k => {
+      const got = hasLegendaryKey(k.id);
+      return `<span class="lk-slot ${got ? 'lit' : ''}" title="${k.name} — ${k.desc}"
+        style="${got ? `--kc:${k.color}` : ''}">${got ? k.icon : '🔒'}</span>`;
+    }).join('');
+  }
+}
+
+/* ---- Legendary key award moment (Priority 6) ---- */
+function showLegendaryKeyMoment(keyId) {
+  const k = (DATA.legendaryKeys || []).find(x => x.id === keyId);
+  if (!k) return;
+  confetti(); fanfare();
+  const modal = document.getElementById('cel-modal');
+  const emoji = modal.querySelector('.big-emoji');
+  const prevEmoji = emoji ? emoji.textContent : '🔓';
+  if (emoji) emoji.textContent = k.icon;
+  document.getElementById('cel-title').textContent = '⭐ LEGENDARY KEY EARNED!';
+  document.getElementById('cel-sub').textContent = k.name;
+  const owned = state.legendaryKeys.length;
+  document.getElementById('cel-stats').innerHTML =
+    `<span>${k.desc}</span><span>🗝️ ${owned}/5 Keys of Knowledge</span>`;
+  modal.classList.add('open');
+  document.getElementById('cel-btn').onclick = () => {
+    modal.classList.remove('open');
+    if (emoji) emoji.textContent = prevEmoji;
+    if (owned >= 5) setTimeout(() => toast('🎉 You have all Five Keys of Knowledge! You are a true Breakout Legend!'), 400);
+  };
 }
 
 /* ---- building router ---- */
@@ -61,11 +93,63 @@ function openBuilding(id) {
   else if (id === 'badges') renderBadgeHall(title, body);
   else if (id === 'plus') renderPlus(title, body);
   modal.classList.add('open');
+  if (typeof advanceTutorial === 'function') advanceTutorial(id);
+}
+
+/* ---- NPC side quests (Priority 4) ---- */
+function openNpcQuest(npc, quest) {
+  blip(720);
+  const body = document.getElementById('bm-body');
+  const title = document.getElementById('bm-title');
+  const modal = document.getElementById('building-modal');
+  title.textContent = `${quest.icon} ${quest.title}`;
+  const r = quest.reward || { keys: 8, xp: 20, arcade: 3 };
+  body.innerHTML = `
+    <p class="muted center"><em>${npc.name} says:</em></p>
+    <p class="center">${quest.intro}</p>
+    <div class="reward-row"><span>Reward: <strong>${r.keys} 🔑 · ${r.xp} XP${r.arcade ? ` · ${r.arcade} arcade min` : ''}</strong></span></div>
+    <button class="btn-big" id="npc-go">Help ${npc.name} solve it! 🔓</button>`;
+  modal.classList.add('open');
+  document.getElementById('npc-go').onclick = () => {
+    closeBuildingModal();
+    startPuzzle({
+      title: quest.title,
+      ctxLabel: `${npc.name}'s Quest`,
+      locks: [quest.lock],
+      celType: 'npc',
+      onWin: () => {
+        completeNpcQuest(npc.name, quest.reward);
+        const done = npcQuestsToday().length;
+        toast(`${npc.name} is thrilled! +${r.keys} 🔑 +${r.xp} XP` + (done >= DATA.npcQuests.length ? ' — all friends helped! 🎉' : ''));
+      },
+    });
+  };
 }
 
 /* ---- Lock Plaza: Lock of the Day ---- */
 function renderDaily(title, body) {
   title.textContent = '🔐 Lock of the Day';
+  // first-timer tutorial: a gentle 1-digit lock to teach the basics
+  if (state.tutorialStep === 1) {
+    body.innerHTML = `
+      <p class="muted">Ollie 🦉 says: <em>Every lock has a clue. Read it, tap your answer, then press TRY IT. Let's warm up with an easy one!</em></p>
+      <button class="btn-big" id="daily-go">Try my first lock! 🔓</button>`;
+    document.getElementById('daily-go').onclick = () => {
+      closeBuildingModal();
+      startPuzzle({
+        title: 'Your First Lock',
+        ctxLabel: 'Tutorial',
+        celType: 'firstBreak',
+        locks: [{ type: 'number', subject: 'Getting started', clue: 'How many days are in one week? Tap the number, then press TRY IT!', answer: '7', hint: 'Monday, Tuesday, Wednesday… count them up!' }],
+        onWin: () => {
+          completeTutorialLock();
+          grant({ keys: 5, xp: 10 });
+          toast('You did it! +5 🔑 +10 XP — now follow Ollie to the Badge Hall! 🦉');
+        },
+      });
+    };
+    return;
+  }
   const done = state.lastDaily === todayKey();
   if (done) {
     body.innerHTML = `
@@ -80,10 +164,16 @@ function renderDaily(title, body) {
     <button class="btn-big" id="daily-go">Take on today’s lock!</button>`;
   document.getElementById('daily-go').onclick = () => {
     closeBuildingModal();
+    // project the streak the win will produce, so the celebration tier matches
+    const y = new Date(Date.now() - 86400000);
+    const yKey = `${y.getFullYear()}-${y.getMonth() + 1}-${y.getDate()}`;
+    const projected = (state.lastDaily === yKey) ? state.streak + 1 : 1;
+    const celType = projected >= 7 ? 'streak7' : projected >= 3 ? 'streak3' : 'standard';
     startPuzzle({
       title: 'Lock of the Day',
       ctxLabel: 'Daily challenge',
       locks: [dailyLock()],
+      celType,
       onWin: () => {
         completeDaily();
         toast(`+10 🔑  +25 XP  +5 arcade minutes! Streak: ${state.streak} 🔥`);
@@ -121,14 +211,18 @@ function renderGameHall(title, body) {
     btn.onclick = () => {
       const g = DATA.games.find(g => g.id === btn.dataset.play);
       closeBuildingModal();
+      const firstEver = Object.keys(state.gamesDone).length === 0;
       startPuzzle({
         title: g.name,
         ctxLabel: g.subject,
         locks: g.locks,
+        celType: firstEver ? 'firstBreak' : 'standard',
         onWin: ({ attempts, seconds }) => {
           const first = !state.gamesDone[g.id];
           state.gamesDone[g.id] = { attempts, seconds };
           grant(first ? { keys: 25, xp: 60, arcade: 10 } : { keys: 5, xp: 15, arcade: 0 });
+          // cracking every lock in a game (multi-lock) earns the Key of Logic
+          if (first && g.locks.length >= 3) awardLegendaryKey('logic');
           toast(first ? '+25 🔑  +60 XP  +10 arcade minutes!' : 'Replay complete! +5 🔑 +15 XP');
         },
       });
@@ -173,16 +267,27 @@ function renderArcade(title, body) {
   if (mm && state.arcadeMin >= 5) mm.onclick = () => { closeBuildingModal(); startMemoryMatch(); };
 }
 
-/* Memory Match minigame — DOM cards with 3D flips */
+/* Memory Match minigame — DOM cards with 3D flips.
+   Grades 3-5 use curriculum decks (match the fact to its answer); K-2 keep emoji. */
 function startMemoryMatch() {
   state.arcadeMin -= 5; saveState(); updateHUD();
   const modal = document.getElementById('mm-modal');
   const grid = document.getElementById('mm-grid');
   const status = document.getElementById('mm-status');
+  const heading = modal.querySelector('h2');
   modal.classList.add('open');
 
-  const icons = ['🔑', '🔒', '⭐', '🧪', '📘', '⚙️'];
-  const deck = shuffle([...icons, ...icons].map((ic, i) => ({ ic, id: i })));
+  const curriculum = DATA.memoryDecks && DATA.memoryDecks[state.mathGrade];
+  let deck;
+  if (curriculum) {
+    if (heading) heading.textContent = `🃏 Memory Match — Grade ${state.mathGrade} Skills`;
+    // each pair is a fact and its answer, matched by pair id
+    deck = shuffle(curriculum.flatMap(([a, b], i) => [{ face: a, pid: i, text: true }, { face: b, pid: i, text: true }]));
+  } else {
+    if (heading) heading.textContent = '🃏 Memory Match';
+    const icons = ['🔑', '🔒', '⭐', '🧪', '📘', '⚙️'];
+    deck = shuffle(icons.flatMap((ic, i) => [{ face: ic, pid: i }, { face: ic, pid: i }]));
+  }
   let flipped = [], matched = 0, misses = 0, lock = false;
   const t0 = Date.now();
 
@@ -195,16 +300,16 @@ function startMemoryMatch() {
   deck.forEach((card) => {
     const el = document.createElement('button');
     el.className = 'mm-card';
-    el.innerHTML = `<span class="mm-inner"><span class="mm-front">🔐</span><span class="mm-back">${card.ic}</span></span>`;
+    el.innerHTML = `<span class="mm-inner"><span class="mm-front">🔐</span><span class="mm-back${card.text ? ' mm-text' : ''}">${card.face}</span></span>`;
     el.onclick = () => {
       if (lock || el.classList.contains('flip') || el.classList.contains('done')) return;
       blip(640);
       el.classList.add('flip');
-      flipped.push({ el, ic: card.ic });
+      flipped.push({ el, pid: card.pid });
       if (flipped.length === 2) {
         lock = true;
         const [a, b] = flipped;
-        if (a.ic === b.ic) {
+        if (a.pid === b.pid) {
           setTimeout(() => {
             a.el.classList.add('done'); b.el.classList.add('done');
             matched++; blip(900); flipped = []; lock = false;
@@ -596,14 +701,17 @@ function startMathNode(grade, i) {
     title: `${unit} — ${type === 'boss' ? 'BOSS Lock' : type === 'challenge' ? 'Challenge' : type === 'review' ? 'Review' : 'Quest'} ${i + 1}`,
     ctxLabel: `Breakout Math · Grade ${grade}`,
     locks,
+    celType: type === 'boss' ? 'boss' : 'standard',
     onWin: ({ attempts }) => {
       const key = nodeKey(grade, i);
+      const firstClear = !state.mathStars[key];
       const stars = attempts <= count ? 3 : attempts <= count + 1 ? 2 : 1;
       state.mathStars[key] = Math.max(state.mathStars[key] || 0, stars);
       state.mathAttempts[key] = attempts;
       const rewards = { core: { keys: 12, xp: 30, arcade: 4 }, review: { keys: 6, xp: 15, arcade: 2 }, challenge: { keys: 20, xp: 50, arcade: 8 }, boss: { keys: 35, xp: 90, arcade: 12 } }[type];
       grant(rewards);
       if (type === 'challenge' || type === 'boss') awardBadge('challenge');
+      if (type === 'boss' && firstClear) awardLegendaryKey('math');
       if (attempts > count + 1) toast(`+${rewards.keys} 🔑! Tip: the Review stop on the trail is a great warm-up. 💙`);
       else toast(`${'⭐'.repeat(stars)} +${rewards.keys} 🔑 +${rewards.xp} XP +${rewards.arcade} arcade min!`);
       renderMathMap();

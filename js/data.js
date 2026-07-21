@@ -38,20 +38,66 @@ const DATA = {
     { id: 'stylist',        name: 'Style Star',       desc: 'Buy your first Style Shop item',      icon: 'star' },
     { id: 'thinker',        name: 'Critical Thinker', desc: 'Solve a lock on the first try',       icon: 'bulb' },
     { id: 'persistent',     name: 'Never Give Up',    desc: 'Solve a lock after 3+ tries',         icon: 'heart' },
+    { id: 'star-seeker',    name: 'Star Seeker',      desc: 'Collect all 5 Sparkle Keys in one day', icon: 'star' },
+    { id: 'quest-hero',     name: 'Quest Hero',       desc: 'Finish all 4 island quests in one day', icon: 'trophy' },
+  ],
+
+  // The Five Keys of Knowledge — legendary milestone keys that tell the island's story
+  legendaryKeys: [
+    { id: 'math',       name: 'Key of Numbers',    color: '#0068ff', icon: '🔢', desc: 'Awarded for conquering a Breakout Math boss.' },
+    { id: 'logic',      name: 'Key of Logic',      color: '#26b59d', icon: '🧩', desc: 'Awarded for cracking every lock in a game.' },
+    { id: 'words',      name: 'Key of Words',      color: '#c914a7', icon: '📜', desc: 'Awarded for helping all island friends in a day.' },
+    { id: 'explore',    name: 'Key of Discovery',  color: '#f4a11e', icon: '🧭', desc: 'Awarded for finding all Sparkle Keys in a day.' },
+    { id: 'creativity', name: 'Key of Creativity', color: '#5c25b7', icon: '🎨', desc: 'Awarded for making the island your own.' },
   ],
 
   // Lock of the Day pool — rotates by date
   dailyLocks: [
-    { type: 'number', clue: 'I am a two-digit number. My tens digit is double my ones digit, and my digits add up to 9. Open the lock!', answer: '63', hint: 'Try digits that add to 9 where the first is twice the second.' },
-    { type: 'word', clue: 'I have keys but open no locks, I have space but no room, you can enter but not go inside. What am I?', answer: 'KEYBOARD', hint: 'You might be using one right now…' },
-    { type: 'color', clue: 'Mix-up at the paint shop! Enter the colors of: the sun, the ocean, grass, and a strawberry — in that order.', answer: ['yellow', 'blue', 'green', 'red'], hint: 'Sun → Ocean → Grass → Strawberry.' },
-    { type: 'direction', clue: 'The treasure map says: toward the sunrise, then toward the mountains at the top, then sunrise again, then down the waterfall.', answer: ['right', 'up', 'right', 'down'], hint: 'Sunrise = East (right). Top of a map = up.' },
-    { type: 'number', clue: 'Three friends share 24 cookies equally, then each eats 2. How many cookies does each friend have left?', answer: '6', hint: '24 ÷ 3 first, then subtract.' },
-    { type: 'word', clue: 'The more you take, the more you leave behind. What are they?', answer: 'STEPS', hint: 'Think about walking.' },
-    { type: 'number', clue: 'A clock shows 3:15. How many minutes until 4 o’clock?', answer: '45', hint: '60 minutes in an hour.' },
-    { type: 'shape', clue: 'The wizard’s door whispers: “First 3 sides, then 4 sides, then no sides at all!”', answer: ['triangle', 'square', 'circle'], hint: 'Count each shape’s sides.' },
-    { type: 'switch', clue: 'The power panel hums: “Flip ON only the ODD-numbered switches.”', answer: '10101', hint: 'Odd numbers: 1, 3, 5.' },
+    { type: 'number', subject: 'Math · Number Sense', clue: 'I am a two-digit number. My tens digit is double my ones digit, and my digits add up to 9. Open the lock!', answer: '63', hint: 'Try digits that add to 9 where the first is twice the second.' },
+    { type: 'word', subject: 'ELA · Riddles', clue: 'I have keys but open no locks, I have space but no room, you can enter but not go inside. What am I?', answer: 'KEYBOARD', hint: 'You might be using one right now…' },
+    { type: 'color', subject: 'Science · Observation', clue: 'Mix-up at the paint shop! Enter the colors of: the sun, the ocean, grass, and a strawberry — in that order.', answer: ['yellow', 'blue', 'green', 'red'], hint: 'Sun → Ocean → Grass → Strawberry.' },
+    { type: 'direction', subject: 'Geography · Map Skills', clue: 'The treasure map says: toward the sunrise, then toward the mountains at the top, then sunrise again, then down the waterfall.', answer: ['right', 'up', 'right', 'down'], hint: 'Sunrise = East (right). Top of a map = up.' },
+    { type: 'number', subject: 'Math · Division', clue: 'Three friends share 24 cookies equally, then each eats 2. How many cookies does each friend have left?', answer: '6', hint: '24 ÷ 3 first, then subtract.' },
+    { type: 'word', subject: 'ELA · Riddles', clue: 'The more you take, the more you leave behind. What are they?', answer: 'STEPS', hint: 'Think about walking.' },
+    { type: 'number', subject: 'Math · Time', clue: 'A clock shows 3:15. How many minutes until 4 o’clock?', answer: '45', hint: '60 minutes in an hour.' },
+    { type: 'shape', subject: 'Math · Geometry', clue: 'The wizard’s door whispers: “First 3 sides, then 4 sides, then no sides at all!”', answer: ['triangle', 'square', 'circle'], hint: 'Count each shape’s sides.' },
+    { type: 'switch', subject: 'Math · Odd & Even', clue: 'The power panel hums: “Flip ON only the ODD-numbered switches.”', answer: '10101', hint: 'Odd numbers: 1, 3, 5.' },
   ],
+
+  // Daily side quests from the island NPCs
+  npcQuests: [
+    {
+      npc: 'Leo', icon: '🎣', title: "Leo's Riddle",
+      intro: "Hey explorer! I found this locked bait box. Help me crack it and I'll share the catch!",
+      lock: { type: 'number', subject: 'Math · Multiplication', clue: 'I have 6 rods and catch 4 fish per rod. How many fish is that?', answer: '24', hint: 'Multiply the rods by the fish per rod.' },
+      reward: { keys: 8, xp: 20, arcade: 3 },
+    },
+    {
+      npc: 'Maya', icon: '📖', title: "Maya's Cipher",
+      intro: "I found a secret message in Chapter 7! It's in code — help me decode it!",
+      lock: { type: 'word', subject: 'ELA · Word Play', clue: 'Take the LAST letter of each word to spell the secret: "Book Table Sunny Grass."', answer: 'KEYS', hint: 'Last letter of Book… Table… Sunny… Grass.' },
+      reward: { keys: 8, xp: 20, arcade: 3 },
+    },
+    {
+      npc: 'Zoe', icon: '🏃', title: "Zoe's Challenge",
+      intro: "I hid a key somewhere on the island! Follow my directions to find it.",
+      lock: { type: 'direction', subject: 'Geography · Directions', clue: 'From the dock: go toward the sunrise, then up the hill, then toward the sunset, then down to the shore.', answer: ['right', 'up', 'left', 'down'], hint: 'Sunrise = East = right. Sunset = West = left.' },
+      reward: { keys: 10, xp: 25, arcade: 5 },
+    },
+    {
+      npc: 'Kai', icon: '☕', title: "Kai's Puzzle",
+      intro: "Ah, an explorer! I've been contemplating this lock all morning. Perhaps two minds are better than one?",
+      lock: { type: 'color', subject: 'Science · Observation', clue: 'Kai says: "I see the colors of fire, then sky, then leaves — enter them in that order."', answer: ['red', 'blue', 'green'], hint: 'Fire = red. Sky = blue. Leaves = green.' },
+      reward: { keys: 8, xp: 20, arcade: 3 },
+    },
+  ],
+
+  // Grade-aligned Memory Match decks (label pairs); K-2 keep the emoji deck
+  memoryDecks: {
+    3: [['7 × 8', '56'], ['9 × 6', '54'], ['4 × 7', '28'], ['6 × 6', '36'], ['8 × 3', '24'], ['5 × 9', '45']],
+    4: [['1/2', '4/8'], ['3/4', '6/8'], ['1/3', '2/6'], ['2/5', '4/10'], ['1/4', '3/12'], ['2/3', '8/12']],
+    5: [['2.5 + 1.5', '4.0'], ['10²', '100'], ['(6+2) ÷ 2', '4'], ['0.75', '3/4'], ['2×3×4', '24'], ['0.5', '50%']],
+  },
 
   // Assigned games — in production these embed the breakoutedu.com digital game player
   games: [

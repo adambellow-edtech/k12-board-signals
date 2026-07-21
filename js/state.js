@@ -27,6 +27,10 @@ const defaultState = () => ({
   perms: { teacherArcade: true, parentArcade: true, weeklyLimitMin: 120 },
   plus: true,               // teacher has Breakout+ (toggle in teacher view)
   pos: { x: 990, y: 648 },  // avatar position in world (just south of Lock Plaza)
+  sparkleKeys: {},          // dateKey -> [collected star indexes] for the day
+  npcQuests: {},            // dateKey -> [completed npc names] for the day
+  legendaryKeys: [],        // ids of the Five Keys of Knowledge earned
+  tutorialStep: 0,          // 0=not started, 1..4 in progress, 5=done
 });
 
 let state = defaultState();
@@ -81,6 +85,61 @@ function checkBadges() {
   const mathDone = Object.keys(state.mathStars).length;
   if (mathDone >= 3) awardBadge('mathlete');
   if (state.unlocked.length >= 1) awardBadge('stylist');
+  if (sparkleKeysToday().length >= 5) awardBadge('star-seeker');
+  if (npcQuestsToday().length >= DATA.npcQuests.length) awardBadge('quest-hero');
+  if (state.unlocked.length >= 1 && state.badges.length >= 3) awardLegendaryKey('creativity');
+}
+
+/* ---- sparkle keys (daily hidden collectibles) ---- */
+
+function sparkleKeysToday() {
+  return state.sparkleKeys[todayKey()] || [];
+}
+function sparkleKeyFound(idx) {
+  return sparkleKeysToday().includes(idx);
+}
+function collectSparkleKey(idx) {
+  const today = todayKey();
+  const list = state.sparkleKeys[today] || (state.sparkleKeys[today] = []);
+  if (list.includes(idx)) return false;
+  list.push(idx);
+  grant({ keys: 12, xp: 15 });
+  if (list.length >= 5) awardLegendaryKey('explore');
+  saveState();
+  return true;
+}
+
+/* ---- NPC daily side quests ---- */
+
+function npcQuestsToday() {
+  return state.npcQuests[todayKey()] || [];
+}
+function npcQuestDone(name) {
+  return npcQuestsToday().includes(name);
+}
+function completeNpcQuest(name, reward) {
+  const today = todayKey();
+  const list = state.npcQuests[today] || (state.npcQuests[today] = []);
+  if (list.includes(name)) return false;
+  list.push(name);
+  grant(reward || { keys: 8, xp: 20, arcade: 3 });
+  if (list.length >= DATA.npcQuests.length) awardLegendaryKey('words');
+  saveState();
+  return true;
+}
+
+/* ---- Five Keys of Knowledge (legendary milestone keys) ---- */
+
+function hasLegendaryKey(id) {
+  return state.legendaryKeys.includes(id);
+}
+function awardLegendaryKey(id) {
+  if (state.legendaryKeys.includes(id)) return false;
+  state.legendaryKeys.push(id);
+  saveState();
+  if (typeof updateHUD === 'function') updateHUD();
+  if (typeof showLegendaryKeyMoment === 'function') showLegendaryKeyMoment(id);
+  return true;
 }
 
 function todayKey() {
