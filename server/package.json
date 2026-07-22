@@ -1,0 +1,13 @@
+{
+  "name": "breakout-land-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Breakout Land backend: accounts, progress, analytics, dashboards. Zero npm dependencies (Node 22 built-ins only).",
+  "engines": { "node": ">=22.5.0" },
+  "scripts": {
+    "start": "node --experimental-sqlite server.js",
+    "seed": "node --experimental-sqlite seed.js",
+    "test": "node --experimental-sqlite test.mjs"
+  }
+}

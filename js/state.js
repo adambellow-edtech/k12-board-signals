@@ -37,6 +37,7 @@ let state = defaultState();
 
 function saveState() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) { /* private mode */ }
+  if (typeof api !== 'undefined' && api.enabled && api.enabled()) api.saveState(state);
 }
 function loadState() {
   try {

@@ -8,6 +8,11 @@ function boot() {
   flags.load();
   analytics.load();
   analytics.newSession();
+  // backend seam: only active when window.BREAKOUT_API is configured
+  if (api.init()) {
+    analytics.sink = (events) => api.push(events);
+    addEventListener('visibilitychange', () => { if (document.hidden) api.flush(); });
+  }
   track('session_start', { role: state.created ? 'student' : 'new' });
   setupDevOverlay();
 

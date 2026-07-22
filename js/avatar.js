@@ -284,6 +284,12 @@ function finishAvatar() {
   const first = !state.created;
   state.created = true;
   saveState();
+  // backend seam: on first creation, register the student so progress persists
+  // server-side. No-op offline. Deferred-signup friendly: they already played.
+  if (first && typeof api !== 'undefined' && api.enabled && api.enabled() && !api.token) {
+    api.joinAsStudent(state.player.name, state.player, window.BREAKOUT_CLASS_CODE || null)
+      .then(() => saveState());
+  }
   if (first) toast(`Welcome to Breakout Land, ${state.player.name}! 🎉`);
   enterWorld();
 }

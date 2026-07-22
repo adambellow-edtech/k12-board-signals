@@ -4,13 +4,15 @@ Reasonable calls made during the rebuild, plus open questions that need the owne
 
 ## Decisions made
 
-### D4. Architecture: client-first, backend-ready. (Owner deferred the choice; reasonable-call default.)
-Build the learning value for real in the client now, behind thin persistence and service abstractions, so a real backend can slot in later without a rewrite. Rationale: it keeps the zero-dependency strength, ships real mechanics fast, and matches the plan's "extend, do not rip out" rule. What this means per capability:
-- Accounts/SSO: a `Session` service with a `local` provider today (role switch + device profile). Google/Clever/ClassLink providers implement the same interface later.
-- Analytics: a real client event bus now, buffering to localStorage, with a `sink` seam so events can POST to a server later.
-- Spaced repetition: works per-device today off the persisted store; the same scheduler runs server-side later.
-- Teacher dashboard: continues on seed data, but reads through a `roster` service so a live source can replace the seed.
-Revisit if the owner later wants real cross-device accounts, which is the trigger to add a backend.
+### D4. Architecture: REAL BACKEND now. (Owner decision, 2026-07-22: "go to a real backend".)
+Supersedes the earlier client-first default. Stand up an actual server with persistence, accounts, analytics ingestion, and real dashboard data.
+
+**Stack: zero npm dependencies, Node built-ins only.** Node 22 ships `node:http` (server), `node:sqlite` (DatabaseSync, persistence), and `node:crypto` (token signing). This keeps the project's zero-dependency identity on the server too, avoids native compilation, and runs anywhere Node 22+ is installed.
+- **DB:** SQLite for dev via `node:sqlite`. The repository layer (`server/db.js`) is the only code that touches SQL, so Postgres swaps in for production behind the same functions.
+- **Auth:** stateless signed tokens (HMAC-SHA256) with a provider abstraction. A `local` provider works today; Google / Clever / ClassLink adapters implement the same `resolveIdentity()` interface later. No passwords stored.
+- **Analytics:** the client event bus gains a `sink` that POSTs batches to `POST /api/events`; the server persists them for real dashboards and (later) spaced repetition.
+- **Client stays offline-tolerant:** the static single-file artifact keeps working with localStorage when no API is configured. The API turns on when `window.BREAKOUT_API` is set, so the demo build is unaffected.
+- **Hosting:** this container is ephemeral, so the server is built and tested here but deployed elsewhere. Production swaps the SQLite file for managed Postgres and sets real SSO client IDs.
 
 ### D5. Standards: framework-agnostic model, seeded with CCSS.
 Locks gain an optional `standards: [code]` field. A `STANDARDS` map (`code -> { framework, grade, strand, label }`) is seeded with a small Common Core set now. TEKS or others can be added without schema changes. Satisfies the Phase 0 seed requirement of locks across at least 3 standards.
