@@ -605,7 +605,11 @@ function drawNPC(ctx, n, sec) {
   if (nearPlayerNow) dir = state.pos.x >= p.x ? 1 : -1; // turn toward the player
   if (n._face === undefined) n._face = dir;
   n._face += (dir - n._face) * .22;
-  drawAvatar(ctx, p.x, p.y, .98, n.cfg, sec + p.x, walking, n._face);
+  // walk-cycle frame must advance monotonically or the legs stutter. Use a
+  // stable per-NPC offset (base position), not the live x, which oscillates
+  // for wanderers like Zoe and made the animation play back and forth.
+  const gaitPhase = sec + (n.cx !== undefined ? n.cx : n.x) * 0.05;
+  drawAvatar(ctx, p.x, p.y, .98, n.cfg, gaitPhase, walking, n._face);
   if (n.mode === 'fish') {
     // a fish jumps every ~9s; the bobber dips hard during the bite
     const cycle = sec % 9;
