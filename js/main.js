@@ -3,6 +3,14 @@
 function boot() {
   loadState();
 
+  // Phase 0 foundation: feature flags + analytics event bus come up first so
+  // every system can emit from day one.
+  flags.load();
+  analytics.load();
+  analytics.newSession();
+  track('session_start', { role: state.created ? 'student' : 'new' });
+  setupDevOverlay();
+
   // painted art assets (inlined as data URIs in the single-file build)
   const A = (typeof window !== 'undefined' && window.ASSETS) || {};
   const abs = (p) => p.startsWith('data:') ? p : new URL(p, document.baseURI).href;
@@ -66,6 +74,40 @@ function boot() {
 
   showScreen('title');
 }
+
+/* ---- dev event-log overlay (Phase 0) ----
+   Toggle with the backtick key. Never shown to students by default; it is a
+   developer/teammate tool so the event bus is visible while building. */
+let devLogEl = null;
+function setupDevOverlay() {
+  addEventListener('keydown', e => {
+    if (e.key === '`' || e.key === '~') { e.preventDefault(); toggleDevLog(); }
+  });
+}
+function toggleDevLog() {
+  if (!devLogEl) {
+    devLogEl = document.createElement('div');
+    devLogEl.id = 'dev-eventlog';
+    devLogEl.style.cssText = 'position:fixed;right:8px;bottom:8px;width:340px;max-height:52vh;overflow:auto;z-index:9999;background:rgba(4,20,55,.94);color:#cfe3ff;font:11px/1.45 ui-monospace,Menlo,monospace;border:2px solid #0068ff;border-radius:12px;padding:8px 10px;box-shadow:0 10px 30px rgba(0,0,0,.5)';
+    document.body.appendChild(devLogEl);
+  }
+  const open = devLogEl.style.display !== 'none' && devLogEl.dataset.open === '1';
+  devLogEl.dataset.open = open ? '0' : '1';
+  devLogEl.style.display = open ? 'none' : 'block';
+  if (!open) renderDevLog();
+}
+function renderDevLog() {
+  if (!devLogEl || devLogEl.dataset.open !== '1') return;
+  const rows = analytics.recent(40).map(e => {
+    const time = new Date(e.ts).toLocaleTimeString();
+    const extra = Object.entries(e).filter(([k]) => !['type', 'ts', 'sessionId'].includes(k))
+      .map(([k, v]) => `${k}=${Array.isArray(v) ? '[' + v.join(',') + ']' : v}`).join(' ');
+    return `<div><b style="color:#7fd6ff">${e.type}</b> <span style="color:#8aa">${time}</span><br><span style="color:#bfe">${extra}</span></div>`;
+  }).join('<hr style="border:none;border-top:1px solid rgba(255,255,255,.1);margin:4px 0">');
+  devLogEl.innerHTML = `<div style="font-weight:700;color:#fff;margin-bottom:6px">📊 Event log (${analytics.buffer.length}) · backtick to hide</div>${rows || '<i>no events yet</i>'}`;
+}
+// live-update the overlay whenever an event fires
+function onAnalyticsEvent() { renderDevLog(); }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
 else boot();

@@ -162,6 +162,7 @@ function completeDaily() {
   const yKey = `${y.getFullYear()}-${y.getMonth() + 1}-${y.getDate()}`;
   state.streak = (state.lastDaily === yKey) ? state.streak + 1 : 1;
   state.lastDaily = today;
+  if (typeof track === 'function') track('streak_extended', { streak: state.streak });
   grant({ keys: 10, xp: 25, arcade: 5 });
 }
 

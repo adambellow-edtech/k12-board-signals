@@ -29,6 +29,19 @@ const DATA = {
     { id: 'bot',   name: 'Key-Bot',    price: 120, color: '#9db4c4' },
   ],
 
+  // Framework-agnostic standards registry (D5). Seeded with a small Common Core
+  // set; TEKS or others can be added with the same shape, no schema change.
+  standards: {
+    '2.NBT.A.1': { framework: 'CCSS', grade: 2, strand: 'Number & Operations in Base Ten', label: 'Understand place value: hundreds, tens, ones' },
+    '2.OA.C.3':  { framework: 'CCSS', grade: 2, strand: 'Operations & Algebraic Thinking', label: 'Determine whether a group is odd or even' },
+    '3.OA.A.1':  { framework: 'CCSS', grade: 3, strand: 'Operations & Algebraic Thinking', label: 'Interpret products of whole numbers' },
+    '3.OA.A.3':  { framework: 'CCSS', grade: 3, strand: 'Operations & Algebraic Thinking', label: 'Multiply and divide within 100 to solve word problems' },
+    '3.MD.A.1':  { framework: 'CCSS', grade: 3, strand: 'Measurement & Data', label: 'Tell time and measure time intervals in minutes' },
+    '3.G.A.1':   { framework: 'CCSS', grade: 3, strand: 'Geometry', label: 'Understand shapes by their attributes' },
+    '4.NF.A.1':  { framework: 'CCSS', grade: 4, strand: 'Number & Operations: Fractions', label: 'Recognize and generate equivalent fractions' },
+    'L.3.5':     { framework: 'CCSS', grade: 3, strand: 'Language', label: 'Understand word relationships and nuances in meaning' },
+  },
+
   badges: [
     { id: 'first-breakout', name: 'First Breakout!',  desc: 'Complete your first game',            icon: 'lock' },
     { id: 'daily-3',        name: 'On a Roll',        desc: '3-day Lock of the Day streak',        icon: 'flame' },
@@ -53,15 +66,15 @@ const DATA = {
 
   // Lock of the Day pool — rotates by date
   dailyLocks: [
-    { type: 'number', subject: 'Math · Number Sense', clue: 'I am a two-digit number. My tens digit is double my ones digit, and my digits add up to 9. Open the lock!', answer: '63', hint: 'Try digits that add to 9 where the first is twice the second.' },
-    { type: 'word', subject: 'ELA · Riddles', clue: 'I have keys but open no locks, I have space but no room, you can enter but not go inside. What am I?', answer: 'KEYBOARD', hint: 'You might be using one right now…' },
+    { type: 'number', subject: 'Math · Number Sense', standards: ['2.NBT.A.1'], clue: 'I am a two-digit number. My tens digit is double my ones digit, and my digits add up to 9. Open the lock!', answer: '63', hint: 'Try digits that add to 9 where the first is twice the second.' },
+    { type: 'word', subject: 'ELA · Riddles', standards: ['L.3.5'], clue: 'I have keys but open no locks, I have space but no room, you can enter but not go inside. What am I?', answer: 'KEYBOARD', hint: 'You might be using one right now…' },
     { type: 'color', subject: 'Science · Observation', clue: 'Mix-up at the paint shop! Enter the colors of: the sun, the ocean, grass, and a strawberry — in that order.', answer: ['yellow', 'blue', 'green', 'red'], hint: 'Sun → Ocean → Grass → Strawberry.' },
     { type: 'direction', subject: 'Geography · Map Skills', clue: 'The treasure map says: toward the sunrise, then toward the mountains at the top, then sunrise again, then down the waterfall.', answer: ['right', 'up', 'right', 'down'], hint: 'Sunrise = East (right). Top of a map = up.' },
-    { type: 'number', subject: 'Math · Division', clue: 'Three friends share 24 cookies equally, then each eats 2. How many cookies does each friend have left?', answer: '6', hint: '24 ÷ 3 first, then subtract.' },
-    { type: 'word', subject: 'ELA · Riddles', clue: 'The more you take, the more you leave behind. What are they?', answer: 'STEPS', hint: 'Think about walking.' },
-    { type: 'number', subject: 'Math · Time', clue: 'A clock shows 3:15. How many minutes until 4 o’clock?', answer: '45', hint: '60 minutes in an hour.' },
-    { type: 'shape', subject: 'Math · Geometry', clue: 'The wizard’s door whispers: “First 3 sides, then 4 sides, then no sides at all!”', answer: ['triangle', 'square', 'circle'], hint: 'Count each shape’s sides.' },
-    { type: 'switch', subject: 'Math · Odd & Even', clue: 'The power panel hums: “Flip ON only the ODD-numbered switches.”', answer: '10101', hint: 'Odd numbers: 1, 3, 5.' },
+    { type: 'number', subject: 'Math · Division', standards: ['3.OA.A.3'], clue: 'Three friends share 24 cookies equally, then each eats 2. How many cookies does each friend have left?', answer: '6', hint: '24 ÷ 3 first, then subtract.' },
+    { type: 'word', subject: 'ELA · Riddles', standards: ['L.3.5'], clue: 'The more you take, the more you leave behind. What are they?', answer: 'STEPS', hint: 'Think about walking.' },
+    { type: 'number', subject: 'Math · Time', standards: ['3.MD.A.1'], clue: 'A clock shows 3:15. How many minutes until 4 o’clock?', answer: '45', hint: '60 minutes in an hour.' },
+    { type: 'shape', subject: 'Math · Geometry', standards: ['3.G.A.1'], clue: 'The wizard’s door whispers: “First 3 sides, then 4 sides, then no sides at all!”', answer: ['triangle', 'square', 'circle'], hint: 'Count each shape’s sides.' },
+    { type: 'switch', subject: 'Math · Odd & Even', standards: ['2.OA.C.3'], clue: 'The power panel hums: “Flip ON only the ODD-numbered switches.”', answer: '10101', hint: 'Odd numbers: 1, 3, 5.' },
   ],
 
   // Daily side quests from the island NPCs
@@ -69,13 +82,13 @@ const DATA = {
     {
       npc: 'Leo', icon: '🎣', title: "Leo's Riddle",
       intro: "Hey explorer! I found this locked bait box. Help me crack it and I'll share the catch!",
-      lock: { type: 'number', subject: 'Math · Multiplication', clue: 'I have 6 rods and catch 4 fish per rod. How many fish is that?', answer: '24', hint: 'Multiply the rods by the fish per rod.' },
+      lock: { type: 'number', subject: 'Math · Multiplication', standards: ['3.OA.A.1'], clue: 'I have 6 rods and catch 4 fish per rod. How many fish is that?', answer: '24', hint: 'Multiply the rods by the fish per rod.' },
       reward: { keys: 8, xp: 20, arcade: 3 },
     },
     {
       npc: 'Maya', icon: '📖', title: "Maya's Cipher",
       intro: "I found a secret message in Chapter 7! It's in code — help me decode it!",
-      lock: { type: 'word', subject: 'ELA · Word Play', clue: 'Take the LAST letter of each word to spell the secret: "Book Table Sunny Grass."', answer: 'KEYS', hint: 'Last letter of Book… Table… Sunny… Grass.' },
+      lock: { type: 'word', subject: 'ELA · Word Play', standards: ['L.3.5'], clue: 'Take the LAST letter of each word to spell the secret: "Book Table Sunny Grass."', answer: 'KEYS', hint: 'Last letter of Book… Table… Sunny… Grass.' },
       reward: { keys: 8, xp: 20, arcade: 3 },
     },
     {

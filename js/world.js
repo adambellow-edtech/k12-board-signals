@@ -193,6 +193,15 @@ function worldLoop(t) {
   const sec = (t - world.t0) / 1000;
   world.sec = sec;
   stepPlayer();
+  // navigation-time telemetry: time spent moving around the world, flushed in
+  // ~5s chunks. Paired with lock thinking-time, this is the intrinsic-integration
+  // health check (thinking vs wandering) the plan asks us to instrument.
+  const dt = world.lastLoopT ? t - world.lastLoopT : 0;
+  world.lastLoopT = t;
+  if (world.walking && dt > 0 && dt < 500) {
+    world.navMs = (world.navMs || 0) + dt;
+    if (world.navMs >= 5000) { track('time_navigating_ms', { ms: Math.round(world.navMs) }); world.navMs = 0; }
+  }
   updateCamera(getViewScale());
   drawWorld(sec);
   world.raf = requestAnimationFrame(worldLoop);

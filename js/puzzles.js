@@ -201,16 +201,23 @@ function updateEntryDisplay(kind) {
   }
 }
 
+function lockIdOf(lk) {
+  return lk.id || `${lk.type}:${(lk.standards && lk.standards[0]) || lk.subject || 'na'}`;
+}
+
 function submitEntry(lk, entered) {
   const want = Array.isArray(lk.answer) ? lk.answer.join(',') : String(lk.answer).toUpperCase();
   const got = String(entered).toUpperCase();
   puzzle.attempts++; puzzle.lockAttempts++;
-  if (got === want.toUpperCase()) {
+  const correct = got === want.toUpperCase();
+  track('lock_attempt', { lockId: lockIdOf(lk), lockType: lk.type, standards: lk.standards || [], correct, attemptNo: puzzle.lockAttempts });
+  if (correct) {
     // lock pops open
     tone(880, .15); tone(1175, .2, 'triangle', .07, .1);
     document.getElementById('pz-lock').classList.add('open-anim');
     if (puzzle.lockAttempts === 1) awardBadge('thinker');
     if (puzzle.lockAttempts >= 3) awardBadge('persistent');
+    track('lock_solved', { lockId: lockIdOf(lk), lockType: lk.type, standards: lk.standards || [], attempts: puzzle.lockAttempts, seconds: Math.round((Date.now() - puzzle.t0) / 1000) });
     setTimeout(() => {
       puzzle.idx++;
       if (puzzle.idx < puzzle.locks.length) {
@@ -218,6 +225,7 @@ function submitEntry(lk, entered) {
         renderLock();
       } else {
         const seconds = Math.round((Date.now() - puzzle.t0) / 1000);
+        track('time_thinking_ms', { ms: Date.now() - puzzle.t0, context: puzzle.title });
         closePuzzle();
         // resolve the tier: an explicit type wins; otherwise a no-miss run is Flawless
         let type = puzzle.celType || 'standard';
@@ -233,6 +241,7 @@ function submitEntry(lk, entered) {
     updateEntryDisplay({ number: 'digit', word: 'letter', color: 'color', direction: 'dir', shape: 'shape', switch: 'switch' }[lk.type]);
     if (puzzle.lockAttempts >= 2 && lk.hint) {
       const h = document.getElementById('pz-hint');
+      if (!h.classList.contains('show')) track('hint_used', { lockId: lockIdOf(lk), level: 1 });
       h.textContent = '💡 Hint: ' + lk.hint;
       h.classList.add('show');
     }
