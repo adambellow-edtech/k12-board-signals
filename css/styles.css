@@ -226,6 +226,24 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
   padding: 6px 14px; border-radius: 999px; pointer-events: none;
 }
 
+/* region entry banner — announces the themed land you cross into */
+#region-banner {
+  position: fixed; left: 50%; top: 44px; transform: translate(-50%, -14px);
+  display: flex; align-items: center; gap: 11px; padding: 9px 20px 9px 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,.97), rgba(245,249,255,.97));
+  border: 3px solid var(--rc, #e0a01e); border-left-width: 8px; border-radius: 16px;
+  box-shadow: 0 8px 22px rgba(0,20,60,.28); z-index: 44;
+  opacity: 0; pointer-events: none; transition: transform .4s cubic-bezier(.2,1.5,.4,1), opacity .4s ease;
+}
+#region-banner.show { opacity: 1; transform: translate(-50%, 0); }
+#region-banner .rb-icon {
+  font-size: 24px; width: 40px; height: 40px; flex: 0 0 auto; display: grid; place-items: center;
+  border-radius: 12px; background: var(--rc, #e0a01e); box-shadow: inset 0 -2px 0 rgba(0,0,0,.15);
+}
+#region-banner .rb-text { display: flex; flex-direction: column; line-height: 1.15; }
+#region-banner .rb-text b { font-family: var(--display); font-weight: 900; font-size: 15.5px; color: var(--ink); }
+#region-banner .rb-text i { font-style: normal; font-size: 11.5px; font-weight: 700; color: var(--rc, #b8790a); text-transform: uppercase; letter-spacing: .5px; }
+
 /* tutorial coach banner (Ollie the owl) */
 #tut-banner {
   position: fixed; left: 50%; top: 112px; transform: translate(-50%, -16px);

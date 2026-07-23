@@ -57,6 +57,73 @@ const NPCS = [
 
 const SPARKLE_KEYS = [[865, 300], [1245, 565], [770, 705], [1445, 618], [1085, 862]];
 
+/* Themed regions — the island is divided into subject lands (a Voronoi of these
+   centers), so crossing the map teaches structure: Math to the SE, Words NW,
+   Science SW, Logic NE, all around the central Plaza hub. */
+const REGIONS = [
+  { id: 'plaza',   name: 'Breakout Plaza', subject: 'Hub',              x: 990,  y: 545, color: '#e0a01e', icon: '🔓' },
+  { id: 'number',  name: 'Number Meadow',  subject: 'Math',             x: 1200, y: 730, color: '#1c9a85', icon: '🔢' },
+  { id: 'word',    name: 'Word Woods',     subject: 'Reading & Words',  x: 585,  y: 415, color: '#7a3fd0', icon: '📖' },
+  { id: 'science', name: 'Discovery Shore', subject: 'Science',         x: 455,  y: 665, color: '#0068ff', icon: '🔬' },
+  { id: 'logic',   name: 'Logic Lookout',  subject: 'Logic & Puzzles',  x: 1400, y: 455, color: '#e8862a', icon: '🧩' },
+];
+function regionAt(x, y) {
+  let best = REGIONS[0], bd = Infinity;
+  for (const r of REGIONS) { const d = Math.hypot(x - r.x, y - r.y); if (d < bd) { bd = d; best = r; } }
+  return best;
+}
+let regionBannerTimer = null;
+function showRegionBanner(reg) {
+  const el = document.getElementById('region-banner');
+  if (!el) return;
+  el.style.setProperty('--rc', reg.color);
+  el.innerHTML = `<span class="rb-icon">${reg.icon}</span><span class="rb-text"><b>${reg.name}</b><i>${reg.subject}</i></span>`;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  clearTimeout(regionBannerTimer);
+  regionBannerTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+/* A little wooden signpost marks the heart of each region on the map. */
+function drawRegionSignpost(ctx, reg, sec) {
+  const x = reg.x, y = reg.y, bob = Math.sin(sec * 1.6 + reg.x) * 2;
+  ctx.save();
+  ctx.translate(x, y + bob);
+  // post
+  ctx.fillStyle = '#7a5a34';
+  ctx.fillRect(-3, -4, 6, 34);
+  ctx.fillStyle = 'rgba(20,35,25,.18)';
+  ctx.beginPath(); ctx.ellipse(0, 32, 16, 4, 0, 0, Math.PI * 2); ctx.fill();
+  // sign board
+  ctx.font = '800 13px "Helix","Quicksand",system-ui,sans-serif';
+  const label = `${reg.icon} ${reg.name}`;
+  const tw = ctx.measureText(label).width;
+  const w = tw + 20, h = 26, by = -34;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,20,50,.35)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+  const g = ctx.createLinearGradient(0, by - h / 2, 0, by + h / 2);
+  g.addColorStop(0, reg.color); g.addColorStop(1, shade(reg.color, -.22));
+  ctx.fillStyle = g;
+  roundRect(ctx, -w / 2, by - h / 2, w, h, 8); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 2;
+  roundRect(ctx, -w / 2, by - h / 2, w, h, 8); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, 0, by + 1);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.restore();
+}
+function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  r = Math.max(0, Math.min(255, r + amt * 255));
+  g = Math.max(0, Math.min(255, g + amt * 255));
+  b = Math.max(0, Math.min(255, b + amt * 255));
+  return `rgb(${r | 0},${g | 0},${b | 0})`;
+}
+function hexA(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
 /* Guided onboarding — a friendly owl walks first-timers to their first breakout,
    then a stealth placement + quest commitment finishes the flow (onboarding.js). */
 const TUTORIAL_STEPS = {
@@ -268,6 +335,14 @@ function stepPlayer() {
     if (Math.hypot(state.pos.x - p.x, state.pos.y - p.y) < 92) { world.nearNpc = n; break; }
   }
 
+  // which themed region the explorer is standing in (announce on change)
+  const reg = regionAt(state.pos.x, state.pos.y);
+  if (!world.region || world.region.id !== reg.id) {
+    const first = !world.region;
+    world.region = reg;
+    if (!first) showRegionBanner(reg);
+  }
+
   const btn = document.getElementById('enter-btn');
   if (world.nearSparkle !== null) {
     btn.classList.add('show'); btn.textContent = 'Collect! ⭐';
@@ -353,6 +428,10 @@ function drawWorld(sec) {
     const sy = 260 + i * 260;
     ctx.beginPath(); ctx.ellipse(sx, sy, 210, 90, .2, 0, Math.PI * 2); ctx.fill();
   }
+
+  // region signposts — landmarks that give each part of the island its identity
+  // (the central Plaza is already marked by the Lock Plaza pin)
+  REGIONS.forEach(r => { if (r.id !== 'plaza') drawRegionSignpost(ctx, r, sec); });
 
   // shoreline glints
   const GLINTS = [[760, 940], [1310, 890], [1620, 560], [330, 640], [700, 150], [1490, 300]];
@@ -602,6 +681,14 @@ function drawWorld(sec) {
     ctx.fillStyle = 'rgba(255,255,235,.95)';
     drawStar(ctx, wx, wy, 5, 6, 2.6); ctx.fill();
     ctx.restore();
+  }
+
+  // subtle region-colored wash from the lower edge, so each land feels distinct
+  if (world.region) {
+    const rc = world.region.color;
+    const grd = ctx.createLinearGradient(0, H, 0, H * .55);
+    grd.addColorStop(0, hexA(rc, .14)); grd.addColorStop(1, hexA(rc, 0));
+    ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
   }
 
   // warm grade + vignette
