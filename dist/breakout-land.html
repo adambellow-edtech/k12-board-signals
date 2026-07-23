@@ -516,6 +516,43 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .shop-name { font-weight: 800; font-size: 13.5px; }
 .shop-price { font-size: 12px; font-weight: 800; color: var(--gold-deep); }
 .shop-item.owned .shop-price { color: var(--teal-deep); }
+/* ---------- onboarding (Phase 1) ---------- */
+.hook-card { text-align: center; max-width: 520px; }
+.hook-art { font-size: 64px; margin-bottom: 6px; animation: hookfloat 2.4s ease-in-out infinite; }
+@keyframes hookfloat { 50% { transform: translateY(-8px) rotate(-4deg); } }
+#hook-title { color: var(--blue); margin-bottom: 10px; }
+#hook-text { color: var(--ink); font-size: 15.5px; line-height: 1.5; margin-bottom: 18px; }
+
+.pl-progress { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
+.pl-dot { width: 12px; height: 12px; border-radius: 50%; background: #d8e2ef; transition: all .3s ease; }
+.pl-dot.now { background: var(--blue); transform: scale(1.25); }
+.pl-dot.done { background: var(--teal); }
+.pl-story { text-align: center; color: var(--ink-soft); font-size: 15px; margin: 4px 0 2px; }
+.pl-clue { text-align: center; font-weight: 800; font-size: 19px; color: var(--ink); margin: 4px 0 16px; }
+.pl-choices { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.pl-choices.answered .pl-choice { pointer-events: none; }
+.pl-choice {
+  min-width: 84px; padding: 16px 18px; border-radius: 16px; border: 3px solid var(--cream-edge);
+  background: var(--white); font-family: var(--display); font-weight: 900; font-size: 26px; color: var(--ink);
+  cursor: pointer; transition: transform .12s ease, border-color .15s ease;
+}
+.pl-choice:hover { border-color: var(--gold); transform: translateY(-2px); }
+.pl-choice.right { border-color: var(--teal); background: #e6faf5; color: var(--teal-deep); }
+.pl-choice.wrong { border-color: #e0607a; background: #fdeef1; color: #c23a56; }
+
+.quest-goals { display: flex; flex-direction: column; gap: 10px; margin: 14px 0 18px; }
+.quest-goal {
+  display: flex; align-items: center; gap: 14px; text-align: left; padding: 14px 16px;
+  border-radius: 16px; border: 3px solid var(--cream-edge); background: var(--white); cursor: pointer;
+  transition: transform .12s ease, border-color .15s ease;
+}
+.quest-goal:hover { border-color: var(--gold); transform: translateY(-1px); }
+.quest-goal.sel { border-color: var(--blue); background: #eef5ff; box-shadow: 0 0 0 3px rgba(0,104,255,.18); }
+.qg-icon { font-size: 30px; flex: 0 0 auto; }
+.qg-label { font-family: var(--display); font-weight: 900; font-size: 17px; color: var(--ink); }
+.quest-goal .qg-blurb { font-size: 12.5px; color: var(--ink-soft); margin-left: auto; text-align: right; }
+#quest-start:disabled { opacity: .5; cursor: not-allowed; }
+
 /* live teacher-dashboard mastery panel */
 .live-badge { display: inline-block; font-size: 11px; font-weight: 800; color: #1c9a85; margin-bottom: 6px; }
 .live-badge::before { content: ''; }
@@ -896,6 +933,38 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
   </div>
 </section>
 
+<!-- ============ ONBOARDING: OPENING HOOK ============ -->
+<div class="modal" id="hook-modal">
+  <div class="modal-card board hook-card">
+    <div class="hook-art" id="hook-art">🔒</div>
+    <h2 id="hook-title">Something is locked on Breakout Land…</h2>
+    <p id="hook-text">Deep in the island, a treasure is sealed behind puzzle locks. The islanders have tried for years. But the locks are waiting for someone new. Someone clever. <strong>Someone like you.</strong></p>
+    <button class="btn-big" id="hook-go">I'll open it! ✨</button>
+  </div>
+</div>
+
+<!-- ============ ONBOARDING: STEALTH PLACEMENT ============ -->
+<div class="modal" id="placement-modal">
+  <div class="modal-card board">
+    <div id="pl-progress" class="pl-progress"></div>
+    <h2 id="pl-title">Explorer's Challenge</h2>
+    <p id="pl-story" class="pl-story"></p>
+    <p id="pl-clue" class="pl-clue"></p>
+    <div id="pl-choices" class="pl-choices"></div>
+  </div>
+</div>
+
+<!-- ============ ONBOARDING: COMMIT TO THE QUEST ============ -->
+<div class="modal" id="quest-modal">
+  <div class="modal-card board">
+    <div class="big-emoji">🗺️</div>
+    <h2>Choose your quest</h2>
+    <p class="muted center">How often will you explore Breakout Land? Pick your daily goal. You can change it anytime.</p>
+    <div id="quest-goals" class="quest-goals"></div>
+    <button class="btn-big" id="quest-start" disabled>Start my quest!</button>
+  </div>
+</div>
+
 <!-- ============ BUILDING MODAL ============ -->
 <div class="modal" id="building-modal">
   <div class="modal-card board">
@@ -1161,6 +1230,123 @@ const api = {
 };
 
 
+/* Breakout Land — Phase 1 onboarding: deferred signup, a sub-60-second first
+   solve, a stealth placement expedition, and a "commit to your quest" finish.
+   The flow: opening hook -> build character -> first lock (in world.js tutorial)
+   -> placement -> commit -> save. No account wall until they've invested. */
+
+/* 1) Opening hook: a short narrative beat before the avatar creator. */
+function showOpeningHook(onDone) {
+  const modal = document.getElementById('hook-modal');
+  modal.classList.add('open');
+  document.getElementById('hook-go').onclick = () => {
+    blip(760);
+    modal.classList.remove('open');
+    onDone && onDone();
+  };
+}
+
+/* 2) Stealth placement: 3 multiple-choice problems across grade levels, framed
+   as exploring. Never blocks (any tap advances), so it never feels like a test.
+   Where the student lands comfortably sets their starting Math Trail grade. */
+function startPlacement(onDone) {
+  const items = DATA.placement;
+  let idx = 0, correct = 0, hardestRight = 0;
+  const modal = document.getElementById('placement-modal');
+  modal.classList.add('open');
+
+  const render = () => {
+    const q = items[idx];
+    document.getElementById('pl-progress').innerHTML =
+      items.map((_, i) => `<span class="pl-dot ${i < idx ? 'done' : i === idx ? 'now' : ''}"></span>`).join('');
+    document.getElementById('pl-story').textContent = q.story;
+    document.getElementById('pl-clue').textContent = q.clue;
+    const wrap = document.getElementById('pl-choices');
+    wrap.classList.remove('answered');
+    wrap.innerHTML = '';
+    shuffle(q.choices.slice()).forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'pl-choice';
+      b.textContent = c;
+      b.onclick = () => {
+        if (wrap.classList.contains('answered')) return;
+        wrap.classList.add('answered');
+        const right = c === q.answer;
+        b.classList.add(right ? 'right' : 'wrong');
+        if (!right) [...wrap.children].find(x => x.textContent === String(q.answer))?.classList.add('right');
+        if (right) { correct++; hardestRight = Math.max(hardestRight, q.level); blip(880); }
+        else buzz();
+        track('lock_attempt', { lockId: `placement:${q.level}`, lockType: 'placement', standards: q.standards || [], correct: right, attemptNo: 1 });
+        setTimeout(() => {
+          idx++;
+          if (idx < items.length) render();
+          else finish();
+        }, 850);
+      };
+      wrap.appendChild(b);
+    });
+  };
+
+  const finish = () => {
+    // grade = hardest level answered correctly, floored at 2; nudged by total right
+    let grade = hardestRight || 2;
+    if (correct === items.length) grade = Math.min(5, grade + 1);
+    grade = Math.max(2, Math.min(5, grade));
+    state.mathGrade = grade;
+    state.placement = { grade, score: correct };
+    saveState();
+    modal.classList.remove('open');
+    toast(`Placement complete! Your Math Trail starts at Grade ${grade}. 🧭`);
+    onDone && onDone(grade);
+  };
+
+  render();
+}
+
+/* 3) Commit to the quest: pick a daily goal, then "Start my quest!". This is the
+   autonomy beat that ends onboarding and ignites Day 1. */
+function startQuestCommit(onDone) {
+  const modal = document.getElementById('quest-modal');
+  const grid = document.getElementById('quest-goals');
+  const startBtn = document.getElementById('quest-start');
+  let picked = null;
+  modal.classList.add('open');
+  startBtn.disabled = true;
+
+  grid.innerHTML = '';
+  DATA.questGoals.forEach(g => {
+    const b = document.createElement('button');
+    b.className = 'quest-goal';
+    b.innerHTML = `<span class="qg-icon">${g.icon}</span><span class="qg-label">${g.label}</span><span class="qg-blurb">${g.blurb}</span>`;
+    b.onclick = () => {
+      picked = g.id;
+      [...grid.children].forEach(c => c.classList.remove('sel'));
+      b.classList.add('sel'); blip(720);
+      startBtn.disabled = false;
+    };
+    grid.appendChild(b);
+  });
+
+  startBtn.onclick = () => {
+    if (!picked) return;
+    state.dailyGoal = picked;
+    saveState();
+    fanfare(); confetti();
+    modal.classList.remove('open');
+    onDone && onDone(picked);
+  };
+}
+
+/* Runs the placement then the commit, then finishes the tutorial. Called from
+   the world tutorial once the first lock is cracked. */
+function runOnboardingCalibration() {
+  const toCommit = () => startQuestCommit(() => { if (typeof finishTutorial === 'function') finishTutorial(); });
+  // resume gracefully: skip placement if it was already done before a reload
+  if (state.placement) { toCommit(); return; }
+  startPlacement(() => setTimeout(toCommit, 500));
+}
+
+
 /* Breakout Land — content data (mock content standing in for the Breakout EDU catalog) */
 
 const DATA = {
@@ -1238,6 +1424,22 @@ const DATA = {
     { type: 'number', subject: 'Math · Time', standards: ['3.MD.A.1'], clue: 'A clock shows 3:15. How many minutes until 4 o’clock?', answer: '45', hint: '60 minutes in an hour.' },
     { type: 'shape', subject: 'Math · Geometry', standards: ['3.G.A.1'], clue: 'The wizard’s door whispers: “First 3 sides, then 4 sides, then no sides at all!”', answer: ['triangle', 'square', 'circle'], hint: 'Count each shape’s sides.' },
     { type: 'switch', subject: 'Math · Odd & Even', standards: ['2.OA.C.3'], clue: 'The power panel hums: “Flip ON only the ODD-numbered switches.”', answer: '10101', hint: 'Odd numbers: 1, 3, 5.' },
+  ],
+
+  // Stealth placement "expedition" — 3 multiple-choice problems spanning grade
+  // levels, framed as exploring the island so it never feels like a test. The
+  // level the student handles comfortably sets their starting Math Trail grade.
+  placement: [
+    { level: 2, standards: ['3.OA.A.1'], story: 'You find 3 treasure chests, each holding 4 golden keys.', clue: 'How many keys in all?', answer: 12, choices: [7, 12, 15] },
+    { level: 3, standards: ['3.OA.A.1'], story: 'A vault wall shows 6 rows of 7 glowing gems.', clue: 'How many gems are there?', answer: 42, choices: [36, 42, 48] },
+    { level: 4, standards: ['3.OA.A.3'], story: 'You must share 96 coins equally into 4 chests.', clue: 'How many coins go in each chest?', answer: 24, choices: [22, 24, 32] },
+  ],
+
+  // Daily-goal options the student picks at the end of onboarding
+  questGoals: [
+    { id: 1, icon: '🌱', label: 'One lock a day', blurb: 'A gentle daily habit.' },
+    { id: 3, icon: '⭐', label: 'Three locks a day', blurb: 'A solid explorer’s pace.' },
+    { id: 5, icon: '🔥', label: 'Five locks a day', blurb: 'For puzzle champions!' },
   ],
 
   // Daily side quests from the island NPCs
@@ -1419,6 +1621,8 @@ const defaultState = () => ({
   npcQuests: {},            // dateKey -> [completed npc names] for the day
   legendaryKeys: [],        // ids of the Five Keys of Knowledge earned
   tutorialStep: 0,          // 0=not started, 1..4 in progress, 5=done
+  dailyGoal: null,          // locks-per-day goal the student commits to in onboarding
+  placement: null,          // { grade, score } from the stealth placement expedition
 });
 
 let state = defaultState();
@@ -2252,17 +2456,17 @@ const NPCS = [
 
 const SPARKLE_KEYS = [[865, 300], [1245, 565], [770, 705], [1445, 618], [1085, 862]];
 
-/* Guided onboarding — a friendly owl walks first-timers to their first breakout */
+/* Guided onboarding — a friendly owl walks first-timers to their first breakout,
+   then a stealth placement + quest commitment finishes the flow (onboarding.js). */
 const TUTORIAL_STEPS = {
-  1: { target: 'daily',  say: (n) => `Welcome to the island, ${n}! I'm Ollie. 🦉 Follow the glowing path to the Lock Plaza for your very first lock!` },
-  2: { target: 'badges', say: () => `Amazing — your first breakout! 🎉 Now follow the path to the Badge Hall to see the badge you just earned.` },
+  1: { target: 'daily', say: (n) => `Welcome to the island, ${n}! I'm Ollie. 🦉 Follow the glowing path to the Lock Plaza for your very first lock!` },
 };
 
 function startTutorial() {
   if (state.tutorialStep === 0) { state.tutorialStep = 1; saveState(); }
   updateTutorialBanner();
 }
-function tutorialActive() { return state.tutorialStep >= 1 && state.tutorialStep <= 2; }
+function tutorialActive() { return state.tutorialStep === 1; } // only the first-lock guidance shows a path
 function tutorialTarget() {
   const step = TUTORIAL_STEPS[state.tutorialStep];
   return step ? BUILDINGS.find(b => b.id === step.target) : null;
@@ -2278,23 +2482,28 @@ function updateTutorialBanner() {
     banner.classList.remove('show');
   }
 }
-function advanceTutorial(buildingId) {
-  const step = TUTORIAL_STEPS[state.tutorialStep];
-  if (!step || step.target !== buildingId) return;
-  if (state.tutorialStep === 2) {
-    state.tutorialStep = 5; // done
-    saveState();
-    const banner = document.getElementById('tut-banner');
-    if (banner) {
-      document.getElementById('tut-say').textContent = `You're all set, ${state.player.name || 'Explorer'}! Explore freely, find hidden Sparkle Keys, help your island friends, and collect the Five Keys of Knowledge. 🗝️`;
-      banner.classList.add('show', 'finale');
-      setTimeout(() => banner.classList.remove('show', 'finale'), 6500);
-    }
-  }
-  // step 1 -> 2 happens when the tutorial lock is solved (see completeTutorialLock)
-}
+function advanceTutorial() { /* building visits no longer drive onboarding */ }
+
+// First lock cracked -> quietly place the student, then let them commit to a quest.
 function completeTutorialLock() {
-  if (state.tutorialStep === 1) { state.tutorialStep = 2; saveState(); updateTutorialBanner(); }
+  if (state.tutorialStep !== 1) return;
+  state.tutorialStep = 2; // calibrating (modals take over)
+  saveState();
+  document.getElementById('tut-banner').classList.remove('show');
+  if (typeof runOnboardingCalibration === 'function') setTimeout(runOnboardingCalibration, 350);
+}
+
+// Onboarding complete: ignite the world with a warm sign-off.
+function finishTutorial() {
+  state.tutorialStep = 5;
+  saveState();
+  updateHUD();
+  const banner = document.getElementById('tut-banner');
+  if (banner) {
+    document.getElementById('tut-say').textContent = `Your quest begins, ${state.player.name || 'Explorer'}! Explore freely, find hidden Sparkle Keys, help your island friends, and collect the Five Keys of Knowledge. 🗝️`;
+    banner.classList.add('show', 'finale');
+    setTimeout(() => banner.classList.remove('show', 'finale'), 7000);
+  }
 }
 
 const world = {
@@ -2318,7 +2527,9 @@ function enterWorld() {
   if (!world.cv) initWorld();
   // players saved before the painted-map update spawn inside the old island
   if (!canWalk(state.pos.x, state.pos.y)) { state.pos.x = 990; state.pos.y = 648; }
-  if (state.tutorialStep === 0) startTutorial(); else updateTutorialBanner();
+  if (state.tutorialStep === 0) startTutorial();
+  else if (state.tutorialStep === 2 && typeof runOnboardingCalibration === 'function') setTimeout(runOnboardingCalibration, 400);
+  else updateTutorialBanner();
   world.t0 = performance.now();
   cancelAnimationFrame(world.raf);
   worldLoop(world.t0);
@@ -3142,7 +3353,7 @@ function renderDaily(title, body) {
         onWin: () => {
           completeTutorialLock();
           grant({ keys: 5, xp: 10 });
-          toast('You did it! +5 🔑 +10 XP — now follow Ollie to the Badge Hall! 🦉');
+          toast('You did it! +5 🔑 +10 XP — now let’s find your perfect puzzles! 🧭');
         },
       });
     };
@@ -4009,7 +4220,9 @@ function boot() {
   // title buttons
   document.getElementById('t-student').onclick = () => {
     blip(700);
-    state.created ? enterWorld() : openAvatarCreator(false);
+    if (state.created) { enterWorld(); return; }
+    // first-timers: opening narrative hook, then build a character (deferred signup)
+    showOpeningHook(() => openAvatarCreator(false));
   };
   document.getElementById('t-teacher').onclick = () => { blip(700); openTeacher(); };
   document.getElementById('t-parent').onclick = () => { blip(700); openParent(); };

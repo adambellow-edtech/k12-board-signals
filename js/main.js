@@ -35,7 +35,9 @@ function boot() {
   // title buttons
   document.getElementById('t-student').onclick = () => {
     blip(700);
-    state.created ? enterWorld() : openAvatarCreator(false);
+    if (state.created) { enterWorld(); return; }
+    // first-timers: opening narrative hook, then build a character (deferred signup)
+    showOpeningHook(() => openAvatarCreator(false));
   };
   document.getElementById('t-teacher').onclick = () => { blip(700); openTeacher(); };
   document.getElementById('t-parent').onclick = () => { blip(700); openParent(); };

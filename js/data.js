@@ -77,6 +77,22 @@ const DATA = {
     { type: 'switch', subject: 'Math · Odd & Even', standards: ['2.OA.C.3'], clue: 'The power panel hums: “Flip ON only the ODD-numbered switches.”', answer: '10101', hint: 'Odd numbers: 1, 3, 5.' },
   ],
 
+  // Stealth placement "expedition" — 3 multiple-choice problems spanning grade
+  // levels, framed as exploring the island so it never feels like a test. The
+  // level the student handles comfortably sets their starting Math Trail grade.
+  placement: [
+    { level: 2, standards: ['3.OA.A.1'], story: 'You find 3 treasure chests, each holding 4 golden keys.', clue: 'How many keys in all?', answer: 12, choices: [7, 12, 15] },
+    { level: 3, standards: ['3.OA.A.1'], story: 'A vault wall shows 6 rows of 7 glowing gems.', clue: 'How many gems are there?', answer: 42, choices: [36, 42, 48] },
+    { level: 4, standards: ['3.OA.A.3'], story: 'You must share 96 coins equally into 4 chests.', clue: 'How many coins go in each chest?', answer: 24, choices: [22, 24, 32] },
+  ],
+
+  // Daily-goal options the student picks at the end of onboarding
+  questGoals: [
+    { id: 1, icon: '🌱', label: 'One lock a day', blurb: 'A gentle daily habit.' },
+    { id: 3, icon: '⭐', label: 'Three locks a day', blurb: 'A solid explorer’s pace.' },
+    { id: 5, icon: '🔥', label: 'Five locks a day', blurb: 'For puzzle champions!' },
+  ],
+
   // Daily side quests from the island NPCs
   npcQuests: [
     {

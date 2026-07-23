@@ -31,6 +31,8 @@ const defaultState = () => ({
   npcQuests: {},            // dateKey -> [completed npc names] for the day
   legendaryKeys: [],        // ids of the Five Keys of Knowledge earned
   tutorialStep: 0,          // 0=not started, 1..4 in progress, 5=done
+  dailyGoal: null,          // locks-per-day goal the student commits to in onboarding
+  placement: null,          // { grade, score } from the stealth placement expedition
 });
 
 let state = defaultState();

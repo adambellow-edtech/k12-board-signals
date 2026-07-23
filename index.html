@@ -208,6 +208,38 @@
   </div>
 </section>
 
+<!-- ============ ONBOARDING: OPENING HOOK ============ -->
+<div class="modal" id="hook-modal">
+  <div class="modal-card board hook-card">
+    <div class="hook-art" id="hook-art">🔒</div>
+    <h2 id="hook-title">Something is locked on Breakout Land…</h2>
+    <p id="hook-text">Deep in the island, a treasure is sealed behind puzzle locks. The islanders have tried for years. But the locks are waiting for someone new. Someone clever. <strong>Someone like you.</strong></p>
+    <button class="btn-big" id="hook-go">I'll open it! ✨</button>
+  </div>
+</div>
+
+<!-- ============ ONBOARDING: STEALTH PLACEMENT ============ -->
+<div class="modal" id="placement-modal">
+  <div class="modal-card board">
+    <div id="pl-progress" class="pl-progress"></div>
+    <h2 id="pl-title">Explorer's Challenge</h2>
+    <p id="pl-story" class="pl-story"></p>
+    <p id="pl-clue" class="pl-clue"></p>
+    <div id="pl-choices" class="pl-choices"></div>
+  </div>
+</div>
+
+<!-- ============ ONBOARDING: COMMIT TO THE QUEST ============ -->
+<div class="modal" id="quest-modal">
+  <div class="modal-card board">
+    <div class="big-emoji">🗺️</div>
+    <h2>Choose your quest</h2>
+    <p class="muted center">How often will you explore Breakout Land? Pick your daily goal. You can change it anytime.</p>
+    <div id="quest-goals" class="quest-goals"></div>
+    <button class="btn-big" id="quest-start" disabled>Start my quest!</button>
+  </div>
+</div>
+
 <!-- ============ BUILDING MODAL ============ -->
 <div class="modal" id="building-modal">
   <div class="modal-card board">
@@ -272,6 +304,7 @@
 <script src="js/analytics.js"></script>
 <script src="js/flags.js"></script>
 <script src="js/api.js"></script>
+<script src="js/onboarding.js"></script>
 <script src="js/data.js"></script>
 <script src="js/state.js"></script>
 <script src="js/puzzles.js"></script>

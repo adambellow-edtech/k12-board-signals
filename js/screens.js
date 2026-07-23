@@ -144,7 +144,7 @@ function renderDaily(title, body) {
         onWin: () => {
           completeTutorialLock();
           grant({ keys: 5, xp: 10 });
-          toast('You did it! +5 🔑 +10 XP — now follow Ollie to the Badge Hall! 🦉');
+          toast('You did it! +5 🔑 +10 XP — now let’s find your perfect puzzles! 🧭');
         },
       });
     };

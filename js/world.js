@@ -57,17 +57,17 @@ const NPCS = [
 
 const SPARKLE_KEYS = [[865, 300], [1245, 565], [770, 705], [1445, 618], [1085, 862]];
 
-/* Guided onboarding — a friendly owl walks first-timers to their first breakout */
+/* Guided onboarding — a friendly owl walks first-timers to their first breakout,
+   then a stealth placement + quest commitment finishes the flow (onboarding.js). */
 const TUTORIAL_STEPS = {
-  1: { target: 'daily',  say: (n) => `Welcome to the island, ${n}! I'm Ollie. 🦉 Follow the glowing path to the Lock Plaza for your very first lock!` },
-  2: { target: 'badges', say: () => `Amazing — your first breakout! 🎉 Now follow the path to the Badge Hall to see the badge you just earned.` },
+  1: { target: 'daily', say: (n) => `Welcome to the island, ${n}! I'm Ollie. 🦉 Follow the glowing path to the Lock Plaza for your very first lock!` },
 };
 
 function startTutorial() {
   if (state.tutorialStep === 0) { state.tutorialStep = 1; saveState(); }
   updateTutorialBanner();
 }
-function tutorialActive() { return state.tutorialStep >= 1 && state.tutorialStep <= 2; }
+function tutorialActive() { return state.tutorialStep === 1; } // only the first-lock guidance shows a path
 function tutorialTarget() {
   const step = TUTORIAL_STEPS[state.tutorialStep];
   return step ? BUILDINGS.find(b => b.id === step.target) : null;
@@ -83,23 +83,28 @@ function updateTutorialBanner() {
     banner.classList.remove('show');
   }
 }
-function advanceTutorial(buildingId) {
-  const step = TUTORIAL_STEPS[state.tutorialStep];
-  if (!step || step.target !== buildingId) return;
-  if (state.tutorialStep === 2) {
-    state.tutorialStep = 5; // done
-    saveState();
-    const banner = document.getElementById('tut-banner');
-    if (banner) {
-      document.getElementById('tut-say').textContent = `You're all set, ${state.player.name || 'Explorer'}! Explore freely, find hidden Sparkle Keys, help your island friends, and collect the Five Keys of Knowledge. 🗝️`;
-      banner.classList.add('show', 'finale');
-      setTimeout(() => banner.classList.remove('show', 'finale'), 6500);
-    }
-  }
-  // step 1 -> 2 happens when the tutorial lock is solved (see completeTutorialLock)
-}
+function advanceTutorial() { /* building visits no longer drive onboarding */ }
+
+// First lock cracked -> quietly place the student, then let them commit to a quest.
 function completeTutorialLock() {
-  if (state.tutorialStep === 1) { state.tutorialStep = 2; saveState(); updateTutorialBanner(); }
+  if (state.tutorialStep !== 1) return;
+  state.tutorialStep = 2; // calibrating (modals take over)
+  saveState();
+  document.getElementById('tut-banner').classList.remove('show');
+  if (typeof runOnboardingCalibration === 'function') setTimeout(runOnboardingCalibration, 350);
+}
+
+// Onboarding complete: ignite the world with a warm sign-off.
+function finishTutorial() {
+  state.tutorialStep = 5;
+  saveState();
+  updateHUD();
+  const banner = document.getElementById('tut-banner');
+  if (banner) {
+    document.getElementById('tut-say').textContent = `Your quest begins, ${state.player.name || 'Explorer'}! Explore freely, find hidden Sparkle Keys, help your island friends, and collect the Five Keys of Knowledge. 🗝️`;
+    banner.classList.add('show', 'finale');
+    setTimeout(() => banner.classList.remove('show', 'finale'), 7000);
+  }
 }
 
 const world = {
@@ -123,7 +128,9 @@ function enterWorld() {
   if (!world.cv) initWorld();
   // players saved before the painted-map update spawn inside the old island
   if (!canWalk(state.pos.x, state.pos.y)) { state.pos.x = 990; state.pos.y = 648; }
-  if (state.tutorialStep === 0) startTutorial(); else updateTutorialBanner();
+  if (state.tutorialStep === 0) startTutorial();
+  else if (state.tutorialStep === 2 && typeof runOnboardingCalibration === 'function') setTimeout(runOnboardingCalibration, 400);
+  else updateTutorialBanner();
   world.t0 = performance.now();
   cancelAnimationFrame(world.raf);
   worldLoop(world.t0);
