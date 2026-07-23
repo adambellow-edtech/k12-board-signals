@@ -205,6 +205,39 @@ function lockIdOf(lk) {
   return lk.id || `${lk.type}:${(lk.standards && lk.standards[0]) || lk.subject || 'na'}`;
 }
 
+/* The signature lock-open beat: a satisfying mechanical release, a light flash,
+   and a burst of sparks flung from the shackle. This is the product's payoff. */
+function unlockChime() {
+  tone(190, .12, 'square', .05);              // mechanical clunk
+  tone(120, .2, 'sine', .06, .02);            // low thunk
+  [523, 659, 784, 988, 1319].forEach((f, i) => tone(f, .17, 'triangle', .06, .12 + i * .05)); // rising shimmer
+  tone(1568, .5, 'sine', .05, .34);           // bright ding
+}
+function lockOpenMoment() {
+  unlockChime();
+  const card = document.querySelector('#puzzle-modal .modal-card');
+  const zone = document.querySelector('.pz-lock-zone');
+  if (card) {
+    const flash = document.createElement('div');
+    flash.className = 'pz-flash';
+    card.appendChild(flash);
+    setTimeout(() => flash.remove(), 520);
+  }
+  if (zone) {
+    for (let i = 0; i < 14; i++) {
+      const s = document.createElement('span');
+      s.className = 'lk-spark';
+      const ang = (i / 14) * Math.PI * 2 + Math.random() * .4;
+      const dist = 46 + Math.random() * 46;
+      s.style.setProperty('--dx', `${Math.cos(ang) * dist}px`);
+      s.style.setProperty('--dy', `${Math.sin(ang) * dist - 12}px`);
+      s.style.animationDelay = `${Math.random() * .05}s`;
+      zone.appendChild(s);
+      setTimeout(() => s.remove(), 720);
+    }
+  }
+}
+
 function submitEntry(lk, entered) {
   const want = Array.isArray(lk.answer) ? lk.answer.join(',') : String(lk.answer).toUpperCase();
   const got = String(entered).toUpperCase();
@@ -212,8 +245,8 @@ function submitEntry(lk, entered) {
   const correct = got === want.toUpperCase();
   track('lock_attempt', { lockId: lockIdOf(lk), lockType: lk.type, standards: lk.standards || [], correct, attemptNo: puzzle.lockAttempts });
   if (correct) {
-    // lock pops open
-    tone(880, .15); tone(1175, .2, 'triangle', .07, .1);
+    // lock pops open — the signature moment
+    lockOpenMoment();
     document.getElementById('pz-lock').classList.add('open-anim');
     if (puzzle.lockAttempts === 1) awardBadge('thinker');
     if (puzzle.lockAttempts >= 3) awardBadge('persistent');

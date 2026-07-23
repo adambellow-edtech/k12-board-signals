@@ -375,18 +375,28 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 #puzzle-modal h2 { color: var(--white); text-shadow: 0 2px 6px rgba(0,0,0,.6); }
 #pz-ctx { font-size: 12px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: #ffd75e; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
 #pz-step { font-size: 13px; font-weight: 700; color: rgba(255,244,214,.95); text-shadow: 0 1px 4px rgba(0,0,0,.55); margin-bottom: 8px; }
-.pz-lock-zone { display: flex; justify-content: center; margin: 6px 0 10px; animation: locksway 3.6s ease-in-out infinite; }
+.pz-lock-zone { display: flex; justify-content: center; margin: 6px 0 10px; animation: locksway 3.6s ease-in-out infinite; position: relative; }
 @keyframes locksway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
 #pz-lock { width: 74px; height: 88px; position: relative; transition: transform .2s; }
+#pz-lock.open-anim { animation: lockpop .6s cubic-bezier(.2, 1.8, .3, 1) both; }
+@keyframes lockpop { 0% { transform: scale(1); } 22% { transform: scale(1.22) rotate(-3deg); } 55% { transform: scale(.96); } 100% { transform: scale(1.06); } }
 #pz-lock.open-anim::after {
   content: '';
-  position: absolute; inset: -34px;
-  background: radial-gradient(circle, rgba(255, 224, 122, .95), rgba(255, 224, 122, 0) 68%);
+  position: absolute; inset: -44px;
+  background: radial-gradient(circle, rgba(255, 236, 150, 1), rgba(255, 224, 122, 0) 66%);
   border-radius: 50%;
-  animation: lockburst .7s ease-out both;
-  pointer-events: none;
+  animation: lockburst .75s ease-out both;
+  pointer-events: none; z-index: -1;
 }
-@keyframes lockburst { from { transform: scale(.2); opacity: 0; } 35% { opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+@keyframes lockburst { from { transform: scale(.2); opacity: 0; } 30% { opacity: 1; } to { transform: scale(2); opacity: 0; } }
+#pz-lock.open-anim::before {
+  content: '';
+  position: absolute; inset: -10px;
+  border: 4px solid rgba(255, 244, 190, .95); border-radius: 50%;
+  animation: lockshock .7s ease-out both;
+  pointer-events: none; z-index: -1;
+}
+@keyframes lockshock { from { transform: scale(.3); opacity: .95; } to { transform: scale(2.4); opacity: 0; } }
 #pz-lock .shackle {
   position: absolute; top: 0; left: 50%; transform: translateX(-50%);
   width: 44px; height: 40px; border: 9px solid #c9a86a; border-bottom: 0;
@@ -401,7 +411,30 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
   position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
   width: 12px; height: 20px; background: #7a5310; border-radius: 7px 7px 4px 4px;
 }
-#pz-lock.open-anim .shackle { transform: translateX(-50%) translateY(-14px) rotate(-24deg); border-color: #57c26b; }
+#pz-lock.open-anim .shackle { border-color: #57c26b; animation: shackle-spring .6s cubic-bezier(.2, 2, .3, 1) both; }
+@keyframes shackle-spring {
+  0% { transform: translateX(-50%) translateY(0) rotate(0); }
+  45% { transform: translateX(-50%) translateY(-22px) rotate(-30deg); }
+  100% { transform: translateX(-50%) translateY(-16px) rotate(-24deg); }
+}
+/* spark particles flung from the lock on open */
+.lk-spark {
+  position: absolute; left: 50%; top: 40%; width: 8px; height: 8px; margin: -4px 0 0 -4px;
+  border-radius: 50%; background: radial-gradient(circle, #fff6cf, #ffd75e 60%, rgba(255,215,94,0) 72%);
+  pointer-events: none; animation: sparkfly .62s ease-out both;
+}
+@keyframes sparkfly {
+  0% { transform: translate(0, 0) scale(.4); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; }
+}
+/* full-modal light flash at the instant of unlock */
+.pz-flash {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 5;
+  background: radial-gradient(circle at 50% 42%, rgba(255,246,200,.9), rgba(255,246,200,0) 60%);
+  animation: pzflash .5s ease-out both;
+}
+@keyframes pzflash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
 #pz-lock.shake { animation: shake .4s; }
 @keyframes shake { 0%,100% { transform: translateX(0);} 20% { transform: translateX(-7px);} 40% { transform: translateX(6px);} 60% { transform: translateX(-4px);} 80% { transform: translateX(3px);} }
 #pz-clue {
@@ -1708,6 +1741,39 @@ function lockIdOf(lk) {
   return lk.id || `${lk.type}:${(lk.standards && lk.standards[0]) || lk.subject || 'na'}`;
 }
 
+/* The signature lock-open beat: a satisfying mechanical release, a light flash,
+   and a burst of sparks flung from the shackle. This is the product's payoff. */
+function unlockChime() {
+  tone(190, .12, 'square', .05);              // mechanical clunk
+  tone(120, .2, 'sine', .06, .02);            // low thunk
+  [523, 659, 784, 988, 1319].forEach((f, i) => tone(f, .17, 'triangle', .06, .12 + i * .05)); // rising shimmer
+  tone(1568, .5, 'sine', .05, .34);           // bright ding
+}
+function lockOpenMoment() {
+  unlockChime();
+  const card = document.querySelector('#puzzle-modal .modal-card');
+  const zone = document.querySelector('.pz-lock-zone');
+  if (card) {
+    const flash = document.createElement('div');
+    flash.className = 'pz-flash';
+    card.appendChild(flash);
+    setTimeout(() => flash.remove(), 520);
+  }
+  if (zone) {
+    for (let i = 0; i < 14; i++) {
+      const s = document.createElement('span');
+      s.className = 'lk-spark';
+      const ang = (i / 14) * Math.PI * 2 + Math.random() * .4;
+      const dist = 46 + Math.random() * 46;
+      s.style.setProperty('--dx', `${Math.cos(ang) * dist}px`);
+      s.style.setProperty('--dy', `${Math.sin(ang) * dist - 12}px`);
+      s.style.animationDelay = `${Math.random() * .05}s`;
+      zone.appendChild(s);
+      setTimeout(() => s.remove(), 720);
+    }
+  }
+}
+
 function submitEntry(lk, entered) {
   const want = Array.isArray(lk.answer) ? lk.answer.join(',') : String(lk.answer).toUpperCase();
   const got = String(entered).toUpperCase();
@@ -1715,8 +1781,8 @@ function submitEntry(lk, entered) {
   const correct = got === want.toUpperCase();
   track('lock_attempt', { lockId: lockIdOf(lk), lockType: lk.type, standards: lk.standards || [], correct, attemptNo: puzzle.lockAttempts });
   if (correct) {
-    // lock pops open
-    tone(880, .15); tone(1175, .2, 'triangle', .07, .1);
+    // lock pops open — the signature moment
+    lockOpenMoment();
     document.getElementById('pz-lock').classList.add('open-anim');
     if (puzzle.lockAttempts === 1) awardBadge('thinker');
     if (puzzle.lockAttempts >= 3) awardBadge('persistent');
@@ -2446,6 +2512,39 @@ function drawWorld(sec) {
     ctx.restore();
   });
 
+  // lagoon water shimmer — soft light bands rippling over the cove
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 5; i++) {
+    const wy = 520 + i * 26 + Math.sin(sec * 1.1 + i) * 4;
+    const a = (Math.sin(sec * 1.6 + i * 1.3) * .5 + .5) * .18;
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = '#bfeaff'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let x = 440; x <= 600; x += 12) {
+      const yy = wy + Math.sin(x * .06 + sec * 2 + i) * 3;
+      x === 440 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // floating light motes — soft golden pollen drifting through the sunbeams
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 16; i++) {
+    const drift = sec * (6 + (i % 4) * 3);
+    const mx = 260 + ((i * 149 + drift) % 1440);
+    const my = 220 + ((i * 211) % 700) + Math.sin(sec * .5 + i * 1.7) * 26 - (drift % 60) * .3;
+    const pulse = .3 + Math.abs(Math.sin(sec * 1.6 + i * 1.3)) * .7;
+    const g = ctx.createRadialGradient(mx, my, 0, mx, my, 9);
+    g.addColorStop(0, `rgba(255,240,170,${pulse * .55})`);
+    g.addColorStop(1, 'rgba(255,240,170,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(mx, my, 9, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+
   // bees looping near the meadow flowers
   for (let i = 0; i < 2; i++) {
     const t = sec * (1.1 + i * .3) + i * 3;
@@ -2620,6 +2719,38 @@ function drawWorld(sec) {
     ctx.beginPath(); ctx.moveTo(bx - 7, by - f); ctx.quadraticCurveTo(bx, by + 3, bx, by); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(bx + 7, by - f); ctx.quadraticCurveTo(bx, by + 3, bx, by); ctx.stroke();
   });
+  // sun god-rays — soft light beams fanning from the upper corner
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const sunX = W * .82, sunY = -H * .12;
+  for (let i = 0; i < 5; i++) {
+    const ang = 1.9 + i * .16 + Math.sin(sec * .2 + i) * .015;
+    const len = H * 1.5, wdt = 46 + i * 14;
+    ctx.save(); ctx.translate(sunX, sunY); ctx.rotate(ang);
+    const g = ctx.createLinearGradient(0, 0, 0, len);
+    const a = .05 + Math.sin(sec * .5 + i * 1.3) * .02;
+    g.addColorStop(0, `rgba(255,244,190,${Math.max(0, a)})`); g.addColorStop(1, 'rgba(255,244,190,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(-wdt, 0); ctx.lineTo(wdt, 0); ctx.lineTo(wdt * 2.4, len); ctx.lineTo(-wdt * 2.4, len); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // wish-star — a rare sparkle streak arcs across the sky (a little magic moment)
+  const wsCycle = sec % 17;
+  if (wsCycle < 1.1) {
+    const p = wsCycle / 1.1;
+    const wx = W * .12 + p * W * .7, wy = H * .1 + p * H * .18 - Math.sin(p * Math.PI) * 30;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const tg = ctx.createLinearGradient(wx - 60, wy - 18, wx, wy);
+    tg.addColorStop(0, 'rgba(255,240,180,0)'); tg.addColorStop(1, 'rgba(255,250,210,.85)');
+    ctx.strokeStyle = tg; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(wx - 60, wy - 18); ctx.lineTo(wx, wy); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,235,.95)';
+    drawStar(ctx, wx, wy, 5, 6, 2.6); ctx.fill();
+    ctx.restore();
+  }
+
   // warm grade + vignette
   const warm = ctx.createRadialGradient(W * .3, -H * .2, 60, W * .3, -H * .2, H * 1.4);
   warm.addColorStop(0, 'rgba(255,236,170,.12)'); warm.addColorStop(.5, 'rgba(255,236,170,.03)'); warm.addColorStop(1, 'rgba(255,236,170,0)');

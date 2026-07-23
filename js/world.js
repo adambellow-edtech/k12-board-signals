@@ -358,6 +358,39 @@ function drawWorld(sec) {
     ctx.restore();
   });
 
+  // lagoon water shimmer — soft light bands rippling over the cove
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 5; i++) {
+    const wy = 520 + i * 26 + Math.sin(sec * 1.1 + i) * 4;
+    const a = (Math.sin(sec * 1.6 + i * 1.3) * .5 + .5) * .18;
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = '#bfeaff'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let x = 440; x <= 600; x += 12) {
+      const yy = wy + Math.sin(x * .06 + sec * 2 + i) * 3;
+      x === 440 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // floating light motes — soft golden pollen drifting through the sunbeams
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 16; i++) {
+    const drift = sec * (6 + (i % 4) * 3);
+    const mx = 260 + ((i * 149 + drift) % 1440);
+    const my = 220 + ((i * 211) % 700) + Math.sin(sec * .5 + i * 1.7) * 26 - (drift % 60) * .3;
+    const pulse = .3 + Math.abs(Math.sin(sec * 1.6 + i * 1.3)) * .7;
+    const g = ctx.createRadialGradient(mx, my, 0, mx, my, 9);
+    g.addColorStop(0, `rgba(255,240,170,${pulse * .55})`);
+    g.addColorStop(1, 'rgba(255,240,170,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(mx, my, 9, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+
   // bees looping near the meadow flowers
   for (let i = 0; i < 2; i++) {
     const t = sec * (1.1 + i * .3) + i * 3;
@@ -532,6 +565,38 @@ function drawWorld(sec) {
     ctx.beginPath(); ctx.moveTo(bx - 7, by - f); ctx.quadraticCurveTo(bx, by + 3, bx, by); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(bx + 7, by - f); ctx.quadraticCurveTo(bx, by + 3, bx, by); ctx.stroke();
   });
+  // sun god-rays — soft light beams fanning from the upper corner
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const sunX = W * .82, sunY = -H * .12;
+  for (let i = 0; i < 5; i++) {
+    const ang = 1.9 + i * .16 + Math.sin(sec * .2 + i) * .015;
+    const len = H * 1.5, wdt = 46 + i * 14;
+    ctx.save(); ctx.translate(sunX, sunY); ctx.rotate(ang);
+    const g = ctx.createLinearGradient(0, 0, 0, len);
+    const a = .05 + Math.sin(sec * .5 + i * 1.3) * .02;
+    g.addColorStop(0, `rgba(255,244,190,${Math.max(0, a)})`); g.addColorStop(1, 'rgba(255,244,190,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(-wdt, 0); ctx.lineTo(wdt, 0); ctx.lineTo(wdt * 2.4, len); ctx.lineTo(-wdt * 2.4, len); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // wish-star — a rare sparkle streak arcs across the sky (a little magic moment)
+  const wsCycle = sec % 17;
+  if (wsCycle < 1.1) {
+    const p = wsCycle / 1.1;
+    const wx = W * .12 + p * W * .7, wy = H * .1 + p * H * .18 - Math.sin(p * Math.PI) * 30;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const tg = ctx.createLinearGradient(wx - 60, wy - 18, wx, wy);
+    tg.addColorStop(0, 'rgba(255,240,180,0)'); tg.addColorStop(1, 'rgba(255,250,210,.85)');
+    ctx.strokeStyle = tg; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(wx - 60, wy - 18); ctx.lineTo(wx, wy); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,235,.95)';
+    drawStar(ctx, wx, wy, 5, 6, 2.6); ctx.fill();
+    ctx.restore();
+  }
+
   // warm grade + vignette
   const warm = ctx.createRadialGradient(W * .3, -H * .2, 60, W * .3, -H * .2, H * 1.4);
   warm.addColorStop(0, 'rgba(255,236,170,.12)'); warm.addColorStop(.5, 'rgba(255,236,170,.03)'); warm.addColorStop(1, 'rgba(255,236,170,0)');
