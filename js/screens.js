@@ -7,6 +7,8 @@ function showScreen(id) {
   const hud = document.getElementById('hud');
   hud.style.display = (id === 'world' || id === 'math') ? 'block' : 'none';
   hud.classList.toggle('math-mode', id === 'math');
+  // ambient soundscape lives on the island only
+  if (typeof ambient !== 'undefined') { if (id === 'world' && !muted) ambient.start(); else ambient.stop(); }
 }
 function screenIs(id) {
   const el = document.getElementById('screen-' + id);

@@ -51,6 +51,7 @@ function boot() {
   document.getElementById('hud-mute').onclick = (e) => {
     muted = !muted;
     e.currentTarget.textContent = muted ? '🔇' : '🔊';
+    if (typeof ambient !== 'undefined') ambient.syncMute();
   };
 
   // back-to-world buttons

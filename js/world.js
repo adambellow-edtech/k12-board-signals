@@ -341,6 +341,7 @@ function stepPlayer() {
     const first = !world.region;
     world.region = reg;
     if (!first) showRegionBanner(reg);
+    if (typeof ambient !== 'undefined') ambient.setRegion(reg.id);
   }
 
   const btn = document.getElementById('enter-btn');
