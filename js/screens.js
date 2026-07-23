@@ -511,14 +511,16 @@ function renderShop(title, body) {
     <div class="shop-grid">
       ${items.filter(i => !i.free).map(i => {
         const owned = itemOwned(i);
-        return `<button class="shop-item ${owned ? 'owned' : ''}" data-buy="${i.id}" data-kind="${equipKey}">
+        const equipped = state.player[equipKey] === i.id;
+        return `<button class="shop-item ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}" data-buy="${i.id}" data-kind="${equipKey}">
+          <span class="shop-preview"><canvas class="shop-canvas" width="120" height="120" data-kind="${equipKey}" data-id="${i.id}"></canvas>${equipped ? '<span class="shop-worn">Worn</span>' : ''}</span>
           <span class="shop-name">${i.name}</span>
-          <span class="shop-price">${owned ? 'Owned ✓' : `${i.price} 🔑`}</span>
+          <span class="shop-price">${owned ? (equipped ? 'Equipped ✓' : 'Tap to wear') : `${i.price} 🔑`}</span>
         </button>`;
       }).join('')}
     </div>`;
   body.innerHTML = `
-    <p class="muted">Spend your hard-earned keys! Equip anything you own in <strong>The Closet</strong> (avatar card, bottom left).</p>
+    <p class="muted">Spend your hard-earned keys, then tap anything you own to wear it. (Also in <strong>The Closet</strong>, bottom-left.)</p>
     <div class="reward-row"><span>Your keys: <strong>${state.keys} 🔑</strong></span></div>
     ${section('Accessories', DATA.accessories, 'accessory')}
     ${section('Sidekick pets', DATA.pets, 'pet')}
@@ -531,6 +533,7 @@ function renderShop(title, body) {
         state.player[btn.dataset.kind] = item.id;
         saveState(); blip(800);
         toast(`Equipped ${item.name}!`);
+        renderShop(document.getElementById('bm-title'), document.getElementById('bm-body'));
         return;
       }
       if (buyItem(item)) {
@@ -545,6 +548,63 @@ function renderShop(title, body) {
       }
     };
   });
+  startShopPreviews();
+}
+
+/* Animated shop previews: each cosmetic renders a live little sprite so kids
+   see exactly what they are buying (accessory on the hero, the pet, the trail). */
+function startShopPreviews() {
+  cancelAnimationFrame(window._shopRaf);
+  const t0 = performance.now();
+  const draw = (now) => {
+    const modalOpen = document.getElementById('building-modal').classList.contains('open');
+    const canvases = document.querySelectorAll('.shop-canvas');
+    if (!modalOpen || !canvases.length) return; // stop when shop closes
+    const sec = (now - t0) / 1000;
+    canvases.forEach(cv => {
+      const ctx = cv.getContext('2d');
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      const kind = cv.dataset.kind, id = cv.dataset.id;
+      if (kind === 'accessory') {
+        drawAvatar(ctx, 60, 112, 0.62, { hero: state.player.hero, accessory: id }, sec, false, 1);
+      } else if (kind === 'pet') {
+        drawPet(ctx, 60, 92, 2.6, id, sec);
+      } else if (kind === 'trail') {
+        drawTrailPreview(ctx, id, sec, cv.width, cv.height);
+      }
+    });
+    window._shopRaf = requestAnimationFrame(draw);
+  };
+  window._shopRaf = requestAnimationFrame(draw);
+}
+
+/* A little emitter loops across the tile leaving the trail, so the motion reads. */
+function drawTrailPreview(ctx, kind, sec, w, h) {
+  const cx = w / 2 + Math.sin(sec * 1.6) * (w * 0.3);
+  const cy = h / 2 + Math.sin(sec * 3.2) * 6;
+  const dir = Math.cos(sec * 1.6) >= 0 ? 1 : -1;
+  for (let i = 0; i < 16; i++) {
+    const age = i / 16;                    // 0 = freshest
+    const px = cx - dir * age * (w * 0.34);
+    const py = cy + Math.sin(sec * 3.2 - age * 2) * 6 - age * 4;
+    const a = 1 - age;
+    ctx.save(); ctx.globalAlpha = a * 0.9;
+    if (kind === 'sparkle') {
+      ctx.fillStyle = '#ffd75e';
+      drawStar(ctx, px, py, 4, 6 * a + 1.5, 2.4 * a + 0.6); ctx.fill();
+    } else if (kind === 'bubbles') {
+      ctx.strokeStyle = '#8fdcf5'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(px, py, 4 + a * 5, 0, Math.PI * 2); ctx.stroke();
+    } else { // rainbow
+      ctx.fillStyle = ['#ff6b5b', '#ffd75e', '#26b59d', '#0068ff', '#9b5de5'][i % 5];
+      ctx.beginPath(); ctx.arc(px, py, 3 + a * 4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  // the little wisp doing the emitting
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,45,114,.3)'; ctx.lineWidth = 2; ctx.stroke();
 }
 
 /* ---- Badge Hall ---- */
@@ -789,6 +849,63 @@ function openTeacher() {
   const plusCb = document.getElementById('t-plus');
   plusCb.checked = state.plus;
   plusCb.onchange = () => { state.plus = plusCb.checked; saveState(); toast(state.plus ? 'Breakout+ active for your class ✨' : 'Breakout+ paused'); };
+
+  // If a backend is configured, replace the mock roster with live class data.
+  if (typeof api !== 'undefined' && api.enabled && api.enabled()) loadLiveTeacherData();
+}
+
+/* Pulls the real roster + per-standard mastery from the backend and swaps it in
+   for the seed data. Falls back silently to the mock view on any failure. */
+async function loadLiveTeacherData() {
+  try {
+    if (!api.teacherToken) await api.loginTeacher(state.player.name || 'Teacher', 'My Class', window.BREAKOUT_TEACHER_EMAIL || null);
+    const data = await api.fetchRoster();
+    if (!data || !screenIs('teacher')) return;
+    const fmtAgo = (ts) => {
+      if (!ts) return 'never';
+      const m = Math.round((Date.now() - ts) / 60000);
+      if (m < 1) return 'just now'; if (m < 60) return `${m}m ago`;
+      const h = Math.round(m / 60); if (h < 24) return `${h}h ago`;
+      return `${Math.round(h / 24)}d ago`;
+    };
+    document.getElementById('t-roster').innerHTML = data.roster.map(s => {
+      const succ = s.successRate;
+      const pill = succ == null ? 'mid' : succ >= .85 ? 'good' : succ >= .7 ? 'mid' : 'low';
+      return `<tr>
+        <td class="t-name">${s.name}</td>
+        <td>${1 + Math.floor((s.xp || 0) / 100)}</td>
+        <td>${s.locksSolved}</td>
+        <td>${fmtAgo(s.lastActive)}</td>
+        <td><span class="pill ${pill}">${succ == null ? '—' : Math.round(succ * 100) + '%'}</span></td>
+        <td>${s.streak}🔥</td>
+        <td>${s.keys} 🔑</td>
+      </tr>`;
+    }).join('');
+    const head = document.querySelector('#screen-teacher .t-table thead tr');
+    if (head) head.innerHTML = '<th>Explorer</th><th>Level</th><th>Solved</th><th>Last active</th><th>Success</th><th>Streak</th><th>Keys</th>';
+    renderMasteryPanel(data.mastery);
+  } catch (e) { /* keep the mock view */ }
+}
+
+/* Honest per-standard mastery, derived from real solve events (not completion). */
+function renderMasteryPanel(mastery) {
+  const host = document.getElementById('t-chart');
+  if (!host || !mastery) return;
+  const codes = Object.keys(mastery);
+  if (!codes.length) return;
+  const rows = codes.map(code => {
+    const m = mastery[code];
+    const rate = m.attempts ? m.correct / m.attempts : 0;
+    const meta = (DATA.standards && DATA.standards[code]) || {};
+    const band = rate >= .85 ? 'good' : rate >= .6 ? 'mid' : 'low';
+    return `<div class="cmp-group">
+      <div class="cmp-label" title="${meta.label || ''}">${code}${meta.strand ? ` · ${meta.strand}` : ''}</div>
+      <div class="mastery-track"><div class="mastery-fill ${band}" style="width:${Math.round(rate * 100)}%"></div></div>
+      <div class="mastery-meta">${Math.round(rate * 100)}% correct · ${m.solved} solved</div>
+    </div>`;
+  }).join('');
+  host.insertAdjacentHTML('afterbegin',
+    `<div class="live-badge">● Live class data</div><h4 class="mastery-h">Mastery by standard</h4>${rows}`);
 }
 
 /* ---- Parent portal ---- */

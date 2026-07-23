@@ -494,13 +494,36 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 .shop-item {
   border: 2.5px solid var(--cream-edge); background: var(--white); border-radius: 14px;
-  padding: 12px; display: flex; flex-direction: column; gap: 5px; align-items: flex-start;
+  padding: 10px; display: flex; flex-direction: column; gap: 4px; align-items: center; text-align: center;
+  cursor: pointer; transition: transform .12s ease, border-color .15s ease;
 }
-.shop-item:hover { border-color: var(--gold); }
+.shop-item:hover { border-color: var(--gold); transform: translateY(-2px); }
 .shop-item.owned { border-color: var(--teal); background: #effaf8; }
-.shop-name { font-weight: 800; font-size: 14px; }
-.shop-price { font-size: 12.5px; font-weight: 800; color: var(--gold-deep); }
+.shop-item.equipped { border-color: var(--gold); background: #fff8e6; box-shadow: 0 0 0 3px rgba(255,182,39,.25); }
+.shop-preview {
+  position: relative; width: 84px; height: 84px; border-radius: 12px;
+  background: radial-gradient(circle at 50% 38%, #eaf4ff, #cfe6fb);
+  border: 2px solid var(--cream-edge); display: grid; place-items: center; overflow: hidden;
+}
+.shop-canvas { width: 84px; height: 84px; display: block; }
+.shop-worn {
+  position: absolute; top: 4px; right: 4px; background: var(--gold); color: #4a2f00;
+  font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 99px; letter-spacing: .3px;
+}
+.shop-name { font-weight: 800; font-size: 13.5px; }
+.shop-price { font-size: 12px; font-weight: 800; color: var(--gold-deep); }
 .shop-item.owned .shop-price { color: var(--teal-deep); }
+/* live teacher-dashboard mastery panel */
+.live-badge { display: inline-block; font-size: 11px; font-weight: 800; color: #1c9a85; margin-bottom: 6px; }
+.live-badge::before { content: ''; }
+.mastery-h { margin: 2px 0 10px; font-size: 14px; color: var(--ink); }
+.mastery-track { height: 12px; border-radius: 99px; background: #e8edf5; overflow: hidden; margin: 3px 0; }
+.mastery-fill { height: 100%; border-radius: 99px; transition: width .5s ease; }
+.mastery-fill.good { background: #26b59d; }
+.mastery-fill.mid { background: #f4a11e; }
+.mastery-fill.low { background: #e0607a; }
+.mastery-meta { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 8px; }
+
 .badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .badge {
   background: var(--white); border: 2.5px solid var(--cream-edge); border-radius: 14px;

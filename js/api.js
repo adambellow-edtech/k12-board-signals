@@ -21,13 +21,31 @@ const api = {
   },
   enabled() { return !!this.base; },
 
-  async _req(method, path, body) {
+  async _req(method, path, body, token = this.token) {
     const res = await fetch(this.base + path, {
       method,
-      headers: { 'content-type': 'application/json', ...(this.token ? { authorization: 'Bearer ' + this.token } : {}) },
+      headers: { 'content-type': 'application/json', ...(token ? { authorization: 'Bearer ' + token } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     });
     return { status: res.status, json: await res.json().catch(() => null) };
+  },
+
+  // Teacher session (kept separate from the student token).
+  teacherToken: null,
+  teacherClass: null,
+  async loginTeacher(name, className, email) {
+    if (!this.base) return null;
+    const r = await this._req('POST', '/api/auth/teacher', { name, className, email }, null);
+    if (r.status === 200 && r.json.token) {
+      this.teacherToken = r.json.token; this.teacherClass = r.json.class;
+      return r.json;
+    }
+    return null;
+  },
+  async fetchRoster() {
+    if (!this.base || !this.teacherClass) return null;
+    const r = await this._req('GET', `/api/classes/${this.teacherClass.id}/roster`, null, this.teacherToken);
+    return r.status === 200 ? r.json : null;
   },
 
   // Deferred signup: the student plays first, then we save what they built.
