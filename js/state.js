@@ -33,6 +33,8 @@ const defaultState = () => ({
   tutorialStep: 0,          // 0=not started, 1..4 in progress, 5=done
   dailyGoal: null,          // locks-per-day goal the student commits to in onboarding
   placement: null,          // { grade, score } from the stealth placement expedition
+  srCards: {},              // spaced-repetition memory cards, keyed by standard code
+  srNudged: null,           // date we last nudged about due reviews
 });
 
 let state = defaultState();

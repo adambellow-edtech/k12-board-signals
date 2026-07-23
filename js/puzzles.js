@@ -251,6 +251,8 @@ function submitEntry(lk, entered) {
     if (puzzle.lockAttempts === 1) awardBadge('thinker');
     if (puzzle.lockAttempts >= 3) awardBadge('persistent');
     track('lock_solved', { lockId: lockIdOf(lk), lockType: lk.type, standards: lk.standards || [], attempts: puzzle.lockAttempts, seconds: Math.round((Date.now() - puzzle.t0) / 1000) });
+    // feed the spaced-repetition scheduler: struggle brings a concept back soon
+    if (typeof srReview === 'function') (lk.standards || []).forEach(code => srReview(code, srQuality(puzzle.lockAttempts)));
     setTimeout(() => {
       puzzle.idx++;
       if (puzzle.idx < puzzle.locks.length) {

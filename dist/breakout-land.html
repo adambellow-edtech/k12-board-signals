@@ -571,6 +571,20 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .quest-goal .qg-blurb { font-size: 12.5px; color: var(--ink-soft); margin-left: auto; text-align: right; }
 #quest-start:disabled { opacity: .5; cursor: not-allowed; }
 
+/* ---- Review Lab / skills (spaced repetition) ---- */
+.pz-sep { border: none; border-top: 2px dashed var(--cream-edge); margin: 16px 0 4px; }
+.skill-strip { display: flex; flex-wrap: wrap; gap: 7px; margin: 6px 0 12px; }
+.skill-chip {
+  font-size: 12px; font-weight: 800; padding: 5px 11px; border-radius: 99px;
+  border: 2px solid var(--cream-edge); background: #eef2f8; color: var(--ink-soft); white-space: nowrap;
+}
+.skill-chip.learning { background: #eef2f8; color: var(--ink-soft); }
+.skill-chip.practicing { background: #e7f1ff; color: #1c5fd0; border-color: #b9d5ff; }
+.skill-chip.mastered { background: #e6faf5; color: var(--teal-deep); border-color: #a6ead9; }
+.skill-chip[title*="due for review"] { background: #fff3d9; color: #a9740a; border-color: #f2d492; animation: chippulse 1.8s ease-in-out infinite; }
+@keyframes chippulse { 50% { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(200,150,20,.3); } }
+.review-btn { background: linear-gradient(180deg, #7a3fd0, #5c25b7); }
+
 /* live teacher-dashboard mastery panel */
 .live-badge { display: inline-block; font-size: 11px; font-weight: 800; color: #1c9a85; margin-bottom: 6px; }
 .live-badge::before { content: ''; }
@@ -1550,6 +1564,43 @@ const DATA = {
     { type: 'switch', subject: 'Math · Odd & Even', standards: ['2.OA.C.3'], clue: 'The power panel hums: “Flip ON only the ODD-numbered switches.”', answer: '10101', hint: 'Odd numbers: 1, 3, 5.' },
   ],
 
+  // Review bank: fresh problems per standard, drawn when a card comes due so the
+  // student practices the concept, not the exact same question.
+  reviewBank: {
+    '2.NBT.A.1': [
+      { type: 'number', clue: 'Which number has 4 tens and 7 ones?', answer: '47', hint: 'Tens first, then ones.' },
+      { type: 'number', clue: 'How many tens are in 60?', answer: '6', hint: 'Each ten is a group of 10.' },
+    ],
+    '2.OA.C.3': [
+      { type: 'number', clue: 'Is 14 odd or even? Enter 0 for even, 1 for odd.', answer: '0', hint: 'Even numbers end in 0,2,4,6,8.' },
+      { type: 'number', clue: 'Is 9 odd or even? Enter 0 for even, 1 for odd.', answer: '1', hint: 'Odd numbers end in 1,3,5,7,9.' },
+    ],
+    '3.OA.A.1': [
+      { type: 'number', clue: '5 baskets with 3 apples each. How many apples?', answer: '15', hint: 'Multiply baskets by apples.' },
+      { type: 'number', clue: '4 rows of 6 stars. How many stars?', answer: '24', hint: '4 groups of 6.' },
+    ],
+    '3.OA.A.3': [
+      { type: 'number', clue: 'Share 18 marbles equally among 3 friends. How many each?', answer: '6', hint: '18 ÷ 3.' },
+      { type: 'number', clue: '7 packs of 5 stickers. How many stickers?', answer: '35', hint: '7 × 5.' },
+    ],
+    '3.MD.A.1': [
+      { type: 'number', clue: 'How many minutes from 2:00 to 2:45?', answer: '45', hint: 'Count the minutes.' },
+      { type: 'number', clue: 'How many minutes are in one hour?', answer: '60', hint: 'A full hour.' },
+    ],
+    '3.G.A.1': [
+      { type: 'shape', clue: 'Enter the shape with 3 sides, then the one with 4 equal sides.', answer: ['triangle', 'square'], hint: 'Count the sides.' },
+      { type: 'number', clue: 'How many sides does a hexagon have?', answer: '6', hint: 'Hex means six.' },
+    ],
+    '4.NF.A.1': [
+      { type: 'word', clue: 'Which fraction equals 1/2? Type it like 3/6.', answer: '3/6', hint: 'Top is half the bottom.' },
+      { type: 'word', clue: 'Which fraction equals 1/3? Type it like 2/6.', answer: '2/6', hint: 'Bottom is three times the top.' },
+    ],
+    'L.3.5': [
+      { type: 'word', clue: 'I have hands and a face but no arms or legs. What am I?', answer: 'CLOCK', hint: 'It tells time.' },
+      { type: 'word', clue: 'The opposite of "day" is…', answer: 'NIGHT', hint: 'When the stars come out.' },
+    ],
+  },
+
   // Stealth placement "expedition" — 3 multiple-choice problems spanning grade
   // levels, framed as exploring the island so it never feels like a test. The
   // level the student handles comfortably sets their starting Math Trail grade.
@@ -1747,6 +1798,8 @@ const defaultState = () => ({
   tutorialStep: 0,          // 0=not started, 1..4 in progress, 5=done
   dailyGoal: null,          // locks-per-day goal the student commits to in onboarding
   placement: null,          // { grade, score } from the stealth placement expedition
+  srCards: {},              // spaced-repetition memory cards, keyed by standard code
+  srNudged: null,           // date we last nudged about due reviews
 });
 
 let state = defaultState();
@@ -1901,6 +1954,72 @@ function buyItem(item) {
   updateHUD();
   return true;
 }
+
+
+/* Breakout Land — spaced-repetition engine (Phase 3, the learning moat).
+   Each standard the student touches gets a memory card scheduled on an expanding
+   ladder. Struggle resets it to soon; success pushes it further out; a card is
+   only "mastered" after it survives the full ladder. The daily return (streak)
+   is what makes the schedule actually fire. This runs on-device today and the
+   same logic can run server-side later. */
+
+const SR_LADDER = [1, 3, 7, 21, 45]; // days between reviews as a card strengthens
+
+function srStartOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+function srCards() { return state.srCards || (state.srCards = {}); }
+
+/* Record a review of a standard. quality: 'good' (first try), 'ok' (a couple
+   tries), 'hard' (struggled). Returns the updated card. */
+function srReview(code, quality) {
+  if (!code) return null;
+  const cards = srCards();
+  let c = cards[code];
+  if (!c) c = cards[code] = { reps: 0, lapses: 0, step: 0, interval: 0, dueMs: 0, lastMs: 0, mastered: false };
+  c.lastMs = Date.now();
+  if (quality === 'hard') {
+    c.lapses++; c.step = 0; c.reps = 0; c.mastered = false;   // forgot it: bring it back soon
+  } else {
+    c.reps++; c.step = Math.min(SR_LADDER.length - 1, c.step + 1); // recalled: push it out
+  }
+  c.interval = SR_LADDER[c.step];
+  c.dueMs = srStartOfToday() + c.interval * 86400000;
+  if (c.step >= SR_LADDER.length - 1 && c.reps >= 4) c.mastered = true; // survived the ladder
+  if (typeof saveState === 'function') saveState();
+  return c;
+}
+
+// codes that are due for review today (not yet mastered)
+function srDue() {
+  const cards = srCards(), t = srStartOfToday();
+  return Object.keys(cards).filter(code => !cards[code].mastered && cards[code].dueMs <= t);
+}
+function srDueCount() { return srDue().length; }
+
+function srStatus(code) {
+  const c = srCards()[code];
+  if (!c) return 'new';
+  if (c.mastered) return 'mastered';
+  if (c.reps >= 2) return 'practicing';
+  return 'learning';
+}
+
+// every standard the student has touched, with status, for the mastery view
+function srSkills() {
+  const cards = srCards(), t = srStartOfToday();
+  return Object.keys(cards).map(code => ({
+    code,
+    status: srStatus(code),
+    reps: cards[code].reps,
+    lapses: cards[code].lapses,
+    mastered: cards[code].mastered,
+    due: !cards[code].mastered && cards[code].dueMs <= t,
+    meta: (typeof DATA !== 'undefined' && DATA.standards && DATA.standards[code]) || {},
+  })).sort((a, b) => (a.mastered - b.mastered) || (b.due - a.due));
+}
+function srMasteredCount() { return Object.values(srCards()).filter(c => c.mastered).length; }
+
+// map a lock's attempt count to a review quality
+function srQuality(attempts) { return attempts <= 1 ? 'good' : attempts <= 2 ? 'ok' : 'hard'; }
 
 
 /* Breakout Land — lock puzzle engine, celebration, sounds, toasts */
@@ -2156,6 +2275,8 @@ function submitEntry(lk, entered) {
     if (puzzle.lockAttempts === 1) awardBadge('thinker');
     if (puzzle.lockAttempts >= 3) awardBadge('persistent');
     track('lock_solved', { lockId: lockIdOf(lk), lockType: lk.type, standards: lk.standards || [], attempts: puzzle.lockAttempts, seconds: Math.round((Date.now() - puzzle.t0) / 1000) });
+    // feed the spaced-repetition scheduler: struggle brings a concept back soon
+    if (typeof srReview === 'function') (lk.standards || []).forEach(code => srReview(code, srQuality(puzzle.lockAttempts)));
     setTimeout(() => {
       puzzle.idx++;
       if (puzzle.idx < puzzle.locks.length) {
@@ -2721,6 +2842,14 @@ function enterWorld() {
   if (state.tutorialStep === 0) startTutorial();
   else if (state.tutorialStep === 2 && typeof runOnboardingCalibration === 'function') setTimeout(runOnboardingCalibration, 400);
   else updateTutorialBanner();
+  // nudge about due spaced-repetition reviews, once per day
+  if (typeof srDueCount === 'function' && state.tutorialStep >= 5) {
+    const n = srDueCount();
+    if (n > 0 && state.srNudged !== todayKey()) {
+      state.srNudged = todayKey(); saveState();
+      setTimeout(() => toast(`🧠 ${n} concept${n > 1 ? 's are' : ' is'} ready to review at the Lock Plaza!`), 1200);
+    }
+  }
   world.t0 = performance.now();
   cancelAnimationFrame(world.raf);
   worldLoop(world.t0);
@@ -3574,18 +3703,17 @@ function renderDaily(title, body) {
     return;
   }
   const done = state.lastDaily === todayKey();
-  if (done) {
-    body.innerHTML = `
-      <div class="big-emoji">🎉</div>
-      <p class="center"><strong>You already cracked today’s lock!</strong></p>
-      <p class="center muted">Streak: ${state.streak} day${state.streak === 1 ? '' : 's'} 🔥 — come back tomorrow to keep it alive.</p>`;
-    return;
-  }
-  body.innerHTML = `
-    <p class="muted">One fresh lock every day. Crack it to grow your streak and earn <strong>10 🔑 + 25 XP + 5 arcade minutes</strong>.</p>
-    <div class="reward-row"><span>🔥 Current streak: <strong>${state.streak}</strong></span></div>
-    <button class="btn-big" id="daily-go">Take on today’s lock!</button>`;
-  document.getElementById('daily-go').onclick = () => {
+  const dailyHtml = done
+    ? `<div class="big-emoji">🎉</div>
+       <p class="center"><strong>You already cracked today’s lock!</strong></p>
+       <p class="center muted">Streak: ${state.streak} day${state.streak === 1 ? '' : 's'} 🔥 — come back tomorrow to keep it alive.</p>`
+    : `<p class="muted">One fresh lock every day. Crack it to grow your streak and earn <strong>10 🔑 + 25 XP + 5 arcade minutes</strong>.</p>
+       <div class="reward-row"><span>🔥 Current streak: <strong>${state.streak}</strong></span></div>
+       <button class="btn-big" id="daily-go">Take on today’s lock!</button>`;
+  body.innerHTML = dailyHtml + reviewSectionHtml();
+
+  const dailyGo = document.getElementById('daily-go');
+  if (dailyGo) dailyGo.onclick = () => {
     closeBuildingModal();
     // project the streak the win will produce, so the celebration tier matches
     const y = new Date(Date.now() - 86400000);
@@ -3603,6 +3731,49 @@ function renderDaily(title, body) {
       },
     });
   };
+  wireReviewSection();
+}
+
+/* ---- Review Lab: spaced repetition surfaced in the daily ritual ---- */
+function reviewSectionHtml() {
+  const due = srDue();
+  const skills = srSkills();
+  const mastered = srMasteredCount();
+  const chips = skills.length
+    ? skills.map(s => `<span class="skill-chip ${s.status}" title="${(s.meta.label || s.code)}${s.due ? ' · due for review' : ''}">${s.due ? '🕒 ' : s.mastered ? '✅ ' : ''}${s.code}</span>`).join('')
+    : '<span class="muted">Solve locks to start building skills!</span>';
+  const reviewBtn = due.length
+    ? `<button class="btn-big review-btn" id="review-go">🧠 Review ${due.length} concept${due.length > 1 ? 's' : ''} — keep them fresh!</button>`
+    : '<p class="center muted" style="margin-top:8px">🌟 No reviews due right now — your memory’s sharp!</p>';
+  return `
+    <hr class="pz-sep">
+    <h3 class="shop-h" style="margin-top:14px">🧠 Your Skills${mastered ? ` · ${mastered} mastered` : ''}</h3>
+    <div class="skill-strip">${chips}</div>
+    ${reviewBtn}`;
+}
+function wireReviewSection() {
+  const b = document.getElementById('review-go');
+  if (b) b.onclick = reviewSession;
+}
+function reviewSession() {
+  const due = srDue();
+  const locks = due.map(code => {
+    const pool = (DATA.reviewBank && DATA.reviewBank[code]) || [];
+    if (!pool.length) return null;
+    const lk = pool[Math.floor(Math.random() * pool.length)];
+    return { ...lk, standards: [code], subject: (DATA.standards[code] || {}).strand || code };
+  }).filter(Boolean).slice(0, 6);
+  if (!locks.length) { toast('You’re all caught up on reviews! 🌟'); return; }
+  closeBuildingModal();
+  startPuzzle({
+    title: 'Review Lab',
+    ctxLabel: 'Keep concepts fresh',
+    locks,
+    onWin: () => {
+      grant({ keys: 4 * locks.length, xp: 8 * locks.length });
+      toast(`Reviews done — those concepts just got stronger! 🧠 +${4 * locks.length} 🔑`);
+    },
+  });
 }
 
 /* ---- Game Hall ---- */

@@ -77,6 +77,43 @@ const DATA = {
     { type: 'switch', subject: 'Math · Odd & Even', standards: ['2.OA.C.3'], clue: 'The power panel hums: “Flip ON only the ODD-numbered switches.”', answer: '10101', hint: 'Odd numbers: 1, 3, 5.' },
   ],
 
+  // Review bank: fresh problems per standard, drawn when a card comes due so the
+  // student practices the concept, not the exact same question.
+  reviewBank: {
+    '2.NBT.A.1': [
+      { type: 'number', clue: 'Which number has 4 tens and 7 ones?', answer: '47', hint: 'Tens first, then ones.' },
+      { type: 'number', clue: 'How many tens are in 60?', answer: '6', hint: 'Each ten is a group of 10.' },
+    ],
+    '2.OA.C.3': [
+      { type: 'number', clue: 'Is 14 odd or even? Enter 0 for even, 1 for odd.', answer: '0', hint: 'Even numbers end in 0,2,4,6,8.' },
+      { type: 'number', clue: 'Is 9 odd or even? Enter 0 for even, 1 for odd.', answer: '1', hint: 'Odd numbers end in 1,3,5,7,9.' },
+    ],
+    '3.OA.A.1': [
+      { type: 'number', clue: '5 baskets with 3 apples each. How many apples?', answer: '15', hint: 'Multiply baskets by apples.' },
+      { type: 'number', clue: '4 rows of 6 stars. How many stars?', answer: '24', hint: '4 groups of 6.' },
+    ],
+    '3.OA.A.3': [
+      { type: 'number', clue: 'Share 18 marbles equally among 3 friends. How many each?', answer: '6', hint: '18 ÷ 3.' },
+      { type: 'number', clue: '7 packs of 5 stickers. How many stickers?', answer: '35', hint: '7 × 5.' },
+    ],
+    '3.MD.A.1': [
+      { type: 'number', clue: 'How many minutes from 2:00 to 2:45?', answer: '45', hint: 'Count the minutes.' },
+      { type: 'number', clue: 'How many minutes are in one hour?', answer: '60', hint: 'A full hour.' },
+    ],
+    '3.G.A.1': [
+      { type: 'shape', clue: 'Enter the shape with 3 sides, then the one with 4 equal sides.', answer: ['triangle', 'square'], hint: 'Count the sides.' },
+      { type: 'number', clue: 'How many sides does a hexagon have?', answer: '6', hint: 'Hex means six.' },
+    ],
+    '4.NF.A.1': [
+      { type: 'word', clue: 'Which fraction equals 1/2? Type it like 3/6.', answer: '3/6', hint: 'Top is half the bottom.' },
+      { type: 'word', clue: 'Which fraction equals 1/3? Type it like 2/6.', answer: '2/6', hint: 'Bottom is three times the top.' },
+    ],
+    'L.3.5': [
+      { type: 'word', clue: 'I have hands and a face but no arms or legs. What am I?', answer: 'CLOCK', hint: 'It tells time.' },
+      { type: 'word', clue: 'The opposite of "day" is…', answer: 'NIGHT', hint: 'When the stars come out.' },
+    ],
+  },
+
   // Stealth placement "expedition" — 3 multiple-choice problems spanning grade
   // levels, framed as exploring the island so it never feels like a test. The
   // level the student handles comfortably sets their starting Math Trail grade.

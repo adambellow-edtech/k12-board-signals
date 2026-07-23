@@ -153,18 +153,17 @@ function renderDaily(title, body) {
     return;
   }
   const done = state.lastDaily === todayKey();
-  if (done) {
-    body.innerHTML = `
-      <div class="big-emoji">🎉</div>
-      <p class="center"><strong>You already cracked today’s lock!</strong></p>
-      <p class="center muted">Streak: ${state.streak} day${state.streak === 1 ? '' : 's'} 🔥 — come back tomorrow to keep it alive.</p>`;
-    return;
-  }
-  body.innerHTML = `
-    <p class="muted">One fresh lock every day. Crack it to grow your streak and earn <strong>10 🔑 + 25 XP + 5 arcade minutes</strong>.</p>
-    <div class="reward-row"><span>🔥 Current streak: <strong>${state.streak}</strong></span></div>
-    <button class="btn-big" id="daily-go">Take on today’s lock!</button>`;
-  document.getElementById('daily-go').onclick = () => {
+  const dailyHtml = done
+    ? `<div class="big-emoji">🎉</div>
+       <p class="center"><strong>You already cracked today’s lock!</strong></p>
+       <p class="center muted">Streak: ${state.streak} day${state.streak === 1 ? '' : 's'} 🔥 — come back tomorrow to keep it alive.</p>`
+    : `<p class="muted">One fresh lock every day. Crack it to grow your streak and earn <strong>10 🔑 + 25 XP + 5 arcade minutes</strong>.</p>
+       <div class="reward-row"><span>🔥 Current streak: <strong>${state.streak}</strong></span></div>
+       <button class="btn-big" id="daily-go">Take on today’s lock!</button>`;
+  body.innerHTML = dailyHtml + reviewSectionHtml();
+
+  const dailyGo = document.getElementById('daily-go');
+  if (dailyGo) dailyGo.onclick = () => {
     closeBuildingModal();
     // project the streak the win will produce, so the celebration tier matches
     const y = new Date(Date.now() - 86400000);
@@ -182,6 +181,49 @@ function renderDaily(title, body) {
       },
     });
   };
+  wireReviewSection();
+}
+
+/* ---- Review Lab: spaced repetition surfaced in the daily ritual ---- */
+function reviewSectionHtml() {
+  const due = srDue();
+  const skills = srSkills();
+  const mastered = srMasteredCount();
+  const chips = skills.length
+    ? skills.map(s => `<span class="skill-chip ${s.status}" title="${(s.meta.label || s.code)}${s.due ? ' · due for review' : ''}">${s.due ? '🕒 ' : s.mastered ? '✅ ' : ''}${s.code}</span>`).join('')
+    : '<span class="muted">Solve locks to start building skills!</span>';
+  const reviewBtn = due.length
+    ? `<button class="btn-big review-btn" id="review-go">🧠 Review ${due.length} concept${due.length > 1 ? 's' : ''} — keep them fresh!</button>`
+    : '<p class="center muted" style="margin-top:8px">🌟 No reviews due right now — your memory’s sharp!</p>';
+  return `
+    <hr class="pz-sep">
+    <h3 class="shop-h" style="margin-top:14px">🧠 Your Skills${mastered ? ` · ${mastered} mastered` : ''}</h3>
+    <div class="skill-strip">${chips}</div>
+    ${reviewBtn}`;
+}
+function wireReviewSection() {
+  const b = document.getElementById('review-go');
+  if (b) b.onclick = reviewSession;
+}
+function reviewSession() {
+  const due = srDue();
+  const locks = due.map(code => {
+    const pool = (DATA.reviewBank && DATA.reviewBank[code]) || [];
+    if (!pool.length) return null;
+    const lk = pool[Math.floor(Math.random() * pool.length)];
+    return { ...lk, standards: [code], subject: (DATA.standards[code] || {}).strand || code };
+  }).filter(Boolean).slice(0, 6);
+  if (!locks.length) { toast('You’re all caught up on reviews! 🌟'); return; }
+  closeBuildingModal();
+  startPuzzle({
+    title: 'Review Lab',
+    ctxLabel: 'Keep concepts fresh',
+    locks,
+    onWin: () => {
+      grant({ keys: 4 * locks.length, xp: 8 * locks.length });
+      toast(`Reviews done — those concepts just got stronger! 🧠 +${4 * locks.length} 🔑`);
+    },
+  });
 }
 
 /* ---- Game Hall ---- */

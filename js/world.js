@@ -198,6 +198,14 @@ function enterWorld() {
   if (state.tutorialStep === 0) startTutorial();
   else if (state.tutorialStep === 2 && typeof runOnboardingCalibration === 'function') setTimeout(runOnboardingCalibration, 400);
   else updateTutorialBanner();
+  // nudge about due spaced-repetition reviews, once per day
+  if (typeof srDueCount === 'function' && state.tutorialStep >= 5) {
+    const n = srDueCount();
+    if (n > 0 && state.srNudged !== todayKey()) {
+      state.srNudged = todayKey(); saveState();
+      setTimeout(() => toast(`🧠 ${n} concept${n > 1 ? 's are' : ' is'} ready to review at the Lock Plaza!`), 1200);
+    }
+  }
   world.t0 = performance.now();
   cancelAnimationFrame(world.raf);
   worldLoop(world.t0);
