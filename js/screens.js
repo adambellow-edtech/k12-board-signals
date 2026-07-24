@@ -26,6 +26,14 @@ function updateHUD() {
   document.getElementById('hud-keys').textContent = state.keys;
   document.getElementById('hud-arcade').textContent = `${state.arcadeMin}m`;
   document.getElementById('hud-streak').textContent = state.streak;
+  const shields = state.shields || 0;
+  const shieldWrap = document.getElementById('hud-shield-wrap');
+  const shieldDiv = document.getElementById('hud-shield-div');
+  if (shieldWrap) {
+    document.getElementById('hud-shield').textContent = shields;
+    shieldWrap.style.display = shields > 0 ? '' : 'none';
+    if (shieldDiv) shieldDiv.style.display = shields > 0 ? '' : 'none';
+  }
   document.getElementById('hud-xpbar').style.width = `${li.into}%`;
 
   // today's quests
@@ -154,13 +162,18 @@ function renderDaily(title, body) {
   }
   const done = state.lastDaily === todayKey();
   const canShare = state.lastDailyResult && state.lastDailyResult.dateKey === todayKey();
+  const shieldNote = (state.shields || 0) > 0
+    ? `<p class="center shield-note">🛡️ <strong>${state.shields}</strong> Streak Shield${state.shields > 1 ? 's' : ''} — ${state.shields > 1 ? 'they' : 'it'} protect${state.shields > 1 ? '' : 's'} your streak if you miss a day.</p>`
+    : '<p class="center muted shield-note">🛡️ Earn a Streak Shield at every 5-day streak — it saves you if you miss a day.</p>';
   const dailyHtml = done
     ? `<div class="big-emoji">🎉</div>
        <p class="center"><strong>You already cracked today’s lock!</strong></p>
        <p class="center muted">Streak: ${state.streak} day${state.streak === 1 ? '' : 's'} 🔥 — come back tomorrow to keep it alive.</p>
+       ${shieldNote}
        ${canShare ? '<button class="btn-big" id="daily-share">📸 Share today’s result</button>' : ''}`
     : `<p class="muted">One fresh lock every day. Crack it to grow your streak and earn <strong>10 🔑 + 25 XP + 5 arcade minutes</strong>.</p>
        <div class="reward-row"><span>🔥 Current streak: <strong>${state.streak}</strong></span></div>
+       ${shieldNote}
        <button class="btn-big" id="daily-go">Take on today’s lock!</button>`;
   body.innerHTML = dailyHtml + reviewSectionHtml();
 
@@ -171,9 +184,7 @@ function renderDaily(title, body) {
   if (dailyGo) dailyGo.onclick = () => {
     closeBuildingModal();
     // project the streak the win will produce, so the celebration tier matches
-    const y = new Date(Date.now() - 86400000);
-    const yKey = `${y.getFullYear()}-${y.getMonth() + 1}-${y.getDate()}`;
-    const projected = (state.lastDaily === yKey) ? state.streak + 1 : 1;
+    const projected = projectStreak();
     const celType = projected >= 7 ? 'streak7' : projected >= 3 ? 'streak3' : 'standard';
     startPuzzle({
       title: 'Lock of the Day',

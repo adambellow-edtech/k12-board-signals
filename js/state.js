@@ -16,6 +16,7 @@ const defaultState = () => ({
   xp: 0,
   arcadeMin: 5,
   streak: 0,
+  shields: 0,               // streak shields: auto-spent to cover a missed day (cap 3)
   lastDaily: null,          // date string of last Lock of the Day completion
   unlocked: [],             // purchased item ids
   badges: [],
@@ -162,15 +163,44 @@ function dailyLock() {
   return DATA.dailyLocks[day % DATA.dailyLocks.length];
 }
 
+/* ---- streak + humane streak shields ---- */
+function parseDayKey(k) { const [y, m, d] = String(k).split('-').map(Number); return new Date(y, m - 1, d).getTime(); }
+function daysSinceDaily() { return state.lastDaily ? Math.round((parseDayKey(todayKey()) - parseDayKey(state.lastDaily)) / 86400000) : null; }
+// What the streak will be after today's completion (accounting for shields).
+function projectStreak() {
+  const gap = daysSinceDaily();
+  if (gap === null) return 1;               // first ever
+  if (gap <= 0) return state.streak;        // already done today
+  if (gap === 1) return state.streak + 1;   // consecutive day
+  return (state.shields || 0) >= (gap - 1) ? state.streak + 1 : 1; // shields can save it
+}
+
 function completeDaily() {
   const today = todayKey();
   if (state.lastDaily === today) return;
-  const y = new Date(Date.now() - 86400000);
-  const yKey = `${y.getFullYear()}-${y.getMonth() + 1}-${y.getDate()}`;
-  state.streak = (state.lastDaily === yKey) ? state.streak + 1 : 1;
+  const gap = daysSinceDaily();
+  let shieldSaved = 0;
+  if (gap === null || gap === 1) {
+    state.streak = gap === 1 ? state.streak + 1 : 1;   // consecutive, or first ever
+  } else {
+    const missed = gap - 1;                            // days skipped
+    if ((state.shields || 0) >= missed) {
+      state.shields -= missed; shieldSaved = missed;   // shields cover the gap
+      state.streak = state.streak + 1;
+    } else {
+      state.streak = 1;                                // not enough shields → reset
+    }
+  }
   state.lastDaily = today;
+  // earn a shield at every 5th day, capped so it stays a safety net not a crutch
+  let shieldEarned = false;
+  if (state.streak > 0 && state.streak % 5 === 0 && (state.shields || 0) < 3) {
+    state.shields = (state.shields || 0) + 1; shieldEarned = true;
+  }
   if (typeof track === 'function') track('streak_extended', { streak: state.streak });
   grant({ keys: 10, xp: 25, arcade: 5 });
+  if (shieldSaved) toast(`🛡️ Streak Shield saved your streak! Now ${state.streak} days 🔥`);
+  else if (shieldEarned) toast('🛡️ You earned a Streak Shield! It protects your streak if you miss a day.');
 }
 
 function arcadeAllowed() {

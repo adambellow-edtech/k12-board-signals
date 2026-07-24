@@ -571,6 +571,9 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .quest-goal .qg-blurb { font-size: 12.5px; color: var(--ink-soft); margin-left: auto; text-align: right; }
 #quest-start:disabled { opacity: .5; cursor: not-allowed; }
 
+.shield-note { font-size: 13px; margin: 8px 0; }
+.shield-note strong { color: var(--blue); }
+
 /* ---- Lock of the Day share card ---- */
 .share-wrap { text-align: center; max-width: 440px; }
 #share-canvas {
@@ -893,6 +896,8 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
       <span class="cap-stat" title="Keys — spend them in the Style Shop">🔑 <b id="hud-keys">0</b></span><i class="cap-div"></i>
       <span class="cap-stat" title="Arcade minutes earned">🕹️ <b id="hud-arcade">0m</b></span><i class="cap-div"></i>
       <span class="cap-stat" title="Lock of the Day streak">🔥 <b id="hud-streak">0</b></span>
+      <i class="cap-div" id="hud-shield-div" style="display:none"></i>
+      <span class="cap-stat" id="hud-shield-wrap" title="Streak Shields protect your streak on a missed day" style="display:none">🛡️ <b id="hud-shield">0</b></span>
     </div>
     <button class="hud-btn" id="hud-mute" title="Sound on/off">🔊</button>
     <button class="hud-btn" id="hud-home" title="Back to title">🏠</button>
@@ -1809,6 +1814,7 @@ const defaultState = () => ({
   xp: 0,
   arcadeMin: 5,
   streak: 0,
+  shields: 0,               // streak shields: auto-spent to cover a missed day (cap 3)
   lastDaily: null,          // date string of last Lock of the Day completion
   unlocked: [],             // purchased item ids
   badges: [],
@@ -1955,15 +1961,44 @@ function dailyLock() {
   return DATA.dailyLocks[day % DATA.dailyLocks.length];
 }
 
+/* ---- streak + humane streak shields ---- */
+function parseDayKey(k) { const [y, m, d] = String(k).split('-').map(Number); return new Date(y, m - 1, d).getTime(); }
+function daysSinceDaily() { return state.lastDaily ? Math.round((parseDayKey(todayKey()) - parseDayKey(state.lastDaily)) / 86400000) : null; }
+// What the streak will be after today's completion (accounting for shields).
+function projectStreak() {
+  const gap = daysSinceDaily();
+  if (gap === null) return 1;               // first ever
+  if (gap <= 0) return state.streak;        // already done today
+  if (gap === 1) return state.streak + 1;   // consecutive day
+  return (state.shields || 0) >= (gap - 1) ? state.streak + 1 : 1; // shields can save it
+}
+
 function completeDaily() {
   const today = todayKey();
   if (state.lastDaily === today) return;
-  const y = new Date(Date.now() - 86400000);
-  const yKey = `${y.getFullYear()}-${y.getMonth() + 1}-${y.getDate()}`;
-  state.streak = (state.lastDaily === yKey) ? state.streak + 1 : 1;
+  const gap = daysSinceDaily();
+  let shieldSaved = 0;
+  if (gap === null || gap === 1) {
+    state.streak = gap === 1 ? state.streak + 1 : 1;   // consecutive, or first ever
+  } else {
+    const missed = gap - 1;                            // days skipped
+    if ((state.shields || 0) >= missed) {
+      state.shields -= missed; shieldSaved = missed;   // shields cover the gap
+      state.streak = state.streak + 1;
+    } else {
+      state.streak = 1;                                // not enough shields → reset
+    }
+  }
   state.lastDaily = today;
+  // earn a shield at every 5th day, capped so it stays a safety net not a crutch
+  let shieldEarned = false;
+  if (state.streak > 0 && state.streak % 5 === 0 && (state.shields || 0) < 3) {
+    state.shields = (state.shields || 0) + 1; shieldEarned = true;
+  }
   if (typeof track === 'function') track('streak_extended', { streak: state.streak });
   grant({ keys: 10, xp: 25, arcade: 5 });
+  if (shieldSaved) toast(`🛡️ Streak Shield saved your streak! Now ${state.streak} days 🔥`);
+  else if (shieldEarned) toast('🛡️ You earned a Streak Shield! It protects your streak if you miss a day.');
 }
 
 function arcadeAllowed() {
@@ -3674,6 +3709,14 @@ function updateHUD() {
   document.getElementById('hud-keys').textContent = state.keys;
   document.getElementById('hud-arcade').textContent = `${state.arcadeMin}m`;
   document.getElementById('hud-streak').textContent = state.streak;
+  const shields = state.shields || 0;
+  const shieldWrap = document.getElementById('hud-shield-wrap');
+  const shieldDiv = document.getElementById('hud-shield-div');
+  if (shieldWrap) {
+    document.getElementById('hud-shield').textContent = shields;
+    shieldWrap.style.display = shields > 0 ? '' : 'none';
+    if (shieldDiv) shieldDiv.style.display = shields > 0 ? '' : 'none';
+  }
   document.getElementById('hud-xpbar').style.width = `${li.into}%`;
 
   // today's quests
@@ -3802,13 +3845,18 @@ function renderDaily(title, body) {
   }
   const done = state.lastDaily === todayKey();
   const canShare = state.lastDailyResult && state.lastDailyResult.dateKey === todayKey();
+  const shieldNote = (state.shields || 0) > 0
+    ? `<p class="center shield-note">🛡️ <strong>${state.shields}</strong> Streak Shield${state.shields > 1 ? 's' : ''} — ${state.shields > 1 ? 'they' : 'it'} protect${state.shields > 1 ? '' : 's'} your streak if you miss a day.</p>`
+    : '<p class="center muted shield-note">🛡️ Earn a Streak Shield at every 5-day streak — it saves you if you miss a day.</p>';
   const dailyHtml = done
     ? `<div class="big-emoji">🎉</div>
        <p class="center"><strong>You already cracked today’s lock!</strong></p>
        <p class="center muted">Streak: ${state.streak} day${state.streak === 1 ? '' : 's'} 🔥 — come back tomorrow to keep it alive.</p>
+       ${shieldNote}
        ${canShare ? '<button class="btn-big" id="daily-share">📸 Share today’s result</button>' : ''}`
     : `<p class="muted">One fresh lock every day. Crack it to grow your streak and earn <strong>10 🔑 + 25 XP + 5 arcade minutes</strong>.</p>
        <div class="reward-row"><span>🔥 Current streak: <strong>${state.streak}</strong></span></div>
+       ${shieldNote}
        <button class="btn-big" id="daily-go">Take on today’s lock!</button>`;
   body.innerHTML = dailyHtml + reviewSectionHtml();
 
@@ -3819,9 +3867,7 @@ function renderDaily(title, body) {
   if (dailyGo) dailyGo.onclick = () => {
     closeBuildingModal();
     // project the streak the win will produce, so the celebration tier matches
-    const y = new Date(Date.now() - 86400000);
-    const yKey = `${y.getFullYear()}-${y.getMonth() + 1}-${y.getDate()}`;
-    const projected = (state.lastDaily === yKey) ? state.streak + 1 : 1;
+    const projected = projectStreak();
     const celType = projected >= 7 ? 'streak7' : projected >= 3 ? 'streak3' : 'standard';
     startPuzzle({
       title: 'Lock of the Day',

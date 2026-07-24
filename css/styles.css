@@ -568,6 +568,9 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .quest-goal .qg-blurb { font-size: 12.5px; color: var(--ink-soft); margin-left: auto; text-align: right; }
 #quest-start:disabled { opacity: .5; cursor: not-allowed; }
 
+.shield-note { font-size: 13px; margin: 8px 0; }
+.shield-note strong { color: var(--blue); }
+
 /* ---- Lock of the Day share card ---- */
 .share-wrap { text-align: center; max-width: 440px; }
 #share-canvas {
