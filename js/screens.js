@@ -1072,6 +1072,8 @@ function openTeacher() {
   const plusCb = document.getElementById('t-plus');
   plusCb.checked = state.plus;
   plusCb.onchange = () => { state.plus = plusCb.checked; saveState(); toast(state.plus ? 'Breakout+ active for your class ✨' : 'Breakout+ paused'); };
+  const boBtn = document.getElementById('t-breakout');
+  if (boBtn) boBtn.onclick = () => { if (typeof launchClassBreakout === 'function') launchClassBreakout(); };
 
   // If a backend is configured, replace the mock roster with live class data.
   if (typeof api !== 'undefined' && api.enabled && api.enabled()) loadLiveTeacherData();

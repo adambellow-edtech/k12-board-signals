@@ -48,6 +48,19 @@ const api = {
     return r.status === 200 ? r.json : null;
   },
 
+  // Class Breakout live sessions (best-effort; the offline demo simulates locally).
+  _boSid: null,
+  async startBreakout(durationSec) {
+    if (!this.base || !this.teacherToken || !this.teacherClass) return null;
+    const r = await this._req('POST', `/api/classes/${this.teacherClass.id}/breakout/start`, { durationSec }, this.teacherToken);
+    if (r.status === 200) this._boSid = r.json.sid;
+    return r.json;
+  },
+  solveBreakout(lockIndex) {
+    if (!this.base || !this.token || !this._boSid) return;
+    this._req('POST', `/api/breakout/${this._boSid}/solve`, { lockIndex }, this.token).catch(() => {});
+  },
+
   // Deferred signup: the student plays first, then we save what they built.
   async joinAsStudent(name, avatar, classCode) {
     if (!this.base) return null;

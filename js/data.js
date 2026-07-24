@@ -53,7 +53,21 @@ const DATA = {
     { id: 'persistent',     name: 'Never Give Up',    desc: 'Solve a lock after 3+ tries',         icon: 'heart' },
     { id: 'star-seeker',    name: 'Star Seeker',      desc: 'Collect all 5 Sparkle Keys in one day', icon: 'star' },
     { id: 'quest-hero',     name: 'Quest Hero',       desc: 'Finish all 4 island quests in one day', icon: 'trophy' },
+    { id: 'team-player',    name: 'Team Player',      desc: 'Win a Class Breakout with your class', icon: 'trophy' },
   ],
+
+  // Class Breakout: a shared cooperative vault the whole class cracks together
+  classBreakout: {
+    title: 'The Vault of the Ancients',
+    durationSec: 300,
+    locks: [
+      { type: 'number', clue: 'The first seal: 8 × 7 = ?', answer: '56', hint: '8 groups of 7.' },
+      { type: 'word', clue: 'The second seal whispers: “I open locks and start cars. What am I?”', answer: 'KEY', hint: 'You collect them here!' },
+      { type: 'order', clue: 'The third seal: line up 12, 6, 9, 3 from SMALLEST to LARGEST.', tiles: ['12', '6', '9', '3'], answer: ['3', '6', '9', '12'], hint: 'Smallest first.' },
+      { type: 'logic', clue: 'The fourth seal: which gem unlocks it?', clues: ['It is NOT blue.', 'Its number is ODD.', 'It is less than 8.'], options: [{ label: '4', color: '#3d7bd9' }, { label: '7', color: '#57c26b' }, { label: '9', color: '#e8a30c' }, { label: '2', color: '#e63946' }], answer: '7', hint: 'Odd, under 8, and not blue.' },
+      { type: 'cipher', clue: 'The final seal: decode the ancient word with the key!', cipherKey: { '◆': 'G', '●': 'O', '★': 'L', '■': 'D' }, coded: '◆●★■', answer: 'GOLD', hint: '◆●★■ → G-O-L-D.' },
+    ],
+  },
 
   // The Five Keys of Knowledge — legendary milestone keys that tell the island's story
   legendaryKeys: [

@@ -59,6 +59,7 @@
   <button id="enter-btn">Enter</button>
   <div id="tut-banner"><span id="tut-guide">🦉</span><p id="tut-say"></p></div>
   <div id="region-banner"></div>
+  <button id="breakout-cta">🎉 Class Breakout is LIVE — Join!</button>
 </section>
 
 <!-- ============ HUD (storybook style: navy panels) ============ -->
@@ -160,6 +161,8 @@
           <span>✨ Breakout+ for this class</span>
           <label class="switch"><input type="checkbox" id="t-plus"><span></span></label>
         </div>
+        <button class="btn-big" id="t-breakout" style="margin-top:12px">🎉 Launch Class Breakout</button>
+        <p class="note" style="margin-top:6px">A 5-minute cooperative vault the whole class cracks together. Great for Fun Friday.</p>
       </div>
     </div>
   </div>
@@ -244,6 +247,14 @@
   </div>
 </div>
 
+<!-- ============ CLASS BREAKOUT ============ -->
+<div class="modal" id="breakout-modal">
+  <div class="modal-card board breakout-card">
+    <button class="modal-close" id="breakout-close" aria-label="Leave event">✕</button>
+    <div id="breakout-body"></div>
+  </div>
+</div>
+
 <!-- ============ SHARE CARD ============ -->
 <div class="modal" id="share-modal">
   <div class="modal-card board share-wrap">
@@ -323,6 +334,7 @@
 <script src="js/api.js"></script>
 <script src="js/onboarding.js"></script>
 <script src="js/ambient.js"></script>
+<script src="js/breakout.js"></script>
 <script src="js/data.js"></script>
 <script src="js/state.js"></script>
 <script src="js/srs.js"></script>

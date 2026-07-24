@@ -14,7 +14,7 @@ let body = html.slice(html.indexOf('<body>') + 6, html.indexOf('</body>'));
 body = body.replace(/^<script src="[^"]+"><\/script>\s*$/gm, '').trimEnd();
 
 const css = read('css/styles.css');
-const js = ['js/analytics.js', 'js/flags.js', 'js/api.js', 'js/onboarding.js', 'js/ambient.js', 'js/data.js', 'js/state.js', 'js/srs.js', 'js/puzzles.js', 'js/avatar.js', 'js/world.js', 'js/screens.js', 'js/main.js']
+const js = ['js/analytics.js', 'js/flags.js', 'js/api.js', 'js/onboarding.js', 'js/ambient.js', 'js/breakout.js', 'js/data.js', 'js/state.js', 'js/srs.js', 'js/puzzles.js', 'js/avatar.js', 'js/world.js', 'js/screens.js', 'js/main.js']
   .map(read).join('\n\n');
 const b64 = (p, mime) => `data:${mime};base64,${readFileSync(join(root, p)).toString('base64')}`;
 const assets = {

@@ -574,6 +574,49 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .shield-note { font-size: 13px; margin: 8px 0; }
 .shield-note strong { color: var(--blue); }
 
+/* ---- Class Breakout live event ---- */
+#breakout-cta {
+  position: fixed; left: 50%; top: 108px; transform: translate(-50%, -14px);
+  border: 3px solid #fff; border-radius: 999px; padding: 12px 22px; z-index: 45;
+  font-family: var(--display); font-weight: 900; font-size: 15px; color: #fff;
+  background: linear-gradient(180deg, #ff8f3f, #e0602a);
+  box-shadow: 0 6px 0 #a8410f, 0 14px 28px rgba(180,60,10,.4);
+  opacity: 0; pointer-events: none; transition: transform .3s cubic-bezier(.2,1.5,.4,1), opacity .3s ease;
+  animation: bopulse 1.4s ease-in-out infinite;
+}
+#breakout-cta.show { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+@keyframes bopulse { 50% { box-shadow: 0 6px 0 #a8410f, 0 14px 34px rgba(255,140,40,.7); } }
+.breakout-card { max-width: 620px; }
+.bo-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.bo-head h2 { margin: 0; }
+.bo-sub { margin: 2px 0 0; font-size: 13px; color: var(--ink-soft); }
+.bo-timer {
+  font-family: var(--display); font-weight: 900; font-size: 30px; color: var(--blue);
+  font-variant-numeric: tabular-nums; background: #eef4ff; border: 2px solid var(--cream-edge);
+  border-radius: 12px; padding: 4px 12px; flex: 0 0 auto;
+}
+.bo-timer.low { color: #c23a56; background: #fdeef1; border-color: #f2b8c4; animation: bopulse2 .8s ease-in-out infinite; }
+@keyframes bopulse2 { 50% { transform: scale(1.06); } }
+.bo-progress { height: 16px; border-radius: 99px; background: #e6ecf6; overflow: hidden; border: 2px solid var(--cream-edge); margin: 14px 0 4px; }
+.bo-fill { height: 100%; background: linear-gradient(90deg, #26b59d, #0068ff); border-radius: 99px; transition: width .5s cubic-bezier(.2,1.4,.4,1); }
+.bo-count { text-align: center; font-weight: 800; font-size: 13px; color: var(--ink); margin-bottom: 12px; }
+.bo-locks { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.bo-lock {
+  border: 2.5px solid var(--cream-edge); background: var(--white); border-radius: 14px; padding: 10px 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; transition: transform .12s ease, border-color .15s ease;
+}
+.bo-lock:hover:not(.done) { border-color: var(--gold); transform: translateY(-2px); }
+.bo-lock.done { border-color: var(--teal); background: #e6faf5; cursor: default; }
+.bo-lock-ico { font-size: 30px; }
+.bo-lock-n { font-family: var(--display); font-weight: 900; font-size: 13px; color: var(--ink); }
+.bo-lock-by { font-size: 11px; color: var(--ink-soft); }
+.bo-lock.done .bo-lock-by { color: var(--teal-deep); font-weight: 800; }
+.bo-feed { margin-top: 12px; font-size: 12.5px; color: var(--ink-soft); display: flex; flex-direction: column; gap: 3px; min-height: 20px; }
+.bo-feed > div { animation: bofeed .4s ease; }
+@keyframes bofeed { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; } }
+.bo-end { text-align: center; }
+.bo-end h2 { color: var(--blue); }
+
 /* ---- Lock of the Day share card ---- */
 .share-wrap { text-align: center; max-width: 440px; }
 #share-canvas {
@@ -881,6 +924,7 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
   <button id="enter-btn">Enter</button>
   <div id="tut-banner"><span id="tut-guide">🦉</span><p id="tut-say"></p></div>
   <div id="region-banner"></div>
+  <button id="breakout-cta">🎉 Class Breakout is LIVE — Join!</button>
 </section>
 
 <!-- ============ HUD (storybook style: navy panels) ============ -->
@@ -982,6 +1026,8 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
           <span>✨ Breakout+ for this class</span>
           <label class="switch"><input type="checkbox" id="t-plus"><span></span></label>
         </div>
+        <button class="btn-big" id="t-breakout" style="margin-top:12px">🎉 Launch Class Breakout</button>
+        <p class="note" style="margin-top:6px">A 5-minute cooperative vault the whole class cracks together. Great for Fun Friday.</p>
       </div>
     </div>
   </div>
@@ -1063,6 +1109,14 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
     <p class="muted center">How often will you explore Breakout Land? Pick your daily goal. You can change it anytime.</p>
     <div id="quest-goals" class="quest-goals"></div>
     <button class="btn-big" id="quest-start" disabled>Start my quest!</button>
+  </div>
+</div>
+
+<!-- ============ CLASS BREAKOUT ============ -->
+<div class="modal" id="breakout-modal">
+  <div class="modal-card board breakout-card">
+    <button class="modal-close" id="breakout-close" aria-label="Leave event">✕</button>
+    <div id="breakout-body"></div>
   </div>
 </div>
 
@@ -1306,6 +1360,19 @@ const api = {
     return r.status === 200 ? r.json : null;
   },
 
+  // Class Breakout live sessions (best-effort; the offline demo simulates locally).
+  _boSid: null,
+  async startBreakout(durationSec) {
+    if (!this.base || !this.teacherToken || !this.teacherClass) return null;
+    const r = await this._req('POST', `/api/classes/${this.teacherClass.id}/breakout/start`, { durationSec }, this.teacherToken);
+    if (r.status === 200) this._boSid = r.json.sid;
+    return r.json;
+  },
+  solveBreakout(lockIndex) {
+    if (!this.base || !this.token || !this._boSid) return;
+    this._req('POST', `/api/breakout/${this._boSid}/solve`, { lockIndex }, this.token).catch(() => {});
+  },
+
   // Deferred signup: the student plays first, then we save what they built.
   async joinAsStudent(name, avatar, classCode) {
     if (!this.base) return null;
@@ -1520,6 +1587,176 @@ const ambient = {
 };
 
 
+/* Class Breakout — a teacher-triggered, whole-class COOPERATIVE solve event.
+   The class cracks one shared vault of locks together before the timer runs out.
+   Cooperative, never a leaderboard (per the plan). Works offline as a demo with
+   simulated classmates; when a backend is configured, solves sync to a real
+   session so a whole class aggregates together. */
+
+const EVENT_KEY = 'breakoutLandEvent.v1';
+const breakout = { session: null, timer: null, simTimer: null };
+const BO_CLASSMATES = ['Ava', 'Diego', 'Lily', 'Marcus', 'Nia', 'Jordan', 'Zoe', 'Kai', 'Sam'];
+
+/* Teacher launches the event. Offline: a local flag other roles can see. Backend:
+   a real session students join. */
+function launchClassBreakout() {
+  const dur = DATA.classBreakout.durationSec || 300;
+  const ev = { endsAt: Date.now() + dur * 1000, total: DATA.classBreakout.locks.length, startedAt: Date.now() };
+  try { localStorage.setItem(EVENT_KEY, JSON.stringify(ev)); } catch (e) {}
+  if (typeof api !== 'undefined' && api.enabled && api.enabled() && api.startBreakout) api.startBreakout(dur);
+  fanfare();
+  toast('🎉 Class Breakout launched! Students can join from the island.');
+}
+
+function activeEvent() {
+  try { const ev = JSON.parse(localStorage.getItem(EVENT_KEY)); if (ev && ev.endsAt > Date.now()) return ev; } catch (e) {}
+  return null;
+}
+function endEvent() { try { localStorage.removeItem(EVENT_KEY); } catch (e) {} }
+
+/* The world shows a join button while an event is live. */
+function updateBreakoutCta() {
+  const cta = document.getElementById('breakout-cta');
+  if (!cta) return;
+  cta.classList.toggle('show', !!activeEvent() && !(breakout.session && breakout.session.won));
+}
+
+/* Student joins the cooperative vault. */
+function openClassBreakout() {
+  const ev = activeEvent();
+  if (!ev) { toast('No Class Breakout is live right now.'); updateBreakoutCta(); return; }
+  const cfg = DATA.classBreakout;
+  breakout.session = { endsAt: ev.endsAt, locks: cfg.locks, title: cfg.title, solved: {}, feed: [], won: false, lost: false };
+  document.getElementById('breakout-modal').classList.add('open');
+  renderBreakout();
+  startBreakoutTimer();
+  startBreakoutSim();
+}
+function closeClassBreakout() {
+  clearInterval(breakout.timer); clearInterval(breakout.simTimer);
+  document.getElementById('breakout-modal').classList.remove('open');
+  updateBreakoutCta();
+}
+
+function startBreakoutTimer() {
+  clearInterval(breakout.timer);
+  breakout.timer = setInterval(() => {
+    const s = breakout.session; if (!s || s.won || s.lost) return;
+    const left = Math.round((s.endsAt - Date.now()) / 1000);
+    const t = document.getElementById('bo-timer');
+    if (t) { t.textContent = `${Math.floor(Math.max(0, left) / 60)}:${String(Math.max(0, left) % 60).padStart(2, '0')}`; t.classList.toggle('low', left <= 30); }
+    if (left <= 0) breakoutTimeUp();
+  }, 250);
+}
+
+/* Simulated classmates crack locks alongside you, so it feels alive offline. */
+function startBreakoutSim() {
+  clearInterval(breakout.simTimer);
+  breakout.simTimer = setInterval(() => {
+    const s = breakout.session; if (!s || s.won || s.lost) return;
+    const open = s.locks.map((_, i) => i).filter(i => !s.solved[i]);
+    if (open.length <= 1) return; // leave the last lock for the player to finish
+    if (Math.random() < 0.55) {
+      const i = open[(Math.random() * open.length) | 0];
+      markBreakoutSolved(i, BO_CLASSMATES[(Math.random() * BO_CLASSMATES.length) | 0]);
+    }
+  }, 5000);
+}
+
+function markBreakoutSolved(i, who) {
+  const s = breakout.session; if (!s || s.solved[i]) return;
+  s.solved[i] = who;
+  s.feed.push(`${who} cracked Lock ${i + 1}! 🔓`);
+  if (typeof api !== 'undefined' && api.enabled && api.enabled() && api.solveBreakout) api.solveBreakout(i);
+  renderBreakout();
+  if (Object.keys(s.solved).length >= s.locks.length) breakoutWin();
+}
+
+function attemptBreakoutLock(i) {
+  const s = breakout.session; if (!s || s.solved[i]) return;
+  const lk = s.locks[i];
+  startPuzzle({
+    title: `Vault Lock ${i + 1}`,
+    ctxLabel: 'Class Breakout',
+    locks: [lk],
+    onWin: () => { grant({ keys: 6, xp: 12 }); markBreakoutSolved(i, state.player.name || 'You'); },
+  });
+}
+
+function breakoutWin() {
+  const s = breakout.session; if (!s || s.won) return;
+  s.won = true; endEvent();
+  clearInterval(breakout.timer); clearInterval(breakout.simTimer);
+  awardBadge('team-player');
+  grant({ keys: 30, xp: 60, arcade: 8 });
+  fanfare(); confetti();
+  renderBreakout();
+}
+function breakoutTimeUp() {
+  const s = breakout.session; if (!s || s.won || s.lost) return;
+  s.lost = true; endEvent();
+  clearInterval(breakout.timer); clearInterval(breakout.simTimer);
+  renderBreakout();
+}
+
+function renderBreakout() {
+  const s = breakout.session; if (!s) return;
+  const body = document.getElementById('breakout-body');
+  const total = s.locks.length, done = Object.keys(s.solved).length;
+  const left = Math.max(0, Math.round((s.endsAt - Date.now()) / 1000));
+  const timer = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+
+  if (s.won) {
+    body.innerHTML = `
+      <div class="bo-end">
+        <div class="big-emoji">🏆</div>
+        <h2>VAULT CRACKED!</h2>
+        <p class="center">Your whole class cracked all ${total} locks together. Teamwork! 🎉</p>
+        <p class="center muted">+30 🔑 +60 XP +8 arcade minutes · Team Player badge earned</p>
+        <button class="btn-big" id="bo-done">Back to the island</button>
+      </div>`;
+    document.getElementById('bo-done').onclick = closeClassBreakout;
+    return;
+  }
+  if (s.lost) {
+    body.innerHTML = `
+      <div class="bo-end">
+        <div class="big-emoji">⏱️</div>
+        <h2>Time’s up!</h2>
+        <p class="center">The class cracked <strong>${done} / ${total}</strong> locks together — great teamwork! Try again next time.</p>
+        <button class="btn-big" id="bo-done">Back to the island</button>
+      </div>`;
+    document.getElementById('bo-done').onclick = closeClassBreakout;
+    return;
+  }
+
+  const tiles = s.locks.map((lk, i) => {
+    const by = s.solved[i];
+    return `<button class="bo-lock ${by ? 'done' : ''}" data-bo="${i}" ${by ? 'disabled' : ''}>
+      <span class="bo-lock-ico">${by ? '🔓' : '🔒'}</span>
+      <span class="bo-lock-n">Lock ${i + 1}</span>
+      <span class="bo-lock-by">${by ? (by === (state.player.name || 'You') ? 'You!' : by) : 'Tap to crack'}</span>
+    </button>`;
+  }).join('');
+  const nextOpen = s.locks.map((_, i) => i).find(i => !s.solved[i]);
+
+  body.innerHTML = `
+    <div class="bo-head">
+      <div><h2>🎉 Class Breakout</h2><p class="bo-sub">${s.title} — crack all ${total} locks together!</p></div>
+      <div class="bo-timer ${left <= 30 ? 'low' : ''}" id="bo-timer">${timer}</div>
+    </div>
+    <div class="bo-progress"><div class="bo-fill" style="width:${(done / total) * 100}%"></div></div>
+    <div class="bo-count">${done} / ${total} locks cracked by the class</div>
+    <div class="bo-locks">${tiles}</div>
+    ${nextOpen !== undefined ? `<button class="btn-big" id="bo-next">🔓 Crack Lock ${nextOpen + 1}!</button>` : ''}
+    <div class="bo-feed">${(s.feed.slice(-4).reverse().map(f => `<div>${f}</div>`).join('')) || '<div class="muted">The vault awaits… crack the first lock!</div>'}</div>`;
+
+  body.querySelectorAll('[data-bo]').forEach(b => b.onclick = () => attemptBreakoutLock(parseInt(b.dataset.bo, 10)));
+  const nb = document.getElementById('bo-next');
+  if (nb && nextOpen !== undefined) nb.onclick = () => attemptBreakoutLock(nextOpen);
+}
+
+
 /* Breakout Land — content data (mock content standing in for the Breakout EDU catalog) */
 
 const DATA = {
@@ -1575,7 +1812,21 @@ const DATA = {
     { id: 'persistent',     name: 'Never Give Up',    desc: 'Solve a lock after 3+ tries',         icon: 'heart' },
     { id: 'star-seeker',    name: 'Star Seeker',      desc: 'Collect all 5 Sparkle Keys in one day', icon: 'star' },
     { id: 'quest-hero',     name: 'Quest Hero',       desc: 'Finish all 4 island quests in one day', icon: 'trophy' },
+    { id: 'team-player',    name: 'Team Player',      desc: 'Win a Class Breakout with your class', icon: 'trophy' },
   ],
+
+  // Class Breakout: a shared cooperative vault the whole class cracks together
+  classBreakout: {
+    title: 'The Vault of the Ancients',
+    durationSec: 300,
+    locks: [
+      { type: 'number', clue: 'The first seal: 8 × 7 = ?', answer: '56', hint: '8 groups of 7.' },
+      { type: 'word', clue: 'The second seal whispers: “I open locks and start cars. What am I?”', answer: 'KEY', hint: 'You collect them here!' },
+      { type: 'order', clue: 'The third seal: line up 12, 6, 9, 3 from SMALLEST to LARGEST.', tiles: ['12', '6', '9', '3'], answer: ['3', '6', '9', '12'], hint: 'Smallest first.' },
+      { type: 'logic', clue: 'The fourth seal: which gem unlocks it?', clues: ['It is NOT blue.', 'Its number is ODD.', 'It is less than 8.'], options: [{ label: '4', color: '#3d7bd9' }, { label: '7', color: '#57c26b' }, { label: '9', color: '#e8a30c' }, { label: '2', color: '#e63946' }], answer: '7', hint: 'Odd, under 8, and not blue.' },
+      { type: 'cipher', clue: 'The final seal: decode the ancient word with the key!', cipherKey: { '◆': 'G', '●': 'O', '★': 'L', '■': 'D' }, coded: '◆●★■', answer: 'GOLD', hint: '◆●★■ → G-O-L-D.' },
+    ],
+  },
 
   // The Five Keys of Knowledge — legendary milestone keys that tell the island's story
   legendaryKeys: [
@@ -3053,6 +3304,7 @@ function enterWorld() {
   if (state.tutorialStep === 0) startTutorial();
   else if (state.tutorialStep === 2 && typeof runOnboardingCalibration === 'function') setTimeout(runOnboardingCalibration, 400);
   else updateTutorialBanner();
+  if (typeof updateBreakoutCta === 'function') updateBreakoutCta();
   // nudge about due spaced-repetition reviews, once per day
   if (typeof srDueCount === 'function' && state.tutorialStep >= 5) {
     const n = srDueCount();
@@ -4833,6 +5085,8 @@ function openTeacher() {
   const plusCb = document.getElementById('t-plus');
   plusCb.checked = state.plus;
   plusCb.onchange = () => { state.plus = plusCb.checked; saveState(); toast(state.plus ? 'Breakout+ active for your class ✨' : 'Breakout+ paused'); };
+  const boBtn = document.getElementById('t-breakout');
+  if (boBtn) boBtn.onclick = () => { if (typeof launchClassBreakout === 'function') launchClassBreakout(); };
 
   // If a backend is configured, replace the mock roster with live class data.
   if (typeof api !== 'undefined' && api.enabled && api.enabled()) loadLiveTeacherData();
@@ -5037,6 +5291,8 @@ function boot() {
   // modal close buttons
   document.getElementById('bm-close').onclick = closeBuildingModal;
   document.getElementById('pz-close').onclick = closePuzzle;
+  document.getElementById('breakout-close').onclick = closeClassBreakout;
+  document.getElementById('breakout-cta').onclick = openClassBreakout;
   document.getElementById('building-modal').addEventListener('pointerdown', e => {
     if (e.target === e.currentTarget) closeBuildingModal();
   });

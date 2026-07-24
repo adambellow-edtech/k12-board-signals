@@ -571,6 +571,49 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .shield-note { font-size: 13px; margin: 8px 0; }
 .shield-note strong { color: var(--blue); }
 
+/* ---- Class Breakout live event ---- */
+#breakout-cta {
+  position: fixed; left: 50%; top: 108px; transform: translate(-50%, -14px);
+  border: 3px solid #fff; border-radius: 999px; padding: 12px 22px; z-index: 45;
+  font-family: var(--display); font-weight: 900; font-size: 15px; color: #fff;
+  background: linear-gradient(180deg, #ff8f3f, #e0602a);
+  box-shadow: 0 6px 0 #a8410f, 0 14px 28px rgba(180,60,10,.4);
+  opacity: 0; pointer-events: none; transition: transform .3s cubic-bezier(.2,1.5,.4,1), opacity .3s ease;
+  animation: bopulse 1.4s ease-in-out infinite;
+}
+#breakout-cta.show { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+@keyframes bopulse { 50% { box-shadow: 0 6px 0 #a8410f, 0 14px 34px rgba(255,140,40,.7); } }
+.breakout-card { max-width: 620px; }
+.bo-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.bo-head h2 { margin: 0; }
+.bo-sub { margin: 2px 0 0; font-size: 13px; color: var(--ink-soft); }
+.bo-timer {
+  font-family: var(--display); font-weight: 900; font-size: 30px; color: var(--blue);
+  font-variant-numeric: tabular-nums; background: #eef4ff; border: 2px solid var(--cream-edge);
+  border-radius: 12px; padding: 4px 12px; flex: 0 0 auto;
+}
+.bo-timer.low { color: #c23a56; background: #fdeef1; border-color: #f2b8c4; animation: bopulse2 .8s ease-in-out infinite; }
+@keyframes bopulse2 { 50% { transform: scale(1.06); } }
+.bo-progress { height: 16px; border-radius: 99px; background: #e6ecf6; overflow: hidden; border: 2px solid var(--cream-edge); margin: 14px 0 4px; }
+.bo-fill { height: 100%; background: linear-gradient(90deg, #26b59d, #0068ff); border-radius: 99px; transition: width .5s cubic-bezier(.2,1.4,.4,1); }
+.bo-count { text-align: center; font-weight: 800; font-size: 13px; color: var(--ink); margin-bottom: 12px; }
+.bo-locks { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.bo-lock {
+  border: 2.5px solid var(--cream-edge); background: var(--white); border-radius: 14px; padding: 10px 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; transition: transform .12s ease, border-color .15s ease;
+}
+.bo-lock:hover:not(.done) { border-color: var(--gold); transform: translateY(-2px); }
+.bo-lock.done { border-color: var(--teal); background: #e6faf5; cursor: default; }
+.bo-lock-ico { font-size: 30px; }
+.bo-lock-n { font-family: var(--display); font-weight: 900; font-size: 13px; color: var(--ink); }
+.bo-lock-by { font-size: 11px; color: var(--ink-soft); }
+.bo-lock.done .bo-lock-by { color: var(--teal-deep); font-weight: 800; }
+.bo-feed { margin-top: 12px; font-size: 12.5px; color: var(--ink-soft); display: flex; flex-direction: column; gap: 3px; min-height: 20px; }
+.bo-feed > div { animation: bofeed .4s ease; }
+@keyframes bofeed { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; } }
+.bo-end { text-align: center; }
+.bo-end h2 { color: var(--blue); }
+
 /* ---- Lock of the Day share card ---- */
 .share-wrap { text-align: center; max-width: 440px; }
 #share-canvas {

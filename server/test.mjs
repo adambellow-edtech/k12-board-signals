@@ -83,6 +83,29 @@ ok((await api('POST', '/api/events', { token: teacherToken, body: { events: [] }
 const acc = await api('PUT', `/api/classes/${classId}/access`, { token: teacherToken, body: { mode: 'never' } });
 ok(acc.status === 200 && acc.json.class.access_mode === 'never', 'teacher can set world access mode');
 
+// ---- Class Breakout: live cooperative session + SSE ----
+const boStart = await api('POST', `/api/classes/${classId}/breakout/start`, { token: teacherToken, body: { durationSec: 300, total: 5 } });
+ok(boStart.status === 200 && boStart.json.sid, 'teacher starts a Class Breakout session');
+const sid = boStart.json.sid;
+ok((await api('POST', `/api/classes/${classId}/breakout/start`, { token: studentToken })).status === 403, 'student cannot start a breakout');
+
+const boCurrent = await api('GET', `/api/classes/${classId}/breakout`, { token: studentToken });
+ok(boCurrent.status === 200 && boCurrent.json.sid === sid, 'student can find the active session');
+
+// open an SSE stream and confirm a student solve broadcasts live
+const streamRes = await fetch(`${base}/api/breakout/${sid}/stream`);
+const reader = streamRes.body.getReader();
+const dec = new TextDecoder();
+const first = dec.decode((await reader.read()).value);
+ok(first.startsWith('data:') && first.includes('"solved":{}'), 'SSE sends the initial session state');
+
+await api('POST', `/api/breakout/${sid}/solve`, { token: studentToken, body: { lockIndex: 2 } });
+let update = '';
+for (let i = 0; i < 5 && !update.includes('"2"'); i++) update += dec.decode((await reader.read()).value);
+ok(update.includes('"2"'), 'a student solve broadcasts over SSE to subscribers');
+ok((await api('POST', `/api/breakout/${sid}/solve`, { token: teacherToken, body: { lockIndex: 0 } })).status === 403, 'teacher token cannot post a solve');
+try { await reader.cancel(); } catch (e) {}
+
 server.close();
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

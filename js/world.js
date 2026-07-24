@@ -198,6 +198,7 @@ function enterWorld() {
   if (state.tutorialStep === 0) startTutorial();
   else if (state.tutorialStep === 2 && typeof runOnboardingCalibration === 'function') setTimeout(runOnboardingCalibration, 400);
   else updateTutorialBanner();
+  if (typeof updateBreakoutCta === 'function') updateBreakoutCta();
   // nudge about due spaced-repetition reviews, once per day
   if (typeof srDueCount === 'function' && state.tutorialStep >= 5) {
     const n = srDueCount();

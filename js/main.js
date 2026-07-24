@@ -61,6 +61,8 @@ function boot() {
   // modal close buttons
   document.getElementById('bm-close').onclick = closeBuildingModal;
   document.getElementById('pz-close').onclick = closePuzzle;
+  document.getElementById('breakout-close').onclick = closeClassBreakout;
+  document.getElementById('breakout-cta').onclick = openClassBreakout;
   document.getElementById('building-modal').addEventListener('pointerdown', e => {
     if (e.target === e.currentTarget) closeBuildingModal();
   });

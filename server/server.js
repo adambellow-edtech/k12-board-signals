@@ -2,6 +2,7 @@
    node:http only. Run: node --experimental-sqlite server/server.js */
 
 import { createServer } from 'node:http';
+import { randomUUID } from 'node:crypto';
 import * as db from './db.js';
 import { issueToken, verifyToken, getProvider } from './auth.js';
 
@@ -111,6 +112,55 @@ route('PUT', '/api/classes/:id/access', async (req, res, params) => {
   const { mode } = await readJson(req);
   if (!['always', 'school', 'never'].includes(mode)) return send(res, 400, { error: 'mode must be always|school|never' });
   send(res, 200, { class: db.setClassAccessMode(params.id, mode) });
+});
+
+/* ---- Class Breakout: live cooperative sessions (in-memory + SSE) ---- */
+const breakouts = {}; // sid -> { sid, classId, endsAt, total, solved:{}, subs:Set<res> }
+function boState(s) { return { sid: s.sid, classId: s.classId, endsAt: s.endsAt, total: s.total, solved: s.solved }; }
+function broadcastBreakout(sid) {
+  const s = breakouts[sid]; if (!s) return;
+  const payload = `data: ${JSON.stringify(boState(s))}\n\n`;
+  for (const res of s.subs) { try { res.write(payload); } catch (e) {} }
+}
+
+route('POST', '/api/classes/:id/breakout/start', async (req, res, params) => {
+  const claim = auth(req);
+  if (!isClassTeacher(claim, params.id)) return send(res, 403, { error: 'forbidden' });
+  const { durationSec = 300, total = 5 } = await readJson(req);
+  const sid = 'bo_' + randomUUID().slice(0, 8);
+  breakouts[sid] = { sid, classId: params.id, endsAt: Date.now() + durationSec * 1000, total, solved: {}, subs: new Set() };
+  send(res, 200, boState(breakouts[sid]));
+});
+
+route('GET', '/api/classes/:id/breakout', async (req, res, params) => {
+  const claim = auth(req);
+  if (!claim) return send(res, 401, { error: 'unauthorized' });
+  const s = Object.values(breakouts).find(b => b.classId === params.id && b.endsAt > Date.now());
+  send(res, 200, s ? boState(s) : { session: null });
+});
+
+route('POST', '/api/breakout/:sid/solve', async (req, res, params) => {
+  const claim = auth(req);
+  if (!claim || claim.role !== 'student') return send(res, 403, { error: 'student token required' });
+  const s = breakouts[params.sid];
+  if (!s) return send(res, 404, { error: 'no session' });
+  const { lockIndex } = await readJson(req);
+  if (s.solved[lockIndex] === undefined) s.solved[lockIndex] = claim.name || 'A classmate';
+  broadcastBreakout(params.sid);
+  send(res, 200, { ok: true, solved: s.solved });
+});
+
+// Server-Sent Events: live session updates (sid acts as the capability token)
+route('GET', '/api/breakout/:sid/stream', async (req, res, params) => {
+  const s = breakouts[params.sid];
+  if (!s) return send(res, 404, { error: 'no session' });
+  res.writeHead(200, {
+    'content-type': 'text/event-stream', 'cache-control': 'no-cache', 'connection': 'keep-alive',
+    'access-control-allow-origin': '*',
+  });
+  res.write(`data: ${JSON.stringify(boState(s))}\n\n`);
+  s.subs.add(res);
+  req.on('close', () => s.subs.delete(res));
 });
 
 /* ---- authorization helpers ---- */
