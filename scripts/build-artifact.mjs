@@ -33,6 +33,7 @@ ${css}
 ${body}
 <script>
 window.WORLD_MAP_SRC = '${b64('assets/world-map.jpg', 'image/jpeg')}';
+window.MUSIC_SRC = '${b64('assets/map-of-moss.mp3', 'audio/mpeg')}';
 window.ASSETS = ${JSON.stringify(assets)};
 </script>
 <script>
