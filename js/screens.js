@@ -832,23 +832,56 @@ function startMathNode(grade, i) {
   });
 }
 
+/* Class summary: the three questions a teacher actually asks, answered from
+   real gameplay signals — who needs help, who is ready to move up, who hasn't
+   started. Deliberately not "who logged in". */
+function renderClassSummary(rows) {
+  const host = document.getElementById('t-summary');
+  if (!host) return;
+  const played = rows.filter(r => r.lastDays !== null && r.lastDays !== undefined);
+  const notPlayed = rows.filter(r => r.lastDays === null || r.lastDays === undefined);
+  const needsHelp = played.filter(r => (r.success != null && r.success < 0.72) || (r.due || 0) >= 5);
+  const readyUp = played.filter(r => (r.ability || 0) >= 4.3 && (r.success == null || r.success >= 0.85));
+  const names = a => a.length ? a.slice(0, 3).map(r => r.name.replace(' ⭐you', '')).join(', ') + (a.length > 3 ? ` +${a.length - 3}` : '') : '—';
+  const card = (icon, label, arr, cls) => `
+    <div class="tsum ${cls}">
+      <div class="tsum-top"><span class="tsum-ico">${icon}</span><span class="tsum-n">${arr.length}</span></div>
+      <div class="tsum-label">${label}</div>
+      <div class="tsum-names">${names(arr)}</div>
+    </div>`;
+  host.innerHTML = `
+    <h3>Where your class needs you</h3>
+    <p class="note">Honest signals from real gameplay — mastery and struggle, not just who logged in.</p>
+    <div class="tsum-row">
+      ${card('🆘', 'Needs a hand', needsHelp, 'help')}
+      ${card('🚀', 'Ready to level up', readyUp, 'up')}
+      ${card('💤', 'Not started yet', notPlayed, 'idle')}
+    </div>`;
+}
+
 /* ---- Teacher dashboard ---- */
 function openTeacher() {
   showScreen('teacher');
   const you = {
     name: (state.player.name || 'You') + ' ⭐you', level: levelInfo().n, keys: state.totalKeys,
     games: Object.keys(state.gamesDone).length + Object.keys(state.mathStars).length,
-    avgMin: 12.0, success: 0.9, streak: state.streak, arcade: state.perms.teacherArcade,
+    avgMin: 12.0, success: 0.9, streak: state.streak, arcade: state.perms.teacherArcade, lastDays: 0,
+    mastered: (typeof srMasteredCount === 'function') ? srMasteredCount() : 0,
+    due: (typeof srDueCount === 'function') ? srDueCount() : 0,
+    ability: (typeof adaptiveAbility === 'function') ? adaptiveAbility() : (state.mathGrade || 3),
+    you: true,
   };
   const roster = [...DATA.roster, you];
 
+  renderClassSummary(roster);
   document.getElementById('t-roster').innerHTML = roster.map((s, i) => `
     <tr>
       <td class="t-name">${s.name}</td>
       <td>${s.level}</td>
       <td>${s.games}</td>
-      <td>${s.avgMin.toFixed(1)}</td>
-      <td><span class="pill ${s.success >= .85 ? 'good' : s.success >= .7 ? 'mid' : 'low'}">${Math.round(s.success * 100)}%</span></td>
+      <td>${s.success == null ? '<span class="pill mid">—</span>' : `<span class="pill ${s.success >= .85 ? 'good' : s.success >= .7 ? 'mid' : 'low'}">${Math.round(s.success * 100)}%</span>`}</td>
+      <td>${s.mastered ? `<b>${s.mastered}</b>` : '0'}</td>
+      <td>${s.due ? `<span class="due-pill2">${s.due}</span>` : '—'}</td>
       <td>${s.streak}🔥</td>
       <td><label class="switch"><input type="checkbox" data-arcade="${i}" ${s.arcade ? 'checked' : ''}><span></span></label></td>
     </tr>`).join('');
@@ -921,21 +954,37 @@ async function loadLiveTeacherData() {
       const h = Math.round(m / 60); if (h < 24) return `${h}h ago`;
       return `${Math.round(h / 24)}d ago`;
     };
-    document.getElementById('t-roster').innerHTML = data.roster.map(s => {
-      const succ = s.successRate;
+    const rows = data.roster.map(s => ({
+      name: s.name,
+      level: 1 + Math.floor((s.xp || 0) / 100),
+      solved: s.locksSolved,
+      success: s.successRate,
+      streak: s.streak,
+      keys: s.keys,
+      mastered: s.mastered || 0,
+      due: s.dueReviews || 0,
+      ability: s.ability || 3,
+      lastActive: s.lastActive || null,
+      lastDays: s.lastActive ? Math.floor((Date.now() - s.lastActive) / 86400000) : null,
+    }));
+    renderClassSummary(rows);
+    document.getElementById('t-roster').innerHTML = rows.map(s => {
+      const succ = s.success;
       const pill = succ == null ? 'mid' : succ >= .85 ? 'good' : succ >= .7 ? 'mid' : 'low';
       return `<tr>
         <td class="t-name">${s.name}</td>
-        <td>${1 + Math.floor((s.xp || 0) / 100)}</td>
-        <td>${s.locksSolved}</td>
+        <td>${s.level}</td>
+        <td>${s.solved}</td>
         <td>${fmtAgo(s.lastActive)}</td>
         <td><span class="pill ${pill}">${succ == null ? '—' : Math.round(succ * 100) + '%'}</span></td>
+        <td>${s.mastered ? `<b>${s.mastered}</b>` : '0'}</td>
+        <td>${s.due ? `<span class="due-pill2">${s.due}</span>` : '—'}</td>
         <td>${s.streak}🔥</td>
         <td>${s.keys} 🔑</td>
       </tr>`;
     }).join('');
     const head = document.querySelector('#screen-teacher .t-table thead tr');
-    if (head) head.innerHTML = '<th>Explorer</th><th>Level</th><th>Solved</th><th>Last active</th><th>Success</th><th>Streak</th><th>Keys</th>';
+    if (head) head.innerHTML = '<th>Explorer</th><th>Level</th><th>Solved</th><th>Last active</th><th>Success</th><th>Mastered</th><th>Due</th><th>Streak</th><th>Keys</th>';
     renderMasteryPanel(data.mastery);
   } catch (e) { /* keep the mock view */ }
 }

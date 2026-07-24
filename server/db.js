@@ -123,6 +123,15 @@ export function classRoster(classId) {
     const solved = db.prepare("SELECT COUNT(*) AS n FROM events WHERE student_id=? AND type='lock_solved'").get(s.id);
     const attempts = db.prepare("SELECT COUNT(*) AS n FROM events WHERE student_id=? AND type='lock_attempt'").get(s.id);
     const correct = db.prepare("SELECT COUNT(*) AS n FROM events WHERE student_id=? AND type='lock_attempt' AND json_extract(props_json,'$.correct')=1").get(s.id);
+    // spaced-repetition + adaptive signals, derived from the student's saved state
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const cards = (state && state.srCards) || {};
+    let mastered = 0, dueReviews = 0;
+    for (const code in cards) {
+      const c = cards[code];
+      if (c.mastered) mastered++;
+      else if (c.dueMs && c.dueMs <= startOfToday.getTime()) dueReviews++;
+    }
     return {
       id: s.id, name: s.name,
       keys: state?.totalKeys ?? 0,
@@ -131,6 +140,9 @@ export function classRoster(classId) {
       locksSolved: solved.n,
       successRate: attempts.n ? correct.n / attempts.n : null,
       lastActive: last.t || null,
+      mastered,
+      dueReviews,
+      ability: (state && typeof state.ability === 'number') ? state.ability : null,
     };
   });
 }

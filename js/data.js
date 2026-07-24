@@ -251,12 +251,13 @@ const DATA = {
 
   // Mock roster for teacher dashboard (the live player is appended as "You")
   roster: [
-    { name: 'Ava R.',    level: 6, keys: 142, games: 9,  avgMin: 11.2, success: 0.92, streak: 5, arcade: true },
-    { name: 'Diego M.',  level: 5, keys: 118, games: 8,  avgMin: 13.9, success: 0.88, streak: 2, arcade: true },
-    { name: 'Jordan P.', level: 4, keys: 87,  games: 6,  avgMin: 16.4, success: 0.71, streak: 0, arcade: false },
-    { name: 'Lily C.',   level: 7, keys: 203, games: 12, avgMin: 9.8,  success: 0.95, streak: 8, arcade: true },
-    { name: 'Marcus T.', level: 3, keys: 54,  games: 4,  avgMin: 18.1, success: 0.64, streak: 1, arcade: true },
-    { name: 'Nia W.',    level: 5, keys: 131, games: 8,  avgMin: 12.6, success: 0.85, streak: 3, arcade: true },
+    { name: 'Ava R.',    level: 6, keys: 142, games: 9,  avgMin: 11.2, success: 0.92, streak: 5, arcade: true,  mastered: 7,  due: 1, ability: 4.3, lastDays: 0 },
+    { name: 'Diego M.',  level: 5, keys: 118, games: 8,  avgMin: 13.9, success: 0.88, streak: 2, arcade: true,  mastered: 5,  due: 2, ability: 3.6, lastDays: 1 },
+    { name: 'Jordan P.', level: 4, keys: 87,  games: 6,  avgMin: 16.4, success: 0.71, streak: 0, arcade: false, mastered: 2,  due: 5, ability: 2.4, lastDays: 3 },
+    { name: 'Lily C.',   level: 7, keys: 203, games: 12, avgMin: 9.8,  success: 0.95, streak: 8, arcade: true,  mastered: 10, due: 0, ability: 4.9, lastDays: 0 },
+    { name: 'Marcus T.', level: 3, keys: 54,  games: 4,  avgMin: 18.1, success: 0.64, streak: 1, arcade: true,  mastered: 1,  due: 6, ability: 2.1, lastDays: 2 },
+    { name: 'Nia W.',    level: 5, keys: 131, games: 8,  avgMin: 12.6, success: 0.85, streak: 3, arcade: true,  mastered: 6,  due: 2, ability: 3.4, lastDays: 1 },
+    { name: 'Sam K.',    level: 1, keys: 15,  games: 0,  avgMin: 0,    success: null, streak: 0, arcade: true,  mastered: 0,  due: 0, ability: 3.0, lastDays: null },
   ],
 
   // Comparison data: average minutes to breakout, per game (class / school / all players in age group)

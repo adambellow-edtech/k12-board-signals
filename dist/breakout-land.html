@@ -571,6 +571,26 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .quest-goal .qg-blurb { font-size: 12.5px; color: var(--ink-soft); margin-left: auto; text-align: right; }
 #quest-start:disabled { opacity: .5; cursor: not-allowed; }
 
+/* ---- teacher class-summary cards ---- */
+.tsum-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 8px; }
+.tsum {
+  border: 2px solid var(--cream-edge); border-radius: 14px; padding: 12px 14px; background: var(--white);
+  border-left-width: 6px;
+}
+.tsum.help { border-left-color: #e0607a; }
+.tsum.up { border-left-color: var(--teal); }
+.tsum.idle { border-left-color: #a9b6bc; }
+.tsum-top { display: flex; align-items: center; justify-content: space-between; }
+.tsum-ico { font-size: 22px; }
+.tsum-n { font-family: var(--display); font-weight: 900; font-size: 28px; color: var(--ink); }
+.tsum-label { font-weight: 800; font-size: 13.5px; color: var(--ink); margin-top: 2px; }
+.tsum-names { font-size: 12px; color: var(--ink-soft); margin-top: 3px; min-height: 15px; }
+.due-pill2 {
+  display: inline-block; min-width: 20px; padding: 1px 7px; border-radius: 99px;
+  background: #fff3d9; color: #a9740a; font-weight: 800; font-size: 12px; border: 1.5px solid #f2d492;
+}
+@media (max-width: 640px) { .tsum-row { grid-template-columns: 1fr; } }
+
 /* ---- Review Lab / skills (spaced repetition) ---- */
 .pz-sep { border: none; border-top: 2px dashed var(--cream-edge); margin: 16px 0 4px; }
 .skill-strip { display: flex; flex-wrap: wrap; gap: 7px; margin: 6px 0 12px; }
@@ -891,12 +911,13 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
       <button class="back-btn" data-back-title>← Sign out</button>
     </div>
     <div class="dash-grid">
+      <div class="board span2" id="t-summary"></div>
       <div class="board span2">
         <h3>Class roster</h3>
         <p class="note">The demo player appears in this roster as “⭐you” — play as a student and watch your row update.</p>
         <div class="t-table-wrap">
           <table class="t-table">
-            <thead><tr><th>Explorer</th><th>Level</th><th>Games</th><th>Avg min</th><th>Success</th><th>Streak</th><th>Arcade</th></tr></thead>
+            <thead id="t-thead"><tr><th>Explorer</th><th>Level</th><th>Games</th><th>Success</th><th>Mastered</th><th>Due</th><th>Streak</th><th>Arcade</th></tr></thead>
             <tbody id="t-roster"></tbody>
           </table>
         </div>
@@ -1692,12 +1713,13 @@ const DATA = {
 
   // Mock roster for teacher dashboard (the live player is appended as "You")
   roster: [
-    { name: 'Ava R.',    level: 6, keys: 142, games: 9,  avgMin: 11.2, success: 0.92, streak: 5, arcade: true },
-    { name: 'Diego M.',  level: 5, keys: 118, games: 8,  avgMin: 13.9, success: 0.88, streak: 2, arcade: true },
-    { name: 'Jordan P.', level: 4, keys: 87,  games: 6,  avgMin: 16.4, success: 0.71, streak: 0, arcade: false },
-    { name: 'Lily C.',   level: 7, keys: 203, games: 12, avgMin: 9.8,  success: 0.95, streak: 8, arcade: true },
-    { name: 'Marcus T.', level: 3, keys: 54,  games: 4,  avgMin: 18.1, success: 0.64, streak: 1, arcade: true },
-    { name: 'Nia W.',    level: 5, keys: 131, games: 8,  avgMin: 12.6, success: 0.85, streak: 3, arcade: true },
+    { name: 'Ava R.',    level: 6, keys: 142, games: 9,  avgMin: 11.2, success: 0.92, streak: 5, arcade: true,  mastered: 7,  due: 1, ability: 4.3, lastDays: 0 },
+    { name: 'Diego M.',  level: 5, keys: 118, games: 8,  avgMin: 13.9, success: 0.88, streak: 2, arcade: true,  mastered: 5,  due: 2, ability: 3.6, lastDays: 1 },
+    { name: 'Jordan P.', level: 4, keys: 87,  games: 6,  avgMin: 16.4, success: 0.71, streak: 0, arcade: false, mastered: 2,  due: 5, ability: 2.4, lastDays: 3 },
+    { name: 'Lily C.',   level: 7, keys: 203, games: 12, avgMin: 9.8,  success: 0.95, streak: 8, arcade: true,  mastered: 10, due: 0, ability: 4.9, lastDays: 0 },
+    { name: 'Marcus T.', level: 3, keys: 54,  games: 4,  avgMin: 18.1, success: 0.64, streak: 1, arcade: true,  mastered: 1,  due: 6, ability: 2.1, lastDays: 2 },
+    { name: 'Nia W.',    level: 5, keys: 131, games: 8,  avgMin: 12.6, success: 0.85, streak: 3, arcade: true,  mastered: 6,  due: 2, ability: 3.4, lastDays: 1 },
+    { name: 'Sam K.',    level: 1, keys: 15,  games: 0,  avgMin: 0,    success: null, streak: 0, arcade: true,  mastered: 0,  due: 0, ability: 3.0, lastDays: null },
   ],
 
   // Comparison data: average minutes to breakout, per game (class / school / all players in age group)
@@ -4372,23 +4394,56 @@ function startMathNode(grade, i) {
   });
 }
 
+/* Class summary: the three questions a teacher actually asks, answered from
+   real gameplay signals — who needs help, who is ready to move up, who hasn't
+   started. Deliberately not "who logged in". */
+function renderClassSummary(rows) {
+  const host = document.getElementById('t-summary');
+  if (!host) return;
+  const played = rows.filter(r => r.lastDays !== null && r.lastDays !== undefined);
+  const notPlayed = rows.filter(r => r.lastDays === null || r.lastDays === undefined);
+  const needsHelp = played.filter(r => (r.success != null && r.success < 0.72) || (r.due || 0) >= 5);
+  const readyUp = played.filter(r => (r.ability || 0) >= 4.3 && (r.success == null || r.success >= 0.85));
+  const names = a => a.length ? a.slice(0, 3).map(r => r.name.replace(' ⭐you', '')).join(', ') + (a.length > 3 ? ` +${a.length - 3}` : '') : '—';
+  const card = (icon, label, arr, cls) => `
+    <div class="tsum ${cls}">
+      <div class="tsum-top"><span class="tsum-ico">${icon}</span><span class="tsum-n">${arr.length}</span></div>
+      <div class="tsum-label">${label}</div>
+      <div class="tsum-names">${names(arr)}</div>
+    </div>`;
+  host.innerHTML = `
+    <h3>Where your class needs you</h3>
+    <p class="note">Honest signals from real gameplay — mastery and struggle, not just who logged in.</p>
+    <div class="tsum-row">
+      ${card('🆘', 'Needs a hand', needsHelp, 'help')}
+      ${card('🚀', 'Ready to level up', readyUp, 'up')}
+      ${card('💤', 'Not started yet', notPlayed, 'idle')}
+    </div>`;
+}
+
 /* ---- Teacher dashboard ---- */
 function openTeacher() {
   showScreen('teacher');
   const you = {
     name: (state.player.name || 'You') + ' ⭐you', level: levelInfo().n, keys: state.totalKeys,
     games: Object.keys(state.gamesDone).length + Object.keys(state.mathStars).length,
-    avgMin: 12.0, success: 0.9, streak: state.streak, arcade: state.perms.teacherArcade,
+    avgMin: 12.0, success: 0.9, streak: state.streak, arcade: state.perms.teacherArcade, lastDays: 0,
+    mastered: (typeof srMasteredCount === 'function') ? srMasteredCount() : 0,
+    due: (typeof srDueCount === 'function') ? srDueCount() : 0,
+    ability: (typeof adaptiveAbility === 'function') ? adaptiveAbility() : (state.mathGrade || 3),
+    you: true,
   };
   const roster = [...DATA.roster, you];
 
+  renderClassSummary(roster);
   document.getElementById('t-roster').innerHTML = roster.map((s, i) => `
     <tr>
       <td class="t-name">${s.name}</td>
       <td>${s.level}</td>
       <td>${s.games}</td>
-      <td>${s.avgMin.toFixed(1)}</td>
-      <td><span class="pill ${s.success >= .85 ? 'good' : s.success >= .7 ? 'mid' : 'low'}">${Math.round(s.success * 100)}%</span></td>
+      <td>${s.success == null ? '<span class="pill mid">—</span>' : `<span class="pill ${s.success >= .85 ? 'good' : s.success >= .7 ? 'mid' : 'low'}">${Math.round(s.success * 100)}%</span>`}</td>
+      <td>${s.mastered ? `<b>${s.mastered}</b>` : '0'}</td>
+      <td>${s.due ? `<span class="due-pill2">${s.due}</span>` : '—'}</td>
       <td>${s.streak}🔥</td>
       <td><label class="switch"><input type="checkbox" data-arcade="${i}" ${s.arcade ? 'checked' : ''}><span></span></label></td>
     </tr>`).join('');
@@ -4461,21 +4516,37 @@ async function loadLiveTeacherData() {
       const h = Math.round(m / 60); if (h < 24) return `${h}h ago`;
       return `${Math.round(h / 24)}d ago`;
     };
-    document.getElementById('t-roster').innerHTML = data.roster.map(s => {
-      const succ = s.successRate;
+    const rows = data.roster.map(s => ({
+      name: s.name,
+      level: 1 + Math.floor((s.xp || 0) / 100),
+      solved: s.locksSolved,
+      success: s.successRate,
+      streak: s.streak,
+      keys: s.keys,
+      mastered: s.mastered || 0,
+      due: s.dueReviews || 0,
+      ability: s.ability || 3,
+      lastActive: s.lastActive || null,
+      lastDays: s.lastActive ? Math.floor((Date.now() - s.lastActive) / 86400000) : null,
+    }));
+    renderClassSummary(rows);
+    document.getElementById('t-roster').innerHTML = rows.map(s => {
+      const succ = s.success;
       const pill = succ == null ? 'mid' : succ >= .85 ? 'good' : succ >= .7 ? 'mid' : 'low';
       return `<tr>
         <td class="t-name">${s.name}</td>
-        <td>${1 + Math.floor((s.xp || 0) / 100)}</td>
-        <td>${s.locksSolved}</td>
+        <td>${s.level}</td>
+        <td>${s.solved}</td>
         <td>${fmtAgo(s.lastActive)}</td>
         <td><span class="pill ${pill}">${succ == null ? '—' : Math.round(succ * 100) + '%'}</span></td>
+        <td>${s.mastered ? `<b>${s.mastered}</b>` : '0'}</td>
+        <td>${s.due ? `<span class="due-pill2">${s.due}</span>` : '—'}</td>
         <td>${s.streak}🔥</td>
         <td>${s.keys} 🔑</td>
       </tr>`;
     }).join('');
     const head = document.querySelector('#screen-teacher .t-table thead tr');
-    if (head) head.innerHTML = '<th>Explorer</th><th>Level</th><th>Solved</th><th>Last active</th><th>Success</th><th>Streak</th><th>Keys</th>';
+    if (head) head.innerHTML = '<th>Explorer</th><th>Level</th><th>Solved</th><th>Last active</th><th>Success</th><th>Mastered</th><th>Due</th><th>Streak</th><th>Keys</th>';
     renderMasteryPanel(data.mastery);
   } catch (e) { /* keep the mock view */ }
 }

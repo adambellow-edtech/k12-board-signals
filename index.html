@@ -134,12 +134,13 @@
       <button class="back-btn" data-back-title>← Sign out</button>
     </div>
     <div class="dash-grid">
+      <div class="board span2" id="t-summary"></div>
       <div class="board span2">
         <h3>Class roster</h3>
         <p class="note">The demo player appears in this roster as “⭐you” — play as a student and watch your row update.</p>
         <div class="t-table-wrap">
           <table class="t-table">
-            <thead><tr><th>Explorer</th><th>Level</th><th>Games</th><th>Avg min</th><th>Success</th><th>Streak</th><th>Arcade</th></tr></thead>
+            <thead id="t-thead"><tr><th>Explorer</th><th>Level</th><th>Games</th><th>Success</th><th>Mastered</th><th>Due</th><th>Streak</th><th>Arcade</th></tr></thead>
             <tbody id="t-roster"></tbody>
           </table>
         </div>
