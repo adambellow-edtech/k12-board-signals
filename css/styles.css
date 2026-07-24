@@ -796,6 +796,12 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
 }
 .ord-hint { text-align: center; font-weight: 700; color: var(--ink-soft); font-size: 13px; margin-bottom: 6px; }
 .pz-key.orderkey { min-width: 54px; font-size: 20px; }
+.sp-head { display: flex; justify-content: space-between; font-weight: 800; font-size: 13px; color: var(--ink); margin-bottom: 5px; }
+.sp-head #sp-time { font-variant-numeric: tabular-nums; color: var(--blue); }
+.sp-track { height: 14px; border-radius: 99px; background: #e6ecf6; overflow: hidden; border: 1.5px solid var(--cream-edge); }
+.sp-bar { height: 100%; width: 100%; background: #26b59d; border-radius: 99px; transition: width .1s linear, background .3s ease; }
+.pz-key.speedkey { min-width: 88px; font-size: 26px; font-weight: 900; }
+.pz-key.speedkey.wrong { border-color: #e0607a; color: #c23a56; animation: shake .3s; }
 
 /* key catcher */
 #kc-canvas { width: 100%; height: min(60vh, 460px); border-radius: 16px; display: block; touch-action: none; }

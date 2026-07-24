@@ -78,6 +78,13 @@ const DATA = {
     { type: 'cipher', subject: 'Logic · Ciphers', clue: 'A coded message glows on the door. Use the key to decode the secret word!', cipherKey: { '◆': 'M', '●': 'O', '■': 'N' }, coded: '◆●●■', answer: 'MOON', hint: 'Swap each symbol for its letter: ◆●●■.' },
     { type: 'logic', subject: 'Logic · Deduction', clue: 'Four keys hang on the wall. Which one opens the chest?', clues: ['The key is NOT red.', 'Its number is EVEN.', 'Its number is GREATER than 5.'], options: [{ label: '3', color: '#e63946' }, { label: '4', color: '#3d7bd9' }, { label: '6', color: '#57c26b' }, { label: '5', color: '#e8a30c' }], answer: '6', hint: 'Even, bigger than 5, and not the red one.' },
     { type: 'order', subject: 'Math · Sequencing', clue: 'Arrange the numbers from SMALLEST to LARGEST to line up the tumblers.', tiles: ['7', '3', '9', '5'], answer: ['3', '5', '7', '9'], hint: 'Start with the smallest number.' },
+    { type: 'speed', subject: 'Math · Fluency', clue: 'Quick-fire round! Answer them all before the timer runs out.', timeLimit: 18, questions: [
+      { q: '3 × 4 = ?', answer: '12', choices: ['10', '12', '16'] },
+      { q: '6 + 7 = ?', answer: '13', choices: ['12', '13', '15'] },
+      { q: '15 − 8 = ?', answer: '7', choices: ['6', '7', '9'] },
+      { q: '2 × 8 = ?', answer: '16', choices: ['14', '16', '18'] },
+      { q: '9 + 5 = ?', answer: '14', choices: ['13', '14', '16'] },
+    ], hint: 'You know these — trust your first instinct!' },
   ],
 
   // Review bank: fresh problems per standard, drawn when a card comes due so the

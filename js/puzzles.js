@@ -89,6 +89,7 @@ function startPuzzle({ title, ctxLabel, locks, onWin, celType = 'standard' }) {
 }
 
 function closePuzzle() {
+  clearInterval(puzzle.speedTimer);
   document.getElementById('puzzle-modal').classList.remove('open');
 }
 
@@ -96,6 +97,7 @@ function renderLock() {
   const lk = puzzle.locks[puzzle.idx];
   puzzle.entry = [];
   puzzle.lockAttempts = 0;
+  clearInterval(puzzle.speedTimer);
   document.getElementById('pz-step').textContent =
     puzzle.locks.length > 1 ? `Lock ${puzzle.idx + 1} of ${puzzle.locks.length}` : 'One lock stands in your way';
   document.getElementById('pz-clue').textContent = lk.clue;
@@ -208,7 +210,67 @@ function renderLock() {
       addKey(t, () => { if (puzzle.entry.length < lk.answer.length) { puzzle.entry.push(t); blip(500 + puzzle.entry.length * 50); updateEntryDisplay('order'); } }, 'orderkey'));
     addKey('⌫', () => { puzzle.entry.pop(); updateEntryDisplay('order'); blip(300); }, 'wide');
     addKey('TRY IT', () => submitEntry(lk, puzzle.entry.join(',')), 'go wide');
+  } else if (lk.type === 'speed') {
+    runSpeedLock(lk);
   }
+}
+
+/* Speed lock (fluency archetype): answer a rapid set of questions before the
+   timer runs out. Low-stakes — running out just restarts the round. */
+function runSpeedLock(lk) {
+  const extra = document.getElementById('pz-extra');
+  const disp = document.getElementById('pz-display');
+  const pad = document.getElementById('pz-pad');
+  const clue = document.getElementById('pz-clue');
+  const qs = lk.questions, total = qs.length, timeLimit = lk.timeLimit || 18;
+  disp.dataset.slots = '0'; disp.innerHTML = '';
+  if (extra) extra.innerHTML = `<div class="sp-head"><span id="sp-count"></span><span id="sp-time"></span></div><div class="sp-track"><div class="sp-bar" id="sp-bar"></div></div>`;
+  let qi = 0, tLeft = timeLimit, ended = false;
+
+  const paint = () => {
+    const bar = document.getElementById('sp-bar'), tm = document.getElementById('sp-time');
+    const pct = Math.max(0, (tLeft / timeLimit) * 100);
+    if (bar) { bar.style.width = pct + '%'; bar.style.background = pct < 30 ? '#e0607a' : pct < 60 ? '#f4a11e' : '#26b59d'; }
+    if (tm) tm.textContent = Math.max(0, tLeft).toFixed(1) + 's';
+  };
+  const renderQ = () => {
+    const q = qs[qi];
+    clue.textContent = q.q;
+    const c = document.getElementById('sp-count'); if (c) c.textContent = `Question ${qi + 1} of ${total}`;
+    pad.innerHTML = '';
+    shuffle(q.choices.slice()).forEach(ch => {
+      const b = document.createElement('button');
+      b.className = 'pz-key speedkey'; b.textContent = ch;
+      b.onclick = () => {
+        if (ended) return;
+        if (String(ch) === String(q.answer)) {
+          blip(720 + qi * 40); qi++;
+          if (qi >= total) { ended = true; clearInterval(puzzle.speedTimer); puzzle.attempts++; puzzle.lockAttempts++; openLock(lk); }
+          else renderQ();
+        } else { buzz(); tLeft = Math.max(0.1, tLeft - 2); b.classList.add('wrong'); paint(); }
+      };
+      pad.appendChild(b);
+    });
+  };
+  const startTimer = () => {
+    clearInterval(puzzle.speedTimer);
+    puzzle.speedTimer = setInterval(() => {
+      if (ended) return;
+      tLeft -= 0.1; paint();
+      if (tLeft <= 0) {
+        ended = true; clearInterval(puzzle.speedTimer);
+        puzzle.attempts++; puzzle.lockAttempts++;
+        const lockEl = document.getElementById('pz-lock');
+        lockEl.classList.remove('shake'); void lockEl.offsetWidth; lockEl.classList.add('shake'); buzz();
+        toast('⏱ Out of time! Take a breath and go again.');
+        setTimeout(() => {
+          if (!document.getElementById('puzzle-modal').classList.contains('open')) return; // player left
+          qi = 0; tLeft = timeLimit; ended = false; paint(); renderQ(); startTimer();
+        }, 1000);
+      }
+    }, 100);
+  };
+  paint(); renderQ(); startTimer();
 }
 
 function updateEntryDisplay(kind) {
@@ -271,6 +333,33 @@ function lockOpenMoment() {
   }
 }
 
+/* Shared "this lock opened" path — used by the standard entry locks and by the
+   speed lock. Assumes puzzle.lockAttempts is already set for this lock. */
+function openLock(lk) {
+  clearInterval(puzzle.speedTimer);
+  lockOpenMoment();
+  document.getElementById('pz-lock').classList.add('open-anim');
+  if (puzzle.lockAttempts === 1) awardBadge('thinker');
+  if (puzzle.lockAttempts >= 3) awardBadge('persistent');
+  track('lock_solved', { lockId: lockIdOf(lk), lockType: lk.type, standards: lk.standards || [], attempts: puzzle.lockAttempts, seconds: Math.round((Date.now() - puzzle.t0) / 1000) });
+  if (typeof srReview === 'function') (lk.standards || []).forEach(code => srReview(code, srQuality(puzzle.lockAttempts)));
+  if (typeof adaptiveRecord === 'function') adaptiveRecord(puzzle.lockAttempts, Math.round((Date.now() - puzzle.t0) / 1000));
+  setTimeout(() => {
+    puzzle.idx++;
+    if (puzzle.idx < puzzle.locks.length) {
+      toast('Click! One down — next lock! 🔓');
+      renderLock();
+    } else {
+      const seconds = Math.round((Date.now() - puzzle.t0) / 1000);
+      track('time_thinking_ms', { ms: Date.now() - puzzle.t0, context: puzzle.title });
+      closePuzzle();
+      let type = puzzle.celType || 'standard';
+      if (type === 'standard' && puzzle.attempts === 1) type = 'flawless';
+      celebration(puzzle.title, puzzle.attempts, seconds, () => puzzle.onWin({ attempts: puzzle.attempts, seconds }), type);
+    }
+  }, 750);
+}
+
 function submitEntry(lk, entered) {
   const want = Array.isArray(lk.answer) ? lk.answer.join(',') : String(lk.answer).toUpperCase();
   const got = String(entered).toUpperCase();
@@ -278,31 +367,7 @@ function submitEntry(lk, entered) {
   const correct = got === want.toUpperCase();
   track('lock_attempt', { lockId: lockIdOf(lk), lockType: lk.type, standards: lk.standards || [], correct, attemptNo: puzzle.lockAttempts });
   if (correct) {
-    // lock pops open — the signature moment
-    lockOpenMoment();
-    document.getElementById('pz-lock').classList.add('open-anim');
-    if (puzzle.lockAttempts === 1) awardBadge('thinker');
-    if (puzzle.lockAttempts >= 3) awardBadge('persistent');
-    track('lock_solved', { lockId: lockIdOf(lk), lockType: lk.type, standards: lk.standards || [], attempts: puzzle.lockAttempts, seconds: Math.round((Date.now() - puzzle.t0) / 1000) });
-    // feed the spaced-repetition scheduler: struggle brings a concept back soon
-    if (typeof srReview === 'function') (lk.standards || []).forEach(code => srReview(code, srQuality(puzzle.lockAttempts)));
-    // feed the adaptive-difficulty estimate (rolling accuracy + speed)
-    if (typeof adaptiveRecord === 'function') adaptiveRecord(puzzle.lockAttempts, Math.round((Date.now() - puzzle.t0) / 1000));
-    setTimeout(() => {
-      puzzle.idx++;
-      if (puzzle.idx < puzzle.locks.length) {
-        toast('Click! One down — next lock! 🔓');
-        renderLock();
-      } else {
-        const seconds = Math.round((Date.now() - puzzle.t0) / 1000);
-        track('time_thinking_ms', { ms: Date.now() - puzzle.t0, context: puzzle.title });
-        closePuzzle();
-        // resolve the tier: an explicit type wins; otherwise a no-miss run is Flawless
-        let type = puzzle.celType || 'standard';
-        if (type === 'standard' && puzzle.attempts === 1) type = 'flawless';
-        celebration(puzzle.title, puzzle.attempts, seconds, () => puzzle.onWin({ attempts: puzzle.attempts, seconds }), type);
-      }
-    }, 750);
+    openLock(lk);
   } else {
     buzz();
     const lockEl = document.getElementById('pz-lock');
