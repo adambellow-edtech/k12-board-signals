@@ -716,7 +716,8 @@ function renderMathMap() {
   const grade = state.mathGrade;
   const unit = DATA.mathUnits[grade];
   document.getElementById('math-unit').textContent = unit.unit;
-  document.getElementById('math-skills').textContent = unit.skills;
+  const lvl = (typeof adaptiveAbility === 'function') ? ` · 🎯 Challenge level ${adaptiveAbility().toFixed(1)}` : '';
+  document.getElementById('math-skills').textContent = unit.skills + lvl;
 
   // grade pills
   const gp = document.getElementById('grade-pills');
@@ -796,9 +797,17 @@ function startMathNode(grade, i) {
   const type = DATA.mathTrail[i];
   const probs = DATA.mathProblems[grade];
   const count = type === 'boss' ? 3 : type === 'challenge' ? 2 : 1;
+  // adaptive difficulty: pick each problem's grade near the trail grade, nudged
+  // by rolling ability. Reviews lean easier; challenges & bosses lean harder.
+  const base = (typeof adaptiveProblemGrade === 'function') ? adaptiveProblemGrade(grade) : grade;
   const locks = Array.from({ length: count }, (_, j) => {
-    const p = probs[(i + j) % probs.length];
-    return { type: 'number', clue: p.clue, answer: p.answer, hint: 'Draw it out or count it up — you’ve got this.' };
+    let pg = base;
+    if (type === 'review') pg = Math.max(1, Math.min(base, grade));
+    else if (type === 'challenge' || type === 'boss') pg = Math.min(5, Math.max(base, grade));
+    const pool = DATA.mathProblems[pg] || probs;
+    const p = pool[(i + j) % pool.length];
+    const tier = pg > grade ? `Stretch · Grade ${pg}` : pg < grade ? `Warm-up · Grade ${pg}` : null;
+    return { type: 'number', clue: p.clue, answer: p.answer, subject: tier, hint: 'Draw it out or count it up — you’ve got this.' };
   });
   const unit = DATA.mathUnits[grade].unit;
   startPuzzle({

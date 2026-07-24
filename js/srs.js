@@ -62,3 +62,36 @@ function srMasteredCount() { return Object.values(srCards()).filter(c => c.maste
 
 // map a lock's attempt count to a review quality
 function srQuality(attempts) { return attempts <= 1 ? 'good' : attempts <= 2 ? 'ok' : 'hard'; }
+
+/* ---- adaptive difficulty: keep the student in their zone of proximal development ----
+   A rolling ability estimate (a float grade) rises with fast first-try solves and
+   falls when a concept is a struggle, so the Math Trail can stretch strong
+   students and scaffold those who need it, without ever leaving their grade far
+   behind. Seeded from the stealth placement. */
+function adaptiveAbility() {
+  if (typeof state.ability !== 'number') {
+    state.ability = (state.placement && state.placement.grade) || state.mathGrade || 3;
+  }
+  return state.ability;
+}
+function adaptiveRecord(attempts, seconds) {
+  let a = adaptiveAbility(), delta;
+  if (attempts <= 1) delta = seconds <= 45 ? 0.09 : 0.05;   // recalled cleanly
+  else if (attempts === 2) delta = 0.01;                    // got there
+  else delta = -0.11;                                       // a real struggle
+  a = Math.max(1, Math.min(5.9, a + delta));
+  state.ability = a;
+  if (typeof saveState === 'function') saveState();
+  return a;
+}
+// pick the problem grade for a math node: near the chosen grade, nudged by ability
+function adaptiveProblemGrade(anchor) {
+  let g = Math.round(adaptiveAbility());
+  g = Math.max(anchor - 1, Math.min(anchor + 1, g));
+  g = Math.max(1, Math.min(5, g));
+  return (typeof DATA !== 'undefined' && DATA.mathProblems[g]) ? g : anchor;
+}
+function adaptiveTier(anchor) {
+  const g = adaptiveProblemGrade(anchor);
+  return g > anchor ? 'stretch' : g < anchor ? 'support' : 'onlevel';
+}

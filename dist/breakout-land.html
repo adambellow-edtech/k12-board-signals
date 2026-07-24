@@ -1754,6 +1754,7 @@ const defaultState = () => ({
   placement: null,          // { grade, score } from the stealth placement expedition
   srCards: {},              // spaced-repetition memory cards, keyed by standard code
   srNudged: null,           // date we last nudged about due reviews
+  ability: null,            // rolling ability estimate (float grade) for adaptive difficulty
 });
 
 let state = defaultState();
@@ -1974,6 +1975,39 @@ function srMasteredCount() { return Object.values(srCards()).filter(c => c.maste
 
 // map a lock's attempt count to a review quality
 function srQuality(attempts) { return attempts <= 1 ? 'good' : attempts <= 2 ? 'ok' : 'hard'; }
+
+/* ---- adaptive difficulty: keep the student in their zone of proximal development ----
+   A rolling ability estimate (a float grade) rises with fast first-try solves and
+   falls when a concept is a struggle, so the Math Trail can stretch strong
+   students and scaffold those who need it, without ever leaving their grade far
+   behind. Seeded from the stealth placement. */
+function adaptiveAbility() {
+  if (typeof state.ability !== 'number') {
+    state.ability = (state.placement && state.placement.grade) || state.mathGrade || 3;
+  }
+  return state.ability;
+}
+function adaptiveRecord(attempts, seconds) {
+  let a = adaptiveAbility(), delta;
+  if (attempts <= 1) delta = seconds <= 45 ? 0.09 : 0.05;   // recalled cleanly
+  else if (attempts === 2) delta = 0.01;                    // got there
+  else delta = -0.11;                                       // a real struggle
+  a = Math.max(1, Math.min(5.9, a + delta));
+  state.ability = a;
+  if (typeof saveState === 'function') saveState();
+  return a;
+}
+// pick the problem grade for a math node: near the chosen grade, nudged by ability
+function adaptiveProblemGrade(anchor) {
+  let g = Math.round(adaptiveAbility());
+  g = Math.max(anchor - 1, Math.min(anchor + 1, g));
+  g = Math.max(1, Math.min(5, g));
+  return (typeof DATA !== 'undefined' && DATA.mathProblems[g]) ? g : anchor;
+}
+function adaptiveTier(anchor) {
+  const g = adaptiveProblemGrade(anchor);
+  return g > anchor ? 'stretch' : g < anchor ? 'support' : 'onlevel';
+}
 
 
 /* Breakout Land — lock puzzle engine, celebration, sounds, toasts */
@@ -2231,6 +2265,8 @@ function submitEntry(lk, entered) {
     track('lock_solved', { lockId: lockIdOf(lk), lockType: lk.type, standards: lk.standards || [], attempts: puzzle.lockAttempts, seconds: Math.round((Date.now() - puzzle.t0) / 1000) });
     // feed the spaced-repetition scheduler: struggle brings a concept back soon
     if (typeof srReview === 'function') (lk.standards || []).forEach(code => srReview(code, srQuality(puzzle.lockAttempts)));
+    // feed the adaptive-difficulty estimate (rolling accuracy + speed)
+    if (typeof adaptiveRecord === 'function') adaptiveRecord(puzzle.lockAttempts, Math.round((Date.now() - puzzle.t0) / 1000));
     setTimeout(() => {
       puzzle.idx++;
       if (puzzle.idx < puzzle.locks.length) {
@@ -4220,7 +4256,8 @@ function renderMathMap() {
   const grade = state.mathGrade;
   const unit = DATA.mathUnits[grade];
   document.getElementById('math-unit').textContent = unit.unit;
-  document.getElementById('math-skills').textContent = unit.skills;
+  const lvl = (typeof adaptiveAbility === 'function') ? ` · 🎯 Challenge level ${adaptiveAbility().toFixed(1)}` : '';
+  document.getElementById('math-skills').textContent = unit.skills + lvl;
 
   // grade pills
   const gp = document.getElementById('grade-pills');
@@ -4300,9 +4337,17 @@ function startMathNode(grade, i) {
   const type = DATA.mathTrail[i];
   const probs = DATA.mathProblems[grade];
   const count = type === 'boss' ? 3 : type === 'challenge' ? 2 : 1;
+  // adaptive difficulty: pick each problem's grade near the trail grade, nudged
+  // by rolling ability. Reviews lean easier; challenges & bosses lean harder.
+  const base = (typeof adaptiveProblemGrade === 'function') ? adaptiveProblemGrade(grade) : grade;
   const locks = Array.from({ length: count }, (_, j) => {
-    const p = probs[(i + j) % probs.length];
-    return { type: 'number', clue: p.clue, answer: p.answer, hint: 'Draw it out or count it up — you’ve got this.' };
+    let pg = base;
+    if (type === 'review') pg = Math.max(1, Math.min(base, grade));
+    else if (type === 'challenge' || type === 'boss') pg = Math.min(5, Math.max(base, grade));
+    const pool = DATA.mathProblems[pg] || probs;
+    const p = pool[(i + j) % pool.length];
+    const tier = pg > grade ? `Stretch · Grade ${pg}` : pg < grade ? `Warm-up · Grade ${pg}` : null;
+    return { type: 'number', clue: p.clue, answer: p.answer, subject: tier, hint: 'Draw it out or count it up — you’ve got this.' };
   });
   const unit = DATA.mathUnits[grade].unit;
   startPuzzle({

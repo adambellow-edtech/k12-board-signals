@@ -253,6 +253,8 @@ function submitEntry(lk, entered) {
     track('lock_solved', { lockId: lockIdOf(lk), lockType: lk.type, standards: lk.standards || [], attempts: puzzle.lockAttempts, seconds: Math.round((Date.now() - puzzle.t0) / 1000) });
     // feed the spaced-repetition scheduler: struggle brings a concept back soon
     if (typeof srReview === 'function') (lk.standards || []).forEach(code => srReview(code, srQuality(puzzle.lockAttempts)));
+    // feed the adaptive-difficulty estimate (rolling accuracy + speed)
+    if (typeof adaptiveRecord === 'function') adaptiveRecord(puzzle.lockAttempts, Math.round((Date.now() - puzzle.t0) / 1000));
     setTimeout(() => {
       puzzle.idx++;
       if (puzzle.idx < puzzle.locks.length) {

@@ -35,6 +35,7 @@ const defaultState = () => ({
   placement: null,          // { grade, score } from the stealth placement expedition
   srCards: {},              // spaced-repetition memory cards, keyed by standard code
   srNudged: null,           // date we last nudged about due reviews
+  ability: null,            // rolling ability estimate (float grade) for adaptive difficulty
 });
 
 let state = defaultState();
