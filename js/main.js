@@ -16,6 +16,15 @@ function boot() {
   track('session_start', { role: state.created ? 'student' : 'new' });
   setupDevOverlay();
 
+  // returning from an SSO redirect: the backend hands back a teacher token in the
+  // URL fragment. Adopt it and jump straight to the dashboard.
+  const m = location.hash.match(/sso_token=([^&]+)/);
+  if (m && typeof api !== 'undefined') {
+    api.teacherToken = decodeURIComponent(m[1]);
+    history.replaceState(null, '', location.pathname + location.search);
+    if (typeof openTeacher === 'function') setTimeout(openTeacher, 0);
+  }
+
   // painted art assets (inlined as data URIs in the single-file build)
   const A = (typeof window !== 'undefined' && window.ASSETS) || {};
   const abs = (p) => p.startsWith('data:') ? p : new URL(p, document.baseURI).href;
@@ -39,7 +48,7 @@ function boot() {
     // first-timers: opening narrative hook, then build a character (deferred signup)
     showOpeningHook(() => openAvatarCreator(false));
   };
-  document.getElementById('t-teacher').onclick = () => { blip(700); openTeacher(); };
+  document.getElementById('t-teacher').onclick = () => { blip(700); openTeacherSignin(); };
   document.getElementById('t-parent').onclick = () => { blip(700); openParent(); };
 
   // avatar creator done

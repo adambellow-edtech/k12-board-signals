@@ -4,7 +4,7 @@
 import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import * as db from './db.js';
-import { issueToken, verifyToken, getProvider } from './auth.js';
+import { issueToken, verifyToken, getProvider, ssoProviders, ssoConfigured, ssoAuthorizeUrl, ssoExchange } from './auth.js';
 
 const PORT = process.env.PORT || 4000;
 
@@ -71,6 +71,36 @@ route('GET', '/api/me', async (req, res) => {
   const claim = auth(req);
   if (!claim) return send(res, 401, { error: 'unauthorized' });
   send(res, 200, { user: claim });
+});
+
+/* ---- SSO (Google / Clever / ClassLink) ---- */
+route('GET', '/api/auth/sso/providers', async (req, res) => {
+  send(res, 200, { providers: ssoProviders().map(p => ({ id: p, configured: ssoConfigured(p) })) });
+});
+route('GET', '/api/auth/sso/:provider/start', async (req, res, params) => {
+  const url = new URL(req.url, 'http://x');
+  const role = url.searchParams.get('role') || 'teacher';
+  const redirectUri = url.searchParams.get('redirect_uri') || `${process.env.PUBLIC_URL || ''}/api/auth/sso/${params.provider}/callback`;
+  const state = Buffer.from(JSON.stringify({ role, n: randomUUID().slice(0, 8) })).toString('base64url');
+  const authUrl = ssoAuthorizeUrl(params.provider, { redirectUri, state });
+  if (!authUrl) return send(res, 404, { error: 'unknown provider' });
+  send(res, 200, { url: authUrl, demo: !ssoConfigured(params.provider), state });
+});
+route('GET', '/api/auth/sso/:provider/callback', async (req, res, params) => {
+  const url = new URL(req.url, 'http://x');
+  const code = url.searchParams.get('code') || '';
+  const redirectUri = `${process.env.PUBLIC_URL || ''}/api/auth/sso/${params.provider}/callback`;
+  let identity;
+  try { identity = await ssoExchange(params.provider, { code, redirectUri }); }
+  catch (e) { return send(res, 502, { error: 'sso exchange failed' }); }
+  // SSO provisions staff accounts; students join with class codes
+  let teacher = identity.email ? db.getTeacherByEmail(identity.email) : null;
+  if (!teacher) teacher = db.createTeacher({ name: identity.name, email: identity.email, provider: params.provider });
+  const existing = db._rawDb().prepare('SELECT * FROM classes WHERE teacher_id=? LIMIT 1').get(teacher.id);
+  const cls = existing || db.createClass({ teacherId: teacher.id, name: 'My Class', grade: '3' });
+  const token = issueToken({ uid: teacher.id, role: 'teacher', name: teacher.name });
+  if (url.searchParams.get('json')) return send(res, 200, { token, teacher, class: cls, demo: !!identity.demo });
+  res.writeHead(302, { location: `${process.env.APP_URL || '/'}#sso_token=${token}` }); res.end();
 });
 
 // Load / save a student's world state. Student owns theirs; their teacher may read.

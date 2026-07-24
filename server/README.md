@@ -39,6 +39,34 @@ When configured, the client registers the student on avatar creation (deferred s
 | POST | `/api/events` | student | analytics ingestion (batch) |
 | GET  | `/api/classes/:id/roster` | class teacher | real roster + per-standard mastery |
 | PUT  | `/api/classes/:id/access` | class teacher | world access mode: `always` \| `school` \| `never` |
+| POST | `/api/classes/:id/breakout/start` | class teacher | start a Class Breakout live session |
+| GET  | `/api/classes/:id/breakout` | token | current live session for the class |
+| POST | `/api/breakout/:sid/solve` | student | record a cooperative solve (broadcasts) |
+| GET  | `/api/breakout/:sid/stream` | sid | Server-Sent Events stream of live session state |
+| GET  | `/api/auth/sso/providers` | any | which SSO providers are configured |
+| GET  | `/api/auth/sso/:provider/start` | any | begin an SSO login (returns the authorize URL) |
+| GET  | `/api/auth/sso/:provider/callback` | any | OAuth callback → provisions a teacher, issues a token |
+
+## SSO (Google / Clever / ClassLink)
+
+The `auth.js` provider layer is real OAuth2, config-driven. Until a provider's
+`*_CLIENT_ID` is set it runs in **demo mode** (deterministic identity, no network)
+so the flow is exercisable locally and in the offline build. To go live, register
+the app with each provider, set a redirect URI of
+`https://your-host/api/auth/sso/<provider>/callback`, and set:
+
+| Var | Provider |
+|---|---|
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google |
+| `CLEVER_CLIENT_ID` / `CLEVER_CLIENT_SECRET` (+ `CLEVER_DISTRICT_ID`) | Clever |
+| `CLASSLINK_CLIENT_ID` / `CLASSLINK_CLIENT_SECRET` | ClassLink |
+| `PUBLIC_URL` | base URL for building redirect URIs |
+| `APP_URL` | where the callback redirects back with `#sso_token=…` |
+
+Google trusts the `id_token` returned by its token endpoint (delivered over TLS);
+Clever and ClassLink use the access token to read the user profile. SSO provisions
+**staff** accounts; students still join with a class code. The client shows
+Sign-in-with buttons on the teacher entry and adopts the `#sso_token` on return.
 
 ## Design notes
 

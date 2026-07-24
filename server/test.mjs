@@ -106,6 +106,20 @@ ok(update.includes('"2"'), 'a student solve broadcasts over SSE to subscribers')
 ok((await api('POST', `/api/breakout/${sid}/solve`, { token: teacherToken, body: { lockIndex: 0 } })).status === 403, 'teacher token cannot post a solve');
 try { await reader.cancel(); } catch (e) {}
 
+// ---- SSO (demo mode, since no real client IDs in tests) ----
+const ssoList = await api('GET', '/api/auth/sso/providers');
+ok(ssoList.status === 200 && ssoList.json.providers.length === 3, 'lists Google, Clever, ClassLink');
+ok(ssoList.json.providers.every(p => p.configured === false), 'providers report demo (unconfigured) in tests');
+const gStart = await api('GET', '/api/auth/sso/google/start?role=teacher');
+ok(gStart.status === 200 && gStart.json.demo === true && gStart.json.url.startsWith('demo://google'), 'google start returns a demo authorize url + state');
+const gCb = await api('GET', `/api/auth/sso/google/callback?code=abc&state=${encodeURIComponent(gStart.json.state)}&json=1`);
+ok(gCb.status === 200 && gCb.json.token, 'google demo callback issues a teacher token');
+ok(gCb.json.teacher && gCb.json.class && gCb.json.class.join_code, 'google demo callback provisions a teacher + class');
+const who = await api('GET', '/api/me', { token: gCb.json.token });
+ok(who.status === 200 && who.json.user.role === 'teacher', 'SSO token authenticates as a teacher');
+const cleverStart = await api('GET', '/api/auth/sso/clever/start');
+ok(cleverStart.status === 200 && cleverStart.json.url.includes('clever'), 'clever start returns an authorize url');
+
 server.close();
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

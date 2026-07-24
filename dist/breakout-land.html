@@ -574,6 +574,21 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .shield-note { font-size: 13px; margin: 8px 0; }
 .shield-note strong { color: var(--blue); }
 
+/* ---- teacher SSO sign-in ---- */
+.signin-card { max-width: 400px; text-align: center; }
+.sso-btns { display: flex; flex-direction: column; gap: 10px; margin: 16px 0 12px; }
+.sso-btn {
+  display: flex; align-items: center; gap: 12px; justify-content: flex-start;
+  padding: 12px 16px; border-radius: 14px; border: 2px solid var(--cream-edge);
+  background: var(--white); font-weight: 800; font-size: 15px; color: var(--ink); cursor: pointer;
+  transition: transform .12s ease, border-color .15s ease;
+}
+.sso-btn:hover { border-color: var(--blue); transform: translateY(-2px); }
+.sso-mark {
+  width: 30px; height: 30px; border-radius: 8px; color: #fff; font-weight: 900; font-size: 13px;
+  display: grid; place-items: center; flex: 0 0 auto;
+}
+
 /* ---- Class Breakout live event ---- */
 #breakout-cta {
   position: fixed; left: 50%; top: 108px; transform: translate(-50%, -14px);
@@ -1109,6 +1124,18 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
     <p class="muted center">How often will you explore Breakout Land? Pick your daily goal. You can change it anytime.</p>
     <div id="quest-goals" class="quest-goals"></div>
     <button class="btn-big" id="quest-start" disabled>Start my quest!</button>
+  </div>
+</div>
+
+<!-- ============ TEACHER SIGN-IN (SSO) ============ -->
+<div class="modal" id="signin-modal">
+  <div class="modal-card board signin-card">
+    <button class="modal-close" id="signin-close" aria-label="Close">✕</button>
+    <div class="big-emoji">🍎</div>
+    <h2>Teacher sign-in</h2>
+    <p class="muted center">Sign in with your school account to sync your real class roster, or explore the demo.</p>
+    <div class="sso-btns" id="sso-btns"></div>
+    <button class="btn-small" id="signin-demo">Explore the demo dashboard →</button>
   </div>
 </div>
 
@@ -5009,6 +5036,46 @@ function renderClassSummary(rows) {
     </div>`;
 }
 
+/* ---- Teacher sign-in (SSO) ---- */
+const SSO_PROVIDERS = [
+  { id: 'google', label: 'Google', color: '#4285F4', mark: 'G' },
+  { id: 'clever', label: 'Clever', color: '#436CF7', mark: 'C' },
+  { id: 'classlink', label: 'ClassLink', color: '#f68b1f', mark: 'CL' },
+];
+function openTeacherSignin() {
+  const modal = document.getElementById('signin-modal');
+  const wrap = document.getElementById('sso-btns');
+  wrap.innerHTML = '';
+  SSO_PROVIDERS.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'sso-btn';
+    b.innerHTML = `<span class="sso-mark" style="background:${p.color}">${p.mark}</span> Sign in with ${p.label}`;
+    b.onclick = () => ssoSignIn(p);
+    wrap.appendChild(b);
+  });
+  document.getElementById('signin-demo').onclick = () => { modal.classList.remove('open'); openTeacher(); };
+  document.getElementById('signin-close').onclick = () => modal.classList.remove('open');
+  modal.classList.add('open');
+}
+function ssoSignIn(p) {
+  blip(720);
+  if (typeof api !== 'undefined' && api.enabled && api.enabled()) {
+    // live: ask the backend for the provider's authorize URL, then redirect
+    fetch(`${api.base}/api/auth/sso/${p.id}/start?role=teacher&redirect_uri=${encodeURIComponent(location.origin + '/api/auth/sso/' + p.id + '/callback')}`)
+      .then(r => r.json())
+      .then(j => {
+        if (j.url && !j.demo) { location.href = j.url; }
+        else { toast(`${p.label}: demo sign-in (no client ID configured).`); document.getElementById('signin-modal').classList.remove('open'); openTeacher(); }
+      })
+      .catch(() => { document.getElementById('signin-modal').classList.remove('open'); openTeacher(); });
+  } else {
+    // offline demo: proceed to the dashboard
+    toast(`Signed in with ${p.label} (demo). Production uses real ${p.label} SSO.`);
+    document.getElementById('signin-modal').classList.remove('open');
+    openTeacher();
+  }
+}
+
 /* ---- Teacher dashboard ---- */
 function openTeacher() {
   showScreen('teacher');
@@ -5246,6 +5313,15 @@ function boot() {
   track('session_start', { role: state.created ? 'student' : 'new' });
   setupDevOverlay();
 
+  // returning from an SSO redirect: the backend hands back a teacher token in the
+  // URL fragment. Adopt it and jump straight to the dashboard.
+  const m = location.hash.match(/sso_token=([^&]+)/);
+  if (m && typeof api !== 'undefined') {
+    api.teacherToken = decodeURIComponent(m[1]);
+    history.replaceState(null, '', location.pathname + location.search);
+    if (typeof openTeacher === 'function') setTimeout(openTeacher, 0);
+  }
+
   // painted art assets (inlined as data URIs in the single-file build)
   const A = (typeof window !== 'undefined' && window.ASSETS) || {};
   const abs = (p) => p.startsWith('data:') ? p : new URL(p, document.baseURI).href;
@@ -5269,7 +5345,7 @@ function boot() {
     // first-timers: opening narrative hook, then build a character (deferred signup)
     showOpeningHook(() => openAvatarCreator(false));
   };
-  document.getElementById('t-teacher').onclick = () => { blip(700); openTeacher(); };
+  document.getElementById('t-teacher').onclick = () => { blip(700); openTeacherSignin(); };
   document.getElementById('t-parent').onclick = () => { blip(700); openParent(); };
 
   // avatar creator done

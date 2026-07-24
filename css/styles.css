@@ -571,6 +571,21 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .shield-note { font-size: 13px; margin: 8px 0; }
 .shield-note strong { color: var(--blue); }
 
+/* ---- teacher SSO sign-in ---- */
+.signin-card { max-width: 400px; text-align: center; }
+.sso-btns { display: flex; flex-direction: column; gap: 10px; margin: 16px 0 12px; }
+.sso-btn {
+  display: flex; align-items: center; gap: 12px; justify-content: flex-start;
+  padding: 12px 16px; border-radius: 14px; border: 2px solid var(--cream-edge);
+  background: var(--white); font-weight: 800; font-size: 15px; color: var(--ink); cursor: pointer;
+  transition: transform .12s ease, border-color .15s ease;
+}
+.sso-btn:hover { border-color: var(--blue); transform: translateY(-2px); }
+.sso-mark {
+  width: 30px; height: 30px; border-radius: 8px; color: #fff; font-weight: 900; font-size: 13px;
+  display: grid; place-items: center; flex: 0 0 auto;
+}
+
 /* ---- Class Breakout live event ---- */
 #breakout-cta {
   position: fixed; left: 50%; top: 108px; transform: translate(-50%, -14px);

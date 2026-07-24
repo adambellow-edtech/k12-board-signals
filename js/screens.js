@@ -996,6 +996,46 @@ function renderClassSummary(rows) {
     </div>`;
 }
 
+/* ---- Teacher sign-in (SSO) ---- */
+const SSO_PROVIDERS = [
+  { id: 'google', label: 'Google', color: '#4285F4', mark: 'G' },
+  { id: 'clever', label: 'Clever', color: '#436CF7', mark: 'C' },
+  { id: 'classlink', label: 'ClassLink', color: '#f68b1f', mark: 'CL' },
+];
+function openTeacherSignin() {
+  const modal = document.getElementById('signin-modal');
+  const wrap = document.getElementById('sso-btns');
+  wrap.innerHTML = '';
+  SSO_PROVIDERS.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'sso-btn';
+    b.innerHTML = `<span class="sso-mark" style="background:${p.color}">${p.mark}</span> Sign in with ${p.label}`;
+    b.onclick = () => ssoSignIn(p);
+    wrap.appendChild(b);
+  });
+  document.getElementById('signin-demo').onclick = () => { modal.classList.remove('open'); openTeacher(); };
+  document.getElementById('signin-close').onclick = () => modal.classList.remove('open');
+  modal.classList.add('open');
+}
+function ssoSignIn(p) {
+  blip(720);
+  if (typeof api !== 'undefined' && api.enabled && api.enabled()) {
+    // live: ask the backend for the provider's authorize URL, then redirect
+    fetch(`${api.base}/api/auth/sso/${p.id}/start?role=teacher&redirect_uri=${encodeURIComponent(location.origin + '/api/auth/sso/' + p.id + '/callback')}`)
+      .then(r => r.json())
+      .then(j => {
+        if (j.url && !j.demo) { location.href = j.url; }
+        else { toast(`${p.label}: demo sign-in (no client ID configured).`); document.getElementById('signin-modal').classList.remove('open'); openTeacher(); }
+      })
+      .catch(() => { document.getElementById('signin-modal').classList.remove('open'); openTeacher(); });
+  } else {
+    // offline demo: proceed to the dashboard
+    toast(`Signed in with ${p.label} (demo). Production uses real ${p.label} SSO.`);
+    document.getElementById('signin-modal').classList.remove('open');
+    openTeacher();
+  }
+}
+
 /* ---- Teacher dashboard ---- */
 function openTeacher() {
   showScreen('teacher');
