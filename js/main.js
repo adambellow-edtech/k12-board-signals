@@ -77,6 +77,7 @@ function boot() {
       closeBuildingModal();
       closePuzzle();
       document.getElementById('cel-modal').classList.remove('open');
+      document.getElementById('share-modal').classList.remove('open');
     }
   });
 

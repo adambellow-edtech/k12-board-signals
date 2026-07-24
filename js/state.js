@@ -36,6 +36,7 @@ const defaultState = () => ({
   srCards: {},              // spaced-repetition memory cards, keyed by standard code
   srNudged: null,           // date we last nudged about due reviews
   ability: null,            // rolling ability estimate (float grade) for adaptive difficulty
+  lastDailyResult: null,    // {dateKey, seconds, tries, streak, subject, milestone} for the share card
 });
 
 let state = defaultState();

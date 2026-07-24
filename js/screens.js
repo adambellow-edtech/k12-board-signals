@@ -153,14 +153,19 @@ function renderDaily(title, body) {
     return;
   }
   const done = state.lastDaily === todayKey();
+  const canShare = state.lastDailyResult && state.lastDailyResult.dateKey === todayKey();
   const dailyHtml = done
     ? `<div class="big-emoji">🎉</div>
        <p class="center"><strong>You already cracked today’s lock!</strong></p>
-       <p class="center muted">Streak: ${state.streak} day${state.streak === 1 ? '' : 's'} 🔥 — come back tomorrow to keep it alive.</p>`
+       <p class="center muted">Streak: ${state.streak} day${state.streak === 1 ? '' : 's'} 🔥 — come back tomorrow to keep it alive.</p>
+       ${canShare ? '<button class="btn-big" id="daily-share">📸 Share today’s result</button>' : ''}`
     : `<p class="muted">One fresh lock every day. Crack it to grow your streak and earn <strong>10 🔑 + 25 XP + 5 arcade minutes</strong>.</p>
        <div class="reward-row"><span>🔥 Current streak: <strong>${state.streak}</strong></span></div>
        <button class="btn-big" id="daily-go">Take on today’s lock!</button>`;
   body.innerHTML = dailyHtml + reviewSectionHtml();
+
+  const shareBtn = document.getElementById('daily-share');
+  if (shareBtn) shareBtn.onclick = () => showShareCard(state.lastDailyResult);
 
   const dailyGo = document.getElementById('daily-go');
   if (dailyGo) dailyGo.onclick = () => {
@@ -175,9 +180,14 @@ function renderDaily(title, body) {
       ctxLabel: 'Daily challenge',
       locks: [dailyLock()],
       celType,
-      onWin: () => {
+      onWin: ({ attempts, seconds }) => {
+        const lk = dailyLock();
         completeDaily();
         toast(`+10 🔑  +25 XP  +5 arcade minutes! Streak: ${state.streak} 🔥`);
+        const milestone = [7, 30, 100].includes(state.streak) ? `${state.streak}-DAY STREAK!` : null;
+        state.lastDailyResult = { dateKey: todayKey(), dateStr: shareDateStr(), seconds, tries: attempts, streak: state.streak, subject: lk.subject || 'Daily challenge', milestone };
+        saveState();
+        setTimeout(() => showShareCard(state.lastDailyResult), 500);
       },
     });
   };
@@ -224,6 +234,73 @@ function reviewSession() {
       toast(`Reviews done — those concepts just got stronger! 🧠 +${4 * locks.length} 🔑`);
     },
   });
+}
+
+/* ---- Lock of the Day share cards (Wordle-style, screenshot-ready) ---- */
+function shareDateStr() { return new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+function fmtTime(s) { const m = Math.floor(s / 60); return `${m}:${String(s % 60).padStart(2, '0')}`; }
+function tryRow(tries) { const n = Math.min(6, Math.max(1, tries)); return '🟨'.repeat(n - 1) + '🟩'; }
+function shareText(r) {
+  const badge = r.milestone ? `🏆 ${r.milestone}\n` : '';
+  return `Breakout Land — Lock of the Day (${r.dateStr})\n${badge}🔓 ${tryRow(r.tries)} — ${r.tries} ${r.tries === 1 ? 'try' : 'tries'} in ${fmtTime(r.seconds)}\n🔥 Streak: ${r.streak}\nThink hard. Break out. Play on!`;
+}
+function showShareCard(result) {
+  if (!result) return;
+  const modal = document.getElementById('share-modal');
+  renderShareCard(document.getElementById('share-canvas'), result);
+  modal.classList.add('open');
+  document.getElementById('share-save').onclick = () => {
+    const cv = document.getElementById('share-canvas');
+    const a = document.createElement('a');
+    a.href = cv.toDataURL('image/png'); a.download = `breakout-land-${result.dateKey || 'lock'}.png`;
+    document.body.appendChild(a); a.click(); a.remove(); blip(820);
+    toast('Saved! Share your breakout 🎉');
+  };
+  document.getElementById('share-copy').onclick = async () => {
+    const txt = shareText(result);
+    try { await navigator.clipboard.writeText(txt); toast('Result copied — paste it anywhere! 📋'); }
+    catch (e) {
+      const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand('copy'); } catch (e2) {} ta.remove();
+      toast('Result copied! 📋');
+    }
+  };
+  document.getElementById('share-close').onclick = () => modal.classList.remove('open');
+}
+function renderShareCard(cv, r) {
+  const ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#1c56ad'); bg.addColorStop(.55, '#0d3271'); bg.addColorStop(1, '#071d45');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const gl = ctx.createRadialGradient(W / 2, H * .1, 40, W / 2, H * .1, W * .85);
+  gl.addColorStop(0, 'rgba(255,224,122,.18)'); gl.addColorStop(1, 'rgba(255,224,122,0)');
+  ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.lineWidth = 6; roundRect(ctx, 40, 40, W - 80, H - 80, 44); ctx.stroke();
+  ctx.textAlign = 'center';
+  ctx.font = '900 66px "Helix","Quicksand",system-ui,sans-serif'; ctx.fillStyle = '#ffd75e';
+  ctx.fillText('🔓 BREAKOUT LAND', W / 2, 180);
+  ctx.font = '800 40px system-ui,sans-serif'; ctx.fillStyle = '#9cc4ff';
+  ctx.fillText(`LOCK OF THE DAY · ${r.dateStr}`, W / 2, 248);
+  ctx.font = '900 108px "Helix","Quicksand",system-ui,sans-serif'; ctx.fillStyle = '#fff';
+  ctx.fillText(r.milestone ? `🔥 ${r.milestone}` : 'CRACKED IT!', W / 2, 430);
+  ctx.font = '120px system-ui,sans-serif';
+  ctx.fillText(tryRow(r.tries), W / 2, 600);
+  const chips = [['⏱', fmtTime(r.seconds)], ['🎯', `${r.tries} ${r.tries === 1 ? 'try' : 'tries'}`], ['🔥', `${r.streak} day${r.streak === 1 ? '' : 's'}`]];
+  const cw = 336, gap = 36, totalW = chips.length * cw + (chips.length - 1) * gap, x0 = (W - totalW) / 2, cy = 730, chh = 158;
+  chips.forEach(([ic, val], i) => {
+    const x = x0 + i * (cw + gap);
+    ctx.fillStyle = 'rgba(255,255,255,.08)'; roundRect(ctx, x, cy, cw, chh, 28); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 3; roundRect(ctx, x, cy, cw, chh, 28); ctx.stroke();
+    ctx.font = '64px system-ui,sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(ic, x + cw / 2, cy + 72);
+    ctx.font = '800 46px "Helix",system-ui,sans-serif'; ctx.fillStyle = '#ffd75e'; ctx.fillText(val, x + cw / 2, cy + 132);
+  });
+  ctx.font = '700 42px system-ui,sans-serif'; ctx.fillStyle = '#bcd6ff';
+  ctx.fillText(`Today’s theme: ${r.subject || 'Daily challenge'}`, W / 2, 1060);
+  ctx.font = '800 48px "Helix","Quicksand",system-ui,sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.92)';
+  ctx.fillText('Think hard. Break out. Play on. ✦', W / 2, 1330);
+  ctx.font = '600 34px system-ui,sans-serif'; ctx.fillStyle = '#9cc4ff';
+  ctx.fillText('A Breakout EDU world', W / 2, 1388);
+  ctx.textAlign = 'left';
 }
 
 /* ---- Game Hall ---- */

@@ -568,6 +568,14 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .quest-goal .qg-blurb { font-size: 12.5px; color: var(--ink-soft); margin-left: auto; text-align: right; }
 #quest-start:disabled { opacity: .5; cursor: not-allowed; }
 
+/* ---- Lock of the Day share card ---- */
+.share-wrap { text-align: center; max-width: 440px; }
+#share-canvas {
+  width: min(360px, 78vw); height: auto; border-radius: 18px; display: block;
+  margin: 8px auto 14px; box-shadow: 0 12px 34px rgba(0,20,60,.4);
+}
+.share-actions { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
+
 /* ---- teacher class-summary cards ---- */
 .tsum-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 8px; }
 .tsum {
