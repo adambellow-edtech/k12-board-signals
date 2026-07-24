@@ -766,6 +766,34 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
 .pz-key.switchkey { min-width: 56px; font-size: 13px; }
 .pz-key.shapekey { font-size: 22px; }
 
+/* ---- new lock archetypes: cipher, logic, order ---- */
+#pz-extra:empty { display: none; }
+#pz-extra { margin: 4px 0 10px; }
+.ci-legend { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 10px; }
+.ci-pair {
+  display: inline-flex; flex-direction: column; align-items: center; line-height: 1.05;
+  background: #eef4ff; border: 2px solid var(--cream-edge); border-radius: 10px; padding: 5px 10px;
+}
+.ci-pair b { font-size: 20px; }
+.ci-pair i { font-style: normal; font-weight: 900; font-size: 14px; color: var(--blue); }
+.ci-coded { display: flex; gap: 10px; justify-content: center; }
+.ci-sym {
+  font-size: 30px; width: 46px; height: 46px; display: grid; place-items: center;
+  background: var(--ink); color: #fff; border-radius: 12px;
+}
+.lg-clues { list-style: none; margin: 0 auto 6px; padding: 0; max-width: 420px; text-align: left; }
+.lg-clues li {
+  padding: 8px 12px 8px 34px; margin: 6px 0; border-radius: 10px; position: relative;
+  background: #f2f6ff; border: 2px solid var(--cream-edge); font-weight: 600; color: var(--ink);
+}
+.lg-clues li::before { content: '🔎'; position: absolute; left: 10px; top: 8px; }
+.pz-key.logickey {
+  min-width: 62px; font-size: 24px; font-weight: 900; border-width: 3px;
+  background: var(--white);
+}
+.ord-hint { text-align: center; font-weight: 700; color: var(--ink-soft); font-size: 13px; margin-bottom: 6px; }
+.pz-key.orderkey { min-width: 54px; font-size: 20px; }
+
 /* key catcher */
 #kc-canvas { width: 100%; height: min(60vh, 460px); border-radius: 16px; display: block; touch-action: none; }
 #kc-quit { margin-top: 10px; }

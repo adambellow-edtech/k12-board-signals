@@ -109,7 +109,8 @@ function renderLock() {
 
   const pad = document.getElementById('pz-pad');
   const disp = document.getElementById('pz-display');
-  pad.innerHTML = ''; disp.innerHTML = '';
+  const extra = document.getElementById('pz-extra');
+  pad.innerHTML = ''; disp.innerHTML = ''; if (extra) extra.innerHTML = '';
 
   const addKey = (label, fn, cls = '') => {
     const b = document.createElement('button');
@@ -175,6 +176,38 @@ function renderLock() {
       }, 'switchkey');
     }
     addKey('TRY IT', () => submitEntry(lk, puzzle.entry.join('')), 'go wide');
+  } else if (lk.type === 'cipher') {
+    // decode a coded message using the cipher key, then enter the word
+    if (extra) {
+      const legend = Object.entries(lk.cipherKey).map(([sym, ltr]) => `<span class="ci-pair"><b>${sym}</b><i>${ltr}</i></span>`).join('');
+      const coded = lk.coded.split('').map(sym => `<span class="ci-sym">${sym}</span>`).join('');
+      extra.innerHTML = `<div class="ci-legend">${legend}</div><div class="ci-coded">${coded}</div>`;
+    }
+    disp.dataset.slots = String(lk.answer.length);
+    updateEntryDisplay('letter');
+    const extras = pickExtraLetters(lk.answer);
+    const padCount = Math.max(0, Math.max(10, lk.answer.length + 2) - lk.answer.length);
+    shuffle((lk.answer + extras.slice(0, padCount)).split('')).forEach(ch =>
+      addKey(ch, () => { if (puzzle.entry.length < lk.answer.length) { puzzle.entry.push(ch); blip(520 + puzzle.entry.length * 40); updateEntryDisplay('letter'); } }));
+    addKey('⌫', () => { puzzle.entry.pop(); updateEntryDisplay('letter'); blip(300); }, 'wide');
+    addKey('TRY IT', () => submitEntry(lk, puzzle.entry.join('')), 'go wide');
+  } else if (lk.type === 'logic') {
+    // deduce the right answer from the clues, then tap it
+    if (extra) extra.innerHTML = `<ul class="lg-clues">${lk.clues.map(c => `<li>${c}</li>`).join('')}</ul>`;
+    disp.dataset.slots = '0';
+    lk.options.forEach(opt => {
+      const b = addKey(opt.label, () => submitEntry(lk, opt.label), 'logickey');
+      if (opt.color) { b.style.borderColor = opt.color; b.style.color = opt.color; }
+    });
+  } else if (lk.type === 'order') {
+    // arrange the tiles into the correct sequence
+    if (extra) extra.innerHTML = '<div class="ord-hint">Tap the tiles in the right order</div>';
+    disp.dataset.slots = String(lk.answer.length);
+    updateEntryDisplay('order');
+    shuffle(lk.tiles.slice()).forEach(t =>
+      addKey(t, () => { if (puzzle.entry.length < lk.answer.length) { puzzle.entry.push(t); blip(500 + puzzle.entry.length * 50); updateEntryDisplay('order'); } }, 'orderkey'));
+    addKey('⌫', () => { puzzle.entry.pop(); updateEntryDisplay('order'); blip(300); }, 'wide');
+    addKey('TRY IT', () => submitEntry(lk, puzzle.entry.join(',')), 'go wide');
   }
 }
 

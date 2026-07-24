@@ -75,6 +75,9 @@ const DATA = {
     { type: 'number', subject: 'Math · Time', standards: ['3.MD.A.1'], clue: 'A clock shows 3:15. How many minutes until 4 o’clock?', answer: '45', hint: '60 minutes in an hour.' },
     { type: 'shape', subject: 'Math · Geometry', standards: ['3.G.A.1'], clue: 'The wizard’s door whispers: “First 3 sides, then 4 sides, then no sides at all!”', answer: ['triangle', 'square', 'circle'], hint: 'Count each shape’s sides.' },
     { type: 'switch', subject: 'Math · Odd & Even', standards: ['2.OA.C.3'], clue: 'The power panel hums: “Flip ON only the ODD-numbered switches.”', answer: '10101', hint: 'Odd numbers: 1, 3, 5.' },
+    { type: 'cipher', subject: 'Logic · Ciphers', clue: 'A coded message glows on the door. Use the key to decode the secret word!', cipherKey: { '◆': 'M', '●': 'O', '■': 'N' }, coded: '◆●●■', answer: 'MOON', hint: 'Swap each symbol for its letter: ◆●●■.' },
+    { type: 'logic', subject: 'Logic · Deduction', clue: 'Four keys hang on the wall. Which one opens the chest?', clues: ['The key is NOT red.', 'Its number is EVEN.', 'Its number is GREATER than 5.'], options: [{ label: '3', color: '#e63946' }, { label: '4', color: '#3d7bd9' }, { label: '6', color: '#57c26b' }, { label: '5', color: '#e8a30c' }], answer: '6', hint: 'Even, bigger than 5, and not the red one.' },
+    { type: 'order', subject: 'Math · Sequencing', clue: 'Arrange the numbers from SMALLEST to LARGEST to line up the tumblers.', tiles: ['7', '3', '9', '5'], answer: ['3', '5', '7', '9'], hint: 'Start with the smallest number.' },
   ],
 
   // Review bank: fresh problems per standard, drawn when a card comes due so the
