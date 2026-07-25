@@ -586,6 +586,21 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
   display: grid; place-items: center; flex: 0 0 auto;
 }
 
+/* ---- Signal (pattern-memory arcade game) ---- */
+#signal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 320px; margin: 12px auto; }
+#signal-grid.shake { animation: shake .4s; }
+.sig-pad {
+  aspect-ratio: 1; border: 4px solid rgba(0,0,0,.15); border-radius: 20px; cursor: pointer;
+  background: var(--pc); box-shadow: inset 0 -6px 0 rgba(0,0,0,.15); opacity: .82;
+  transition: opacity .1s ease, transform .08s ease, box-shadow .1s ease;
+}
+.sig-pad:active { transform: scale(.96); }
+.sig-pad.lit {
+  opacity: 1; background: var(--pl);
+  box-shadow: 0 0 0 4px #fff, 0 0 28px 6px var(--pc), inset 0 -6px 0 rgba(0,0,0,.08);
+  transform: scale(1.04);
+}
+
 /* ---- Class Breakout live event ---- */
 #breakout-cta {
   position: fixed; left: 50%; top: 108px; transform: translate(-50%, -14px);

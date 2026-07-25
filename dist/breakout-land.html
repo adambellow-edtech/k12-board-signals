@@ -589,6 +589,21 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
   display: grid; place-items: center; flex: 0 0 auto;
 }
 
+/* ---- Signal (pattern-memory arcade game) ---- */
+#signal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 320px; margin: 12px auto; }
+#signal-grid.shake { animation: shake .4s; }
+.sig-pad {
+  aspect-ratio: 1; border: 4px solid rgba(0,0,0,.15); border-radius: 20px; cursor: pointer;
+  background: var(--pc); box-shadow: inset 0 -6px 0 rgba(0,0,0,.15); opacity: .82;
+  transition: opacity .1s ease, transform .08s ease, box-shadow .1s ease;
+}
+.sig-pad:active { transform: scale(.96); }
+.sig-pad.lit {
+  opacity: 1; background: var(--pl);
+  box-shadow: 0 0 0 4px #fff, 0 0 28px 6px var(--pc), inset 0 -6px 0 rgba(0,0,0,.08);
+  transform: scale(1.04);
+}
+
 /* ---- Class Breakout live event ---- */
 #breakout-cta {
   position: fixed; left: 50%; top: 108px; transform: translate(-50%, -14px);
@@ -1215,6 +1230,16 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
     <p class="muted" id="mm-status">Find all 6 pairs!</p>
     <div id="mm-grid"></div>
     <button class="btn-small" id="mm-quit">Quit round</button>
+  </div>
+</div>
+
+<!-- ============ SIGNAL (pattern memory) ============ -->
+<div class="modal" id="signal-modal">
+  <div class="modal-card board">
+    <h2>🔔 Signal</h2>
+    <p class="muted" id="signal-status">Watch the pattern…</p>
+    <div id="signal-grid"></div>
+    <button class="btn-small" id="signal-quit">Quit round</button>
   </div>
 </div>
 
@@ -4481,11 +4506,84 @@ function renderArcade(title, body) {
       <div class="game-side">
         <button class="btn-big" id="mm-go" ${state.arcadeMin < 5 ? 'disabled' : ''}>${state.arcadeMin < 5 ? 'Need 5 min' : 'Play (−5 min)'}</button>
       </div>
+    </div>
+    <div class="card game-card">
+      <div class="game-info">
+        <h3>Signal 🔔</h3>
+        <p class="story">Watch the glowing pattern, then repeat it back. Each round adds one — how far can you echo?</p>
+      </div>
+      <div class="game-side">
+        <button class="btn-big" id="sig-go" ${state.arcadeMin < 5 ? 'disabled' : ''}>${state.arcadeMin < 5 ? 'Need 5 min' : 'Play (−5 min)'}</button>
+      </div>
     </div>`;
   const go = document.getElementById('kc-go');
   if (go && state.arcadeMin >= 5) go.onclick = () => { closeBuildingModal(); startKeyCatcher(); };
   const mm = document.getElementById('mm-go');
   if (mm && state.arcadeMin >= 5) mm.onclick = () => { closeBuildingModal(); startMemoryMatch(); };
+  const sg = document.getElementById('sig-go');
+  if (sg && state.arcadeMin >= 5) sg.onclick = () => { closeBuildingModal(); startSignal(); };
+}
+
+/* Signal — a Simon-style pattern-memory arcade game. Watch the glowing sequence,
+   repeat it, each round adds a step. Pure arcade juice. */
+const SIGNAL_PADS = [
+  { c: '#ff5b6a', lit: '#ffd3d8', tone: 330 },
+  { c: '#2ec4b6', lit: '#c8fff7', tone: 415 },
+  { c: '#4c9aff', lit: '#d6e9ff', tone: 494 },
+  { c: '#ffb627', lit: '#fff0cc', tone: 660 },
+];
+function startSignal() {
+  state.arcadeMin -= 5; saveState(); updateHUD();
+  const modal = document.getElementById('signal-modal');
+  const grid = document.getElementById('signal-grid');
+  const status = document.getElementById('signal-status');
+  modal.classList.add('open');
+  let seq = [], input = [], round = 0, playerTurn = false, over = false;
+
+  grid.innerHTML = '';
+  const pads = SIGNAL_PADS.map((p, i) => {
+    const b = document.createElement('button');
+    b.className = 'sig-pad'; b.style.setProperty('--pc', p.c); b.style.setProperty('--pl', p.lit);
+    b.onclick = () => onPad(i);
+    grid.appendChild(b);
+    return b;
+  });
+  const flash = (i, ms = 380) => {
+    pads[i].classList.add('lit'); tone(SIGNAL_PADS[i].tone, .28, 'sine', .07);
+    setTimeout(() => pads[i].classList.remove('lit'), ms);
+  };
+  const playSeq = () => {
+    playerTurn = false; status.textContent = `Round ${round} — watch closely…`;
+    seq.forEach((i, k) => setTimeout(() => flash(i), 650 + k * 620));
+    setTimeout(() => { playerTurn = true; input = []; status.textContent = `Round ${round} — your turn! (${seq.length})`; }, 650 + seq.length * 620 + 200);
+  };
+  const nextRound = () => {
+    round++; seq.push((Math.random() * 4) | 0); playSeq();
+  };
+  const onPad = (i) => {
+    if (!playerTurn || over) return;
+    flash(i, 220); input.push(i);
+    if (input[input.length - 1] !== seq[input.length - 1]) return gameOver();
+    if (input.length === seq.length) {
+      playerTurn = false; blip(900);
+      status.textContent = `Nice! Round ${round} cleared 🎉`;
+      setTimeout(nextRound, 800);
+    }
+  };
+  const gameOver = () => {
+    over = true; playerTurn = false; buzz();
+    const reached = round - 1;
+    const reward = Math.min(20, 3 + reached * 2);
+    grid.classList.add('shake');
+    setTimeout(() => {
+      modal.classList.remove('open'); grid.classList.remove('shake');
+      if (reached >= 1) { grant({ keys: reward, xp: reached * 4 }); fanfare(); confetti(); toast(`Signal: reached round ${reached}! +${reward} 🔑`); }
+      else toast('Signal: give it another go — you’ll get the rhythm!');
+    }, 900);
+  };
+  document.getElementById('signal-quit').onclick = () => { over = true; modal.classList.remove('open'); };
+  if (typeof window !== 'undefined') window.__signal = { seq, ready: () => playerTurn, tap: onPad };
+  setTimeout(nextRound, 500);
 }
 
 /* Memory Match minigame — DOM cards with 3D flips.
