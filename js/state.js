@@ -38,6 +38,7 @@ const defaultState = () => ({
   srNudged: null,           // date we last nudged about due reviews
   ability: null,            // rolling ability estimate (float grade) for adaptive difficulty
   lastDailyResult: null,    // {dateKey, seconds, tries, streak, subject, milestone} for the share card
+  worldsDone: {},           // worldId -> true, for unlockable worlds progression
 });
 
 let state = defaultState();

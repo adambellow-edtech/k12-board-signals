@@ -84,6 +84,7 @@
       <i class="cap-div" id="hud-shield-div" style="display:none"></i>
       <span class="cap-stat" id="hud-shield-wrap" title="Streak Shields protect your streak on a missed day" style="display:none">🛡️ <b id="hud-shield">0</b></span>
     </div>
+    <button class="hud-btn" id="hud-worlds" title="World Map">🗺️</button>
     <button class="hud-btn" id="hud-mute" title="Sound on/off">🔊</button>
     <button class="hud-btn" id="hud-home" title="Back to title">🏠</button>
   </div>
@@ -123,6 +124,20 @@
       <span><i style="background:#5c25b7"></i>Challenge — unlock by beating a quest in ≤2 tries</span>
       <span><i style="background:#ffb627"></i>Boss lock — end of unit</span>
     </div>
+  </div>
+</section>
+
+<!-- ============ WORLD MAP ============ -->
+<section class="screen" id="screen-worldmap">
+  <div class="wm-wrap">
+    <div class="wm-head">
+      <div>
+        <h2>🗺️ The Worlds of Breakout Land</h2>
+        <div class="skills" id="wm-sub">Master skills on the island to open new worlds.</div>
+      </div>
+      <button class="back-btn" data-back-world>← Back to the island</button>
+    </div>
+    <div id="wm-nodes" class="wm-nodes"></div>
   </div>
 </section>
 

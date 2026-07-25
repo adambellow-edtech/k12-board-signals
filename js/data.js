@@ -54,6 +54,53 @@ const DATA = {
     { id: 'star-seeker',    name: 'Star Seeker',      desc: 'Collect all 5 Sparkle Keys in one day', icon: 'star' },
     { id: 'quest-hero',     name: 'Quest Hero',       desc: 'Finish all 4 island quests in one day', icon: 'trophy' },
     { id: 'team-player',    name: 'Team Player',      desc: 'Win a Class Breakout with your class', icon: 'trophy' },
+    { id: 'world-explorer', name: 'World Explorer',    desc: 'Conquer an unlockable world',          icon: 'star' },
+    { id: 'globe-trotter',  name: 'Globe Trotter',     desc: 'Conquer every world',                 icon: 'trophy' },
+  ],
+
+  // Unlockable worlds — themed challenge realms that open as students master
+  // skills on the home island. The first is mastery-gated; the rest chain.
+  worlds: [
+    {
+      id: 'number-kingdom', name: 'Number Kingdom', subject: 'Math', color: '#1c9a85', icon: '🏰',
+      blurb: 'A castle of numbers guarded by tricky tumblers.', unlock: { type: 'mastery', count: 2 },
+      reward: { keys: 40, xp: 80, arcade: 10 },
+      locks: [
+        { type: 'number', subject: 'Math', standards: ['3.OA.A.1'], clue: 'The gate: 9 × 6 = ?', answer: '54', hint: '9 groups of 6.' },
+        { type: 'order', subject: 'Math', clue: 'Line up the stair steps: 24, 6, 18, 12 from smallest to largest.', tiles: ['24', '6', '18', '12'], answer: ['6', '12', '18', '24'], hint: 'Count up by 6s.' },
+        { type: 'number', subject: 'Math', standards: ['3.OA.A.3'], clue: 'The throne: 72 ÷ 8 = ?', answer: '9', hint: 'What times 8 is 72?' },
+      ],
+    },
+    {
+      id: 'story-cove', name: 'Story Cove', subject: 'Reading & Words', color: '#7a3fd0', icon: '🐚',
+      blurb: 'A hidden cove where words unlock the tide.', unlock: { type: 'prev' },
+      reward: { keys: 40, xp: 80, arcade: 10 },
+      locks: [
+        { type: 'word', subject: 'ELA', standards: ['L.3.5'], clue: 'Finish the riddle: “Day breaks and ___ falls.” (one word)', answer: 'NIGHT', hint: 'The dark half of the day.' },
+        { type: 'cipher', subject: 'ELA', clue: 'Decode the treasure word with the shell key!', cipherKey: { '🐚': 'S', '🌊': 'E', '⭐': 'A' }, coded: '🐚🌊⭐', answer: 'SEA', hint: '🐚=S 🌊=E ⭐=A, in that order.' },
+        { type: 'word', subject: 'ELA', standards: ['L.3.5'], clue: 'The opposite of “ancient” is…', answer: 'MODERN', hint: 'New and up to date.' },
+      ],
+    },
+    {
+      id: 'logic-labyrinth', name: 'Logic Labyrinth', subject: 'Logic', color: '#e8862a', icon: '🌀',
+      blurb: 'A maze of clues where only careful thinkers escape.', unlock: { type: 'prev' },
+      reward: { keys: 45, xp: 90, arcade: 12 },
+      locks: [
+        { type: 'logic', subject: 'Logic', clue: 'Which torch lights the exit?', clues: ['It is NOT green.', 'Its number is EVEN.', 'It is more than 4.'], options: [{ label: '3', color: '#57c26b' }, { label: '6', color: '#e8a30c' }, { label: '8', color: '#3d7bd9' }, { label: '5', color: '#e63946' }], answer: '6', hint: 'Even, over 4, not green — and the SMALLER of the two that fit.' },
+        { type: 'order', subject: 'Logic', clue: 'Follow the maze code: press the shapes in this size order — small, medium, large, huge.', tiles: ['🔺', '🔷', '⬛', '⬢'], answer: ['🔺', '🔷', '⬛', '⬢'], hint: 'They are already listed in order in the clue.' },
+        { type: 'cipher', subject: 'Logic', clue: 'The final door: decode it!', cipherKey: { '△': 'W', '○': 'I', '□': 'N' }, coded: '△○□', answer: 'WIN', hint: '△=W ○=I □=N.' },
+      ],
+    },
+    {
+      id: 'discovery-peaks', name: 'Discovery Peaks', subject: 'Science', color: '#0068ff', icon: '⛰️',
+      blurb: 'Snowy peaks of experiments and sharp-eyed observation.', unlock: { type: 'prev' },
+      reward: { keys: 50, xp: 100, arcade: 14 },
+      locks: [
+        { type: 'color', subject: 'Science', clue: 'The lab rainbow: enter the colors of a traffic light from top to bottom.', answer: ['red', 'yellow', 'green'], hint: 'Stop, slow, go.' },
+        { type: 'logic', subject: 'Science', clue: 'Which sample floats?', clues: ['It is lighter than water.', 'It is NOT metal.', 'It is not the rock.'], options: [{ label: 'Cork', color: '#c98a3c' }, { label: 'Coin', color: '#b0b0b0' }, { label: 'Rock', color: '#7a7a7a' }, { label: 'Nail', color: '#8a8a8a' }], answer: 'Cork', hint: 'Cork is light and not metal.' },
+        { type: 'number', subject: 'Science', clue: 'A plant grew 3 cm each week for 5 weeks. How many cm total?', answer: '15', hint: '3 × 5.' },
+      ],
+    },
   ],
 
   // Class Breakout: a shared cooperative vault the whole class cracks together

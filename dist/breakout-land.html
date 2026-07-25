@@ -574,6 +574,33 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .shield-note { font-size: 13px; margin: 8px 0; }
 .shield-note strong { color: var(--blue); }
 
+/* ---- World Map (unlockable worlds) ---- */
+.wm-wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+.wm-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
+.wm-head h2 { margin: 0; color: #fff; text-shadow: 0 2px 8px rgba(0,20,60,.5); }
+.wm-head .skills { color: #dceafe; }
+.wm-nodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.wm-node {
+  border-radius: 20px; padding: 18px 16px; text-align: center; border: 4px solid #fff;
+  background: linear-gradient(180deg, #ffffff, #eef4ff);
+  box-shadow: 0 8px 0 rgba(2,15,40,.25), 0 16px 30px rgba(0,20,60,.25);
+  position: relative; transition: transform .15s ease;
+}
+.wm-node[data-world] { cursor: pointer; }
+.wm-node[data-world]:hover { transform: translateY(-3px); }
+.wm-node.home { background: linear-gradient(180deg, #fff7e6, #ffe9c2); border-color: var(--gold); }
+.wm-node.open { border-color: var(--wc, var(--blue)); box-shadow: 0 8px 0 rgba(2,15,40,.25), 0 0 0 4px color-mix(in srgb, var(--wc, #0068ff) 30%, transparent), 0 16px 30px rgba(0,20,60,.25); }
+.wm-node.done { background: linear-gradient(180deg, #e9fbf4, #cdf3e6); border-color: var(--teal); }
+.wm-node.locked { filter: grayscale(.55) brightness(.97); opacity: .82; }
+.wm-ico { font-size: 46px; line-height: 1; margin-bottom: 6px; }
+.wm-name { font-family: var(--display); font-weight: 900; font-size: 19px; color: var(--ink); }
+.wm-sub2 { font-size: 12px; font-weight: 800; color: var(--wc, var(--blue)); text-transform: uppercase; letter-spacing: .5px; }
+.wm-blurb { font-size: 12.5px; color: var(--ink-soft); margin: 6px 0 8px; min-height: 32px; }
+.wm-state { font-weight: 800; font-size: 13px; color: var(--ink); }
+.wm-node.locked .wm-state { color: var(--ink-soft); }
+.wm-node.done .wm-state { color: var(--teal-deep); }
+#screen-worldmap { background: linear-gradient(180deg, #1a4fa0, #0b2f6b); }
+
 /* ---- teacher SSO sign-in ---- */
 .signin-card { max-width: 400px; text-align: center; }
 .sso-btns { display: flex; flex-direction: column; gap: 10px; margin: 16px 0 12px; }
@@ -979,6 +1006,7 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
       <i class="cap-div" id="hud-shield-div" style="display:none"></i>
       <span class="cap-stat" id="hud-shield-wrap" title="Streak Shields protect your streak on a missed day" style="display:none">🛡️ <b id="hud-shield">0</b></span>
     </div>
+    <button class="hud-btn" id="hud-worlds" title="World Map">🗺️</button>
     <button class="hud-btn" id="hud-mute" title="Sound on/off">🔊</button>
     <button class="hud-btn" id="hud-home" title="Back to title">🏠</button>
   </div>
@@ -1018,6 +1046,20 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
       <span><i style="background:#5c25b7"></i>Challenge — unlock by beating a quest in ≤2 tries</span>
       <span><i style="background:#ffb627"></i>Boss lock — end of unit</span>
     </div>
+  </div>
+</section>
+
+<!-- ============ WORLD MAP ============ -->
+<section class="screen" id="screen-worldmap">
+  <div class="wm-wrap">
+    <div class="wm-head">
+      <div>
+        <h2>🗺️ The Worlds of Breakout Land</h2>
+        <div class="skills" id="wm-sub">Master skills on the island to open new worlds.</div>
+      </div>
+      <button class="back-btn" data-back-world>← Back to the island</button>
+    </div>
+    <div id="wm-nodes" class="wm-nodes"></div>
   </div>
 </section>
 
@@ -1865,6 +1907,53 @@ const DATA = {
     { id: 'star-seeker',    name: 'Star Seeker',      desc: 'Collect all 5 Sparkle Keys in one day', icon: 'star' },
     { id: 'quest-hero',     name: 'Quest Hero',       desc: 'Finish all 4 island quests in one day', icon: 'trophy' },
     { id: 'team-player',    name: 'Team Player',      desc: 'Win a Class Breakout with your class', icon: 'trophy' },
+    { id: 'world-explorer', name: 'World Explorer',    desc: 'Conquer an unlockable world',          icon: 'star' },
+    { id: 'globe-trotter',  name: 'Globe Trotter',     desc: 'Conquer every world',                 icon: 'trophy' },
+  ],
+
+  // Unlockable worlds — themed challenge realms that open as students master
+  // skills on the home island. The first is mastery-gated; the rest chain.
+  worlds: [
+    {
+      id: 'number-kingdom', name: 'Number Kingdom', subject: 'Math', color: '#1c9a85', icon: '🏰',
+      blurb: 'A castle of numbers guarded by tricky tumblers.', unlock: { type: 'mastery', count: 2 },
+      reward: { keys: 40, xp: 80, arcade: 10 },
+      locks: [
+        { type: 'number', subject: 'Math', standards: ['3.OA.A.1'], clue: 'The gate: 9 × 6 = ?', answer: '54', hint: '9 groups of 6.' },
+        { type: 'order', subject: 'Math', clue: 'Line up the stair steps: 24, 6, 18, 12 from smallest to largest.', tiles: ['24', '6', '18', '12'], answer: ['6', '12', '18', '24'], hint: 'Count up by 6s.' },
+        { type: 'number', subject: 'Math', standards: ['3.OA.A.3'], clue: 'The throne: 72 ÷ 8 = ?', answer: '9', hint: 'What times 8 is 72?' },
+      ],
+    },
+    {
+      id: 'story-cove', name: 'Story Cove', subject: 'Reading & Words', color: '#7a3fd0', icon: '🐚',
+      blurb: 'A hidden cove where words unlock the tide.', unlock: { type: 'prev' },
+      reward: { keys: 40, xp: 80, arcade: 10 },
+      locks: [
+        { type: 'word', subject: 'ELA', standards: ['L.3.5'], clue: 'Finish the riddle: “Day breaks and ___ falls.” (one word)', answer: 'NIGHT', hint: 'The dark half of the day.' },
+        { type: 'cipher', subject: 'ELA', clue: 'Decode the treasure word with the shell key!', cipherKey: { '🐚': 'S', '🌊': 'E', '⭐': 'A' }, coded: '🐚🌊⭐', answer: 'SEA', hint: '🐚=S 🌊=E ⭐=A, in that order.' },
+        { type: 'word', subject: 'ELA', standards: ['L.3.5'], clue: 'The opposite of “ancient” is…', answer: 'MODERN', hint: 'New and up to date.' },
+      ],
+    },
+    {
+      id: 'logic-labyrinth', name: 'Logic Labyrinth', subject: 'Logic', color: '#e8862a', icon: '🌀',
+      blurb: 'A maze of clues where only careful thinkers escape.', unlock: { type: 'prev' },
+      reward: { keys: 45, xp: 90, arcade: 12 },
+      locks: [
+        { type: 'logic', subject: 'Logic', clue: 'Which torch lights the exit?', clues: ['It is NOT green.', 'Its number is EVEN.', 'It is more than 4.'], options: [{ label: '3', color: '#57c26b' }, { label: '6', color: '#e8a30c' }, { label: '8', color: '#3d7bd9' }, { label: '5', color: '#e63946' }], answer: '6', hint: 'Even, over 4, not green — and the SMALLER of the two that fit.' },
+        { type: 'order', subject: 'Logic', clue: 'Follow the maze code: press the shapes in this size order — small, medium, large, huge.', tiles: ['🔺', '🔷', '⬛', '⬢'], answer: ['🔺', '🔷', '⬛', '⬢'], hint: 'They are already listed in order in the clue.' },
+        { type: 'cipher', subject: 'Logic', clue: 'The final door: decode it!', cipherKey: { '△': 'W', '○': 'I', '□': 'N' }, coded: '△○□', answer: 'WIN', hint: '△=W ○=I □=N.' },
+      ],
+    },
+    {
+      id: 'discovery-peaks', name: 'Discovery Peaks', subject: 'Science', color: '#0068ff', icon: '⛰️',
+      blurb: 'Snowy peaks of experiments and sharp-eyed observation.', unlock: { type: 'prev' },
+      reward: { keys: 50, xp: 100, arcade: 14 },
+      locks: [
+        { type: 'color', subject: 'Science', clue: 'The lab rainbow: enter the colors of a traffic light from top to bottom.', answer: ['red', 'yellow', 'green'], hint: 'Stop, slow, go.' },
+        { type: 'logic', subject: 'Science', clue: 'Which sample floats?', clues: ['It is lighter than water.', 'It is NOT metal.', 'It is not the rock.'], options: [{ label: 'Cork', color: '#c98a3c' }, { label: 'Coin', color: '#b0b0b0' }, { label: 'Rock', color: '#7a7a7a' }, { label: 'Nail', color: '#8a8a8a' }], answer: 'Cork', hint: 'Cork is light and not metal.' },
+        { type: 'number', subject: 'Science', clue: 'A plant grew 3 cm each week for 5 weeks. How many cm total?', answer: '15', hint: '3 × 5.' },
+      ],
+    },
   ],
 
   // Class Breakout: a shared cooperative vault the whole class cracks together
@@ -2152,6 +2241,7 @@ const defaultState = () => ({
   srNudged: null,           // date we last nudged about due reviews
   ability: null,            // rolling ability estimate (float grade) for adaptive difficulty
   lastDailyResult: null,    // {dateKey, seconds, tries, streak, subject, milestone} for the share card
+  worldsDone: {},           // worldId -> true, for unlockable worlds progression
 });
 
 let state = defaultState();
@@ -4978,6 +5068,73 @@ function renderPlus(title, body) {
   });
 }
 
+/* ---- Unlockable worlds ---- */
+function worldUnlockCondition(w) {
+  if (w.unlock.type === 'mastery') return { met: (typeof srMasteredCount === 'function' ? srMasteredCount() : 0) >= w.unlock.count || (state.legendaryKeys || []).length >= 1, label: `Master ${w.unlock.count} skills (or earn a Key of Knowledge) to open` };
+  if (w.unlock.type === 'prev') { const i = DATA.worlds.findIndex(x => x.id === w.id); const prev = DATA.worlds[i - 1]; return { met: !!(prev && state.worldsDone[prev.id]), label: `Conquer ${prev ? prev.name : 'the previous world'} to open` }; }
+  return { met: false, label: 'Locked' };
+}
+function worldUnlocked(w) { return !!state.worldsDone[w.id] || worldUnlockCondition(w).met; }
+
+function openWorldMap() {
+  showScreen('worldmap');
+  renderWorldMap();
+}
+function renderWorldMap() {
+  const mastered = (typeof srMasteredCount === 'function') ? srMasteredCount() : 0;
+  document.getElementById('wm-sub').textContent = `Skills mastered: ${mastered} · Worlds conquered: ${Object.keys(state.worldsDone).length} / ${DATA.worlds.length}`;
+  const home = `
+    <div class="wm-node home done">
+      <div class="wm-ico">🏝️</div>
+      <div class="wm-name">Breakout Island</div>
+      <div class="wm-state">Home · always open</div>
+    </div>`;
+  const nodes = DATA.worlds.map(w => {
+    const done = !!state.worldsDone[w.id];
+    const open = worldUnlocked(w);
+    const cond = worldUnlockCondition(w);
+    const cls = done ? 'done' : open ? 'open' : 'locked';
+    const state2 = done ? '✓ Conquered — replay' : open ? `${w.locks.length} locks · Enter` : `🔒 ${cond.label}`;
+    return `
+      <div class="wm-node ${cls}" data-world="${w.id}" style="--wc:${w.color}">
+        <div class="wm-ico">${open || done ? w.icon : '🔒'}</div>
+        <div class="wm-name">${w.name}</div>
+        <div class="wm-sub2">${w.subject}</div>
+        <div class="wm-blurb">${w.blurb}</div>
+        <div class="wm-state">${state2}</div>
+      </div>`;
+  }).join('');
+  document.getElementById('wm-nodes').innerHTML = home + nodes;
+  document.querySelectorAll('#wm-nodes .wm-node[data-world]').forEach(el => {
+    el.onclick = () => {
+      const w = DATA.worlds.find(x => x.id === el.dataset.world);
+      if (!worldUnlocked(w)) { buzz(); toast(worldUnlockCondition(w).label); return; }
+      enterWorldLevel(w);
+    };
+  });
+}
+function enterWorldLevel(w) {
+  blip(760);
+  startPuzzle({
+    title: `${w.icon} ${w.name}`,
+    ctxLabel: `World · ${w.subject}`,
+    locks: w.locks,
+    celType: 'boss',
+    onWin: () => {
+      const first = !state.worldsDone[w.id];
+      state.worldsDone[w.id] = true;
+      saveState();
+      awardBadge('world-explorer');
+      if (Object.keys(state.worldsDone).length >= DATA.worlds.length) awardBadge('globe-trotter');
+      grant(w.reward || { keys: 40, xp: 80, arcade: 10 });
+      const nextI = DATA.worlds.findIndex(x => x.id === w.id) + 1;
+      const next = DATA.worlds[nextI];
+      toast(first && next ? `${w.name} conquered! 🎉 ${next.name} is now open!` : `${w.name} conquered! 🎉`);
+      if (screenIs('worldmap')) renderWorldMap();
+    },
+  });
+}
+
 /* ---- Breakout Math adventure map ---- */
 function openMathMap() {
   showScreen('math');
@@ -5451,6 +5608,7 @@ function boot() {
 
   // HUD buttons
   document.getElementById('hud-closet').onclick = () => openAvatarCreator(true);
+  document.getElementById('hud-worlds').onclick = () => openWorldMap();
   document.getElementById('hud-home').onclick = () => showScreen('title');
   document.getElementById('hud-mute').onclick = (e) => {
     muted = !muted;

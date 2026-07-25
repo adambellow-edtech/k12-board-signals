@@ -56,6 +56,7 @@ function boot() {
 
   // HUD buttons
   document.getElementById('hud-closet').onclick = () => openAvatarCreator(true);
+  document.getElementById('hud-worlds').onclick = () => openWorldMap();
   document.getElementById('hud-home').onclick = () => showScreen('title');
   document.getElementById('hud-mute').onclick = (e) => {
     muted = !muted;

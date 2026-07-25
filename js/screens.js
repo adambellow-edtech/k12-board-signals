@@ -913,6 +913,73 @@ function renderPlus(title, body) {
   });
 }
 
+/* ---- Unlockable worlds ---- */
+function worldUnlockCondition(w) {
+  if (w.unlock.type === 'mastery') return { met: (typeof srMasteredCount === 'function' ? srMasteredCount() : 0) >= w.unlock.count || (state.legendaryKeys || []).length >= 1, label: `Master ${w.unlock.count} skills (or earn a Key of Knowledge) to open` };
+  if (w.unlock.type === 'prev') { const i = DATA.worlds.findIndex(x => x.id === w.id); const prev = DATA.worlds[i - 1]; return { met: !!(prev && state.worldsDone[prev.id]), label: `Conquer ${prev ? prev.name : 'the previous world'} to open` }; }
+  return { met: false, label: 'Locked' };
+}
+function worldUnlocked(w) { return !!state.worldsDone[w.id] || worldUnlockCondition(w).met; }
+
+function openWorldMap() {
+  showScreen('worldmap');
+  renderWorldMap();
+}
+function renderWorldMap() {
+  const mastered = (typeof srMasteredCount === 'function') ? srMasteredCount() : 0;
+  document.getElementById('wm-sub').textContent = `Skills mastered: ${mastered} · Worlds conquered: ${Object.keys(state.worldsDone).length} / ${DATA.worlds.length}`;
+  const home = `
+    <div class="wm-node home done">
+      <div class="wm-ico">🏝️</div>
+      <div class="wm-name">Breakout Island</div>
+      <div class="wm-state">Home · always open</div>
+    </div>`;
+  const nodes = DATA.worlds.map(w => {
+    const done = !!state.worldsDone[w.id];
+    const open = worldUnlocked(w);
+    const cond = worldUnlockCondition(w);
+    const cls = done ? 'done' : open ? 'open' : 'locked';
+    const state2 = done ? '✓ Conquered — replay' : open ? `${w.locks.length} locks · Enter` : `🔒 ${cond.label}`;
+    return `
+      <div class="wm-node ${cls}" data-world="${w.id}" style="--wc:${w.color}">
+        <div class="wm-ico">${open || done ? w.icon : '🔒'}</div>
+        <div class="wm-name">${w.name}</div>
+        <div class="wm-sub2">${w.subject}</div>
+        <div class="wm-blurb">${w.blurb}</div>
+        <div class="wm-state">${state2}</div>
+      </div>`;
+  }).join('');
+  document.getElementById('wm-nodes').innerHTML = home + nodes;
+  document.querySelectorAll('#wm-nodes .wm-node[data-world]').forEach(el => {
+    el.onclick = () => {
+      const w = DATA.worlds.find(x => x.id === el.dataset.world);
+      if (!worldUnlocked(w)) { buzz(); toast(worldUnlockCondition(w).label); return; }
+      enterWorldLevel(w);
+    };
+  });
+}
+function enterWorldLevel(w) {
+  blip(760);
+  startPuzzle({
+    title: `${w.icon} ${w.name}`,
+    ctxLabel: `World · ${w.subject}`,
+    locks: w.locks,
+    celType: 'boss',
+    onWin: () => {
+      const first = !state.worldsDone[w.id];
+      state.worldsDone[w.id] = true;
+      saveState();
+      awardBadge('world-explorer');
+      if (Object.keys(state.worldsDone).length >= DATA.worlds.length) awardBadge('globe-trotter');
+      grant(w.reward || { keys: 40, xp: 80, arcade: 10 });
+      const nextI = DATA.worlds.findIndex(x => x.id === w.id) + 1;
+      const next = DATA.worlds[nextI];
+      toast(first && next ? `${w.name} conquered! 🎉 ${next.name} is now open!` : `${w.name} conquered! 🎉`);
+      if (screenIs('worldmap')) renderWorldMap();
+    },
+  });
+}
+
 /* ---- Breakout Math adventure map ---- */
 function openMathMap() {
   showScreen('math');
