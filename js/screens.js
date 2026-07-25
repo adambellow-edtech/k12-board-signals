@@ -929,10 +929,11 @@ function renderWorldMap() {
   const mastered = (typeof srMasteredCount === 'function') ? srMasteredCount() : 0;
   document.getElementById('wm-sub').textContent = `Skills mastered: ${mastered} · Worlds conquered: ${Object.keys(state.worldsDone).length} / ${DATA.worlds.length}`;
   const home = `
-    <div class="wm-node home done">
+    <div class="wm-node home done" data-home>
       <div class="wm-ico">🏝️</div>
       <div class="wm-name">Breakout Island</div>
-      <div class="wm-state">Home · always open</div>
+      <div class="wm-sub2">Your Home Land</div>
+      <div class="wm-state">Home · decorate your plot →</div>
     </div>`;
   const nodes = DATA.worlds.map(w => {
     const done = !!state.worldsDone[w.id];
@@ -957,6 +958,8 @@ function renderWorldMap() {
       enterWorldLevel(w);
     };
   });
+  const homeEl = document.querySelector('#wm-nodes .wm-node[data-home]');
+  if (homeEl) homeEl.onclick = () => { blip(720); openHomeLand(); };
 }
 function enterWorldLevel(w) {
   blip(760);
@@ -977,6 +980,74 @@ function enterWorldLevel(w) {
       toast(first && next ? `${w.name} conquered! 🎉 ${next.name} is now open!` : `${w.name} conquered! 🎉`);
       if (screenIs('worldmap')) renderWorldMap();
     },
+  });
+}
+
+/* ---- Home Land: a personal plot the student decorates with earned keys ---- */
+const HL_COLS = 8, HL_ROWS = 4;
+let hlSel = null; // selected décor id, or 'erase'
+function openHomeLand() {
+  if (!state.home) state.home = { owned: ['tree', 'flower', 'bush'], placed: {} };
+  showScreen('homeland');
+  renderHomeLand();
+}
+function renderHomeLand() {
+  const home = state.home;
+  const placedCount = Object.keys(home.placed).length;
+  document.getElementById('hl-sub').textContent = `Coziness: ${placedCount} décor placed · ${state.keys} 🔑 to spend`;
+  const plot = document.getElementById('hl-plot');
+  plot.innerHTML = '';
+  for (let i = 0; i < HL_COLS * HL_ROWS; i++) {
+    const cell = document.createElement('button');
+    cell.className = 'hl-cell';
+    const id = home.placed[i];
+    if (id) { const d = DATA.homeItems.find(x => x.id === id); cell.textContent = d ? d.icon : ''; cell.classList.add('filled'); }
+    cell.onclick = () => {
+      if (!hlSel) { toast('Pick a décor below first!'); return; }
+      if (hlSel === 'erase') { delete home.placed[i]; blip(300); }
+      else { home.placed[i] = hlSel; blip(680); }
+      saveState(); renderHomeLand();
+    };
+    plot.appendChild(cell);
+  }
+  const pal = document.getElementById('hl-palette');
+  pal.innerHTML = '';
+  home.owned.forEach(id => {
+    const d = DATA.homeItems.find(x => x.id === id); if (!d) return;
+    const b = document.createElement('button');
+    b.className = 'hl-pal' + (hlSel === id ? ' sel' : '');
+    b.innerHTML = `<span class="hl-pal-ico">${d.icon}</span><span>${d.name}</span>`;
+    b.onclick = () => { hlSel = id; renderHomeLand(); };
+    pal.appendChild(b);
+  });
+  const er = document.createElement('button');
+  er.className = 'hl-pal erase' + (hlSel === 'erase' ? ' sel' : '');
+  er.innerHTML = '<span class="hl-pal-ico">🧽</span><span>Erase</span>';
+  er.onclick = () => { hlSel = 'erase'; renderHomeLand(); };
+  pal.appendChild(er);
+  document.getElementById('hl-shop-btn').onclick = openHomeShop;
+}
+function openHomeShop() {
+  const body = document.getElementById('bm-body'), title = document.getElementById('bm-title');
+  title.textContent = '🛒 Décor Shop';
+  const items = DATA.homeItems.filter(i => i.price > 0);
+  body.innerHTML = `
+    <p class="muted">Spend the keys you earned by thinking to unlock new décor for your Home Land.</p>
+    <div class="reward-row"><span>Your keys: <strong>${state.keys} 🔑</strong></span></div>
+    <div class="shop-grid">${items.map(i => {
+      const owned = state.home.owned.includes(i.id);
+      return `<button class="shop-item ${owned ? 'owned' : ''}" data-hl="${i.id}">
+        <span class="shop-preview"><span style="font-size:42px">${i.icon}</span></span>
+        <span class="shop-name">${i.name}</span>
+        <span class="shop-price">${owned ? 'Owned ✓' : `${i.price} 🔑`}</span></button>`;
+    }).join('')}</div>`;
+  document.getElementById('building-modal').classList.add('open');
+  body.querySelectorAll('[data-hl]').forEach(btn => btn.onclick = () => {
+    const item = DATA.homeItems.find(i => i.id === btn.dataset.hl);
+    if (state.home.owned.includes(item.id)) { hlSel = item.id; closeBuildingModal(); renderHomeLand(); toast(`Selected ${item.name}, tap a tile to place it!`); return; }
+    if (state.keys < item.price) { buzz(); toast(`You need ${item.price - state.keys} more keys for ${item.name}.`); return; }
+    state.keys -= item.price; state.home.owned.push(item.id); saveState(); updateHUD(); blip(820); fanfare();
+    toast(`Unlocked ${item.name}! 🎉`); openHomeShop();
   });
 }
 

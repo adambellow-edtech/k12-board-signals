@@ -58,6 +58,27 @@ const DATA = {
     { id: 'globe-trotter',  name: 'Globe Trotter',     desc: 'Conquer every world',                 icon: 'trophy' },
   ],
 
+  // Home Land décor — bought with keys earned by thinking, placed on the plot.
+  homeItems: [
+    { id: 'tree', icon: '🌳', name: 'Tree', price: 0 },
+    { id: 'flower', icon: '🌸', name: 'Flowers', price: 0 },
+    { id: 'bush', icon: '🌿', name: 'Bush', price: 0 },
+    { id: 'pine', icon: '🌲', name: 'Pine', price: 10 },
+    { id: 'tulip', icon: '🌷', name: 'Tulip', price: 10 },
+    { id: 'planter', icon: '🪴', name: 'Planter', price: 12 },
+    { id: 'mushroom', icon: '🍄', name: 'Mushroom', price: 15 },
+    { id: 'balloon', icon: '🎈', name: 'Balloon', price: 18 },
+    { id: 'bench', icon: '🪑', name: 'Bench', price: 20 },
+    { id: 'flag', icon: '🚩', name: 'Flag', price: 20 },
+    { id: 'lantern', icon: '🏮', name: 'Lantern', price: 22 },
+    { id: 'star', icon: '⭐', name: 'Star', price: 25 },
+    { id: 'pond', icon: '🟦', name: 'Pond', price: 30 },
+    { id: 'tent', icon: '⛺', name: 'Tent', price: 35 },
+    { id: 'fountain', icon: '⛲', name: 'Fountain', price: 40 },
+    { id: 'rainbow', icon: '🌈', name: 'Rainbow', price: 50 },
+    { id: 'castle', icon: '🏰', name: 'Sandcastle', price: 60 },
+  ],
+
   // Unlockable worlds — themed challenge realms that open as students master
   // skills on the home island. The first is mastery-gated; the rest chain.
   worlds: [

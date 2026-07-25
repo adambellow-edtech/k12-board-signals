@@ -586,8 +586,8 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
   box-shadow: 0 8px 0 rgba(2,15,40,.25), 0 16px 30px rgba(0,20,60,.25);
   position: relative; transition: transform .15s ease;
 }
-.wm-node[data-world] { cursor: pointer; }
-.wm-node[data-world]:hover { transform: translateY(-3px); }
+.wm-node[data-world], .wm-node[data-home] { cursor: pointer; }
+.wm-node[data-world]:hover, .wm-node[data-home]:hover { transform: translateY(-3px); }
 .wm-node.home { background: linear-gradient(180deg, #fff7e6, #ffe9c2); border-color: var(--gold); }
 .wm-node.open { border-color: var(--wc, var(--blue)); box-shadow: 0 8px 0 rgba(2,15,40,.25), 0 0 0 4px color-mix(in srgb, var(--wc, #0068ff) 30%, transparent), 0 16px 30px rgba(0,20,60,.25); }
 .wm-node.done { background: linear-gradient(180deg, #e9fbf4, #cdf3e6); border-color: var(--teal); }
@@ -600,6 +600,39 @@ h1, h2, h3 { font-family: var(--display); text-wrap: balance; }
 .wm-node.locked .wm-state { color: var(--ink-soft); }
 .wm-node.done .wm-state { color: var(--teal-deep); }
 #screen-worldmap { background: linear-gradient(180deg, #1a4fa0, #0b2f6b); }
+
+/* ---- Home Land: decorate your own plot ---- */
+#screen-homeland { background: linear-gradient(180deg, #bfe3ff, #8fd0a8); }
+.hl-wrap { max-width: 860px; margin: 0 auto; }
+.hl-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.hl-head h2 { font-family: var(--display); font-weight: 900; color: var(--ink); font-size: 26px; }
+.hl-plot {
+  display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px;
+  padding: 14px; border-radius: 22px; border: 5px solid var(--teal-deep);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0)),
+    linear-gradient(180deg, #a6e4bb, #7fce9c);
+  box-shadow: inset 0 3px 14px rgba(0,40,20,.18), 0 10px 24px rgba(0,40,20,.22);
+}
+.hl-cell {
+  aspect-ratio: 1; border: 2px dashed rgba(0,60,30,.22); border-radius: 12px;
+  background: rgba(255,255,255,.14); cursor: pointer; font-size: clamp(20px, 5vw, 34px);
+  line-height: 1; display: flex; align-items: center; justify-content: center;
+  transition: transform .1s ease, background .12s ease; padding: 0;
+}
+.hl-cell:hover { background: rgba(255,255,255,.42); transform: scale(1.05); }
+.hl-cell.filled { border-style: solid; border-color: rgba(0,60,30,.12); background: rgba(255,255,255,.28); }
+.hl-tools { margin-top: 16px; }
+.hl-palette { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px; }
+.hl-pal {
+  display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 14px;
+  border: 3px solid var(--cream-edge); background: #fff; cursor: pointer;
+  font-weight: 800; color: var(--ink); font-size: 13px; transition: transform .1s ease;
+}
+.hl-pal:hover { transform: translateY(-2px); }
+.hl-pal.sel { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(255,182,39,.3); background: #fff9ec; }
+.hl-pal.erase.sel { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(201,20,167,.24); background: #fff0fa; }
+.hl-pal-ico { font-size: 22px; line-height: 1; }
 
 /* ---- teacher SSO sign-in ---- */
 .signin-card { max-width: 400px; text-align: center; }
@@ -1045,6 +1078,25 @@ input[type=range] { width: 150px; accent-color: var(--teal); }
       <span><i style="background:#0068ff"></i>Review — warm-up, always open</span>
       <span><i style="background:#5c25b7"></i>Challenge — unlock by beating a quest in ≤2 tries</span>
       <span><i style="background:#ffb627"></i>Boss lock — end of unit</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOME LAND ============ -->
+<section class="screen" id="screen-homeland">
+  <div class="hl-wrap board">
+    <div class="hl-head">
+      <div>
+        <h2>🏡 My Home Land</h2>
+        <div class="skills" id="hl-sub"></div>
+      </div>
+      <button class="back-btn" data-back-world>← Back to the island</button>
+    </div>
+    <div id="hl-plot" class="hl-plot"></div>
+    <div class="hl-tools">
+      <h3 class="shop-h">Your décor: tap one, then tap a tile to place it</h3>
+      <div id="hl-palette" class="hl-palette"></div>
+      <button class="btn-big" id="hl-shop-btn">🛒 Open the Décor Shop</button>
     </div>
   </div>
 </section>
@@ -1911,6 +1963,27 @@ const DATA = {
     { id: 'globe-trotter',  name: 'Globe Trotter',     desc: 'Conquer every world',                 icon: 'trophy' },
   ],
 
+  // Home Land décor — bought with keys earned by thinking, placed on the plot.
+  homeItems: [
+    { id: 'tree', icon: '🌳', name: 'Tree', price: 0 },
+    { id: 'flower', icon: '🌸', name: 'Flowers', price: 0 },
+    { id: 'bush', icon: '🌿', name: 'Bush', price: 0 },
+    { id: 'pine', icon: '🌲', name: 'Pine', price: 10 },
+    { id: 'tulip', icon: '🌷', name: 'Tulip', price: 10 },
+    { id: 'planter', icon: '🪴', name: 'Planter', price: 12 },
+    { id: 'mushroom', icon: '🍄', name: 'Mushroom', price: 15 },
+    { id: 'balloon', icon: '🎈', name: 'Balloon', price: 18 },
+    { id: 'bench', icon: '🪑', name: 'Bench', price: 20 },
+    { id: 'flag', icon: '🚩', name: 'Flag', price: 20 },
+    { id: 'lantern', icon: '🏮', name: 'Lantern', price: 22 },
+    { id: 'star', icon: '⭐', name: 'Star', price: 25 },
+    { id: 'pond', icon: '🟦', name: 'Pond', price: 30 },
+    { id: 'tent', icon: '⛺', name: 'Tent', price: 35 },
+    { id: 'fountain', icon: '⛲', name: 'Fountain', price: 40 },
+    { id: 'rainbow', icon: '🌈', name: 'Rainbow', price: 50 },
+    { id: 'castle', icon: '🏰', name: 'Sandcastle', price: 60 },
+  ],
+
   // Unlockable worlds — themed challenge realms that open as students master
   // skills on the home island. The first is mastery-gated; the rest chain.
   worlds: [
@@ -2242,6 +2315,7 @@ const defaultState = () => ({
   ability: null,            // rolling ability estimate (float grade) for adaptive difficulty
   lastDailyResult: null,    // {dateKey, seconds, tries, streak, subject, milestone} for the share card
   worldsDone: {},           // worldId -> true, for unlockable worlds progression
+  home: { owned: ['tree', 'flower', 'bush'], placed: {} }, // Home Land décor (buy with keys, place on the plot)
 });
 
 let state = defaultState();
@@ -5084,10 +5158,11 @@ function renderWorldMap() {
   const mastered = (typeof srMasteredCount === 'function') ? srMasteredCount() : 0;
   document.getElementById('wm-sub').textContent = `Skills mastered: ${mastered} · Worlds conquered: ${Object.keys(state.worldsDone).length} / ${DATA.worlds.length}`;
   const home = `
-    <div class="wm-node home done">
+    <div class="wm-node home done" data-home>
       <div class="wm-ico">🏝️</div>
       <div class="wm-name">Breakout Island</div>
-      <div class="wm-state">Home · always open</div>
+      <div class="wm-sub2">Your Home Land</div>
+      <div class="wm-state">Home · decorate your plot →</div>
     </div>`;
   const nodes = DATA.worlds.map(w => {
     const done = !!state.worldsDone[w.id];
@@ -5112,6 +5187,8 @@ function renderWorldMap() {
       enterWorldLevel(w);
     };
   });
+  const homeEl = document.querySelector('#wm-nodes .wm-node[data-home]');
+  if (homeEl) homeEl.onclick = () => { blip(720); openHomeLand(); };
 }
 function enterWorldLevel(w) {
   blip(760);
@@ -5132,6 +5209,74 @@ function enterWorldLevel(w) {
       toast(first && next ? `${w.name} conquered! 🎉 ${next.name} is now open!` : `${w.name} conquered! 🎉`);
       if (screenIs('worldmap')) renderWorldMap();
     },
+  });
+}
+
+/* ---- Home Land: a personal plot the student decorates with earned keys ---- */
+const HL_COLS = 8, HL_ROWS = 4;
+let hlSel = null; // selected décor id, or 'erase'
+function openHomeLand() {
+  if (!state.home) state.home = { owned: ['tree', 'flower', 'bush'], placed: {} };
+  showScreen('homeland');
+  renderHomeLand();
+}
+function renderHomeLand() {
+  const home = state.home;
+  const placedCount = Object.keys(home.placed).length;
+  document.getElementById('hl-sub').textContent = `Coziness: ${placedCount} décor placed · ${state.keys} 🔑 to spend`;
+  const plot = document.getElementById('hl-plot');
+  plot.innerHTML = '';
+  for (let i = 0; i < HL_COLS * HL_ROWS; i++) {
+    const cell = document.createElement('button');
+    cell.className = 'hl-cell';
+    const id = home.placed[i];
+    if (id) { const d = DATA.homeItems.find(x => x.id === id); cell.textContent = d ? d.icon : ''; cell.classList.add('filled'); }
+    cell.onclick = () => {
+      if (!hlSel) { toast('Pick a décor below first!'); return; }
+      if (hlSel === 'erase') { delete home.placed[i]; blip(300); }
+      else { home.placed[i] = hlSel; blip(680); }
+      saveState(); renderHomeLand();
+    };
+    plot.appendChild(cell);
+  }
+  const pal = document.getElementById('hl-palette');
+  pal.innerHTML = '';
+  home.owned.forEach(id => {
+    const d = DATA.homeItems.find(x => x.id === id); if (!d) return;
+    const b = document.createElement('button');
+    b.className = 'hl-pal' + (hlSel === id ? ' sel' : '');
+    b.innerHTML = `<span class="hl-pal-ico">${d.icon}</span><span>${d.name}</span>`;
+    b.onclick = () => { hlSel = id; renderHomeLand(); };
+    pal.appendChild(b);
+  });
+  const er = document.createElement('button');
+  er.className = 'hl-pal erase' + (hlSel === 'erase' ? ' sel' : '');
+  er.innerHTML = '<span class="hl-pal-ico">🧽</span><span>Erase</span>';
+  er.onclick = () => { hlSel = 'erase'; renderHomeLand(); };
+  pal.appendChild(er);
+  document.getElementById('hl-shop-btn').onclick = openHomeShop;
+}
+function openHomeShop() {
+  const body = document.getElementById('bm-body'), title = document.getElementById('bm-title');
+  title.textContent = '🛒 Décor Shop';
+  const items = DATA.homeItems.filter(i => i.price > 0);
+  body.innerHTML = `
+    <p class="muted">Spend the keys you earned by thinking to unlock new décor for your Home Land.</p>
+    <div class="reward-row"><span>Your keys: <strong>${state.keys} 🔑</strong></span></div>
+    <div class="shop-grid">${items.map(i => {
+      const owned = state.home.owned.includes(i.id);
+      return `<button class="shop-item ${owned ? 'owned' : ''}" data-hl="${i.id}">
+        <span class="shop-preview"><span style="font-size:42px">${i.icon}</span></span>
+        <span class="shop-name">${i.name}</span>
+        <span class="shop-price">${owned ? 'Owned ✓' : `${i.price} 🔑`}</span></button>`;
+    }).join('')}</div>`;
+  document.getElementById('building-modal').classList.add('open');
+  body.querySelectorAll('[data-hl]').forEach(btn => btn.onclick = () => {
+    const item = DATA.homeItems.find(i => i.id === btn.dataset.hl);
+    if (state.home.owned.includes(item.id)) { hlSel = item.id; closeBuildingModal(); renderHomeLand(); toast(`Selected ${item.name}, tap a tile to place it!`); return; }
+    if (state.keys < item.price) { buzz(); toast(`You need ${item.price - state.keys} more keys for ${item.name}.`); return; }
+    state.keys -= item.price; state.home.owned.push(item.id); saveState(); updateHUD(); blip(820); fanfare();
+    toast(`Unlocked ${item.name}! 🎉`); openHomeShop();
   });
 }
 
