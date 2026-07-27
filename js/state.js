@@ -39,7 +39,7 @@ const defaultState = () => ({
   ability: null,            // rolling ability estimate (float grade) for adaptive difficulty
   lastDailyResult: null,    // {dateKey, seconds, tries, streak, subject, milestone} for the share card
   worldsDone: {},           // worldId -> true, for unlockable worlds progression
-  home: { owned: ['tree', 'flower', 'bush'], placed: {} }, // Home Land décor (buy with keys, place on the plot)
+  home: { owned: ['tree', 'flower', 'bush'], placed: {}, base: null, wishDay: null, popDay: null }, // Home Land décor + walkable-plot state
 });
 
 let state = defaultState();

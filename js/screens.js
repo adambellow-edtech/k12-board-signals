@@ -994,7 +994,7 @@ function openHomeLand() {
 function renderHomeLand() {
   const home = state.home;
   const placedCount = Object.keys(home.placed).length;
-  document.getElementById('hl-sub').textContent = `Coziness: ${placedCount} décor placed · ${state.keys} 🔑 to spend`;
+  document.getElementById('hl-sub').textContent = `Coziness: ${placedCount} décor placed · ${state.keys} 🔑 to spend · walk the island to visit your home`;
   const plot = document.getElementById('hl-plot');
   plot.innerHTML = '';
   for (let i = 0; i < HL_COLS * HL_ROWS; i++) {

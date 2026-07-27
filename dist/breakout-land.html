@@ -2315,7 +2315,7 @@ const defaultState = () => ({
   ability: null,            // rolling ability estimate (float grade) for adaptive difficulty
   lastDailyResult: null,    // {dateKey, seconds, tries, streak, subject, milestone} for the share card
   worldsDone: {},           // worldId -> true, for unlockable worlds progression
-  home: { owned: ['tree', 'flower', 'bush'], placed: {} }, // Home Land décor (buy with keys, place on the plot)
+  home: { owned: ['tree', 'flower', 'bush'], placed: {}, base: null, wishDay: null, popDay: null }, // Home Land décor + walkable-plot state
 });
 
 let state = defaultState();
@@ -3379,6 +3379,203 @@ const NPCS = [
 
 const SPARKLE_KEYS = [[865, 300], [1245, 565], [770, 705], [1445, 618], [1085, 862]];
 
+/* ============ Home Land — the plot the student designs, made walkable here ============
+   The 8x4 grid in the design screen is the blueprint; on the island it becomes a
+   real fenced homestead the avatar walks through. A few decor items come alive when
+   you walk up, and a friend drops by to admire the build. Keys are earned by thinking,
+   never bought, so this stays a place to enjoy, never a store. */
+const HOME_PLOT = { cx: 1185, cy: 838, w: 348, h: 168, cols: 8, rows: 4 };
+// Pip, the friendly neighbor who lives next door and admires your build (a distinct
+// character so a daily-rotating islander never appears twice on screen at once)
+const HOME_NEIGHBOR = { name: 'Pip', color: '#7a3fd0', cfg: { hero: 3, accessory: 'none' } };
+// decor ids that do something when the explorer walks up to them
+const HOME_LIVE = { flag: 'base', fountain: 'wish', balloon: 'pop' };
+
+function homeCellXY(i) {
+  const c = i % HOME_PLOT.cols, r = Math.floor(i / HOME_PLOT.cols);
+  const cw = HOME_PLOT.w / HOME_PLOT.cols, ch = HOME_PLOT.h / HOME_PLOT.rows;
+  return {
+    x: HOME_PLOT.cx - HOME_PLOT.w / 2 + (c + 0.5) * cw,
+    y: HOME_PLOT.cy - HOME_PLOT.h / 2 + (r + 0.5) * ch,
+  };
+}
+function homeSignXY() { return { x: HOME_PLOT.cx - HOME_PLOT.w / 2 - 22, y: HOME_PLOT.cy }; }
+function homeVisitorPos() { return { x: HOME_PLOT.cx + HOME_PLOT.w / 2 - 26, y: HOME_PLOT.cy - HOME_PLOT.h / 2 + 30 }; }
+function homePlacedCount() { return state.home ? Object.keys(state.home.placed || {}).length : 0; }
+function homeVisitor() { return HOME_NEIGHBOR; }
+
+// Color-emoji glyphs (Noto/Apple bitmap fonts) often fail to paint via fillText when
+// the canvas is scaled, as the world is. Pre-render each glyph once to an offscreen
+// sprite at identity scale, then blit it with drawImage, which works under any transform.
+const _emojiSprites = {};
+function emojiSprite(ch) {
+  if (_emojiSprites[ch]) return _emojiSprites[ch];
+  const s = 72, c = document.createElement('canvas'); c.width = s; c.height = s;
+  const x = c.getContext('2d');
+  x.font = '58px "Noto Color Emoji","Segoe UI Emoji","Apple Color Emoji",serif';
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(ch, s / 2, s / 2 + 2);
+  _emojiSprites[ch] = c;
+  return c;
+}
+function homeVisitorLine() {
+  const n = homePlacedCount();
+  if (n === 0) return 'Ooh, an empty lot! What will you build?';
+  if (n < 4) return 'Cozy start! Add a few more, explorer.';
+  if (n < 8) return `Wow, ${n} things! So cozy in here.`;
+  return 'The coziest home on the whole island!';
+}
+
+// interactive spots on the plot (the design sign, plus any live decor); nearest within reach wins
+function homeSpots() {
+  const spots = [];
+  const s = homeSignXY();
+  spots.push({ x: s.x, y: s.y, r: 60, kind: 'design', label: 'Redesign Home 🎨' });
+  const placed = (state.home && state.home.placed) || {};
+  for (const k in placed) {
+    const kind = HOME_LIVE[placed[k]];
+    if (!kind) continue;
+    const p = homeCellXY(+k);
+    const label = kind === 'base' ? 'Set Home Base 🚩' : kind === 'wish' ? 'Make a Wish ⛲' : 'Pop it! 🎈';
+    spots.push({ x: p.x, y: p.y, r: 48, kind, label });
+  }
+  return spots;
+}
+function homeSpotAt(x, y) {
+  let best = null, bd = Infinity;
+  for (const s of homeSpots()) {
+    const d = Math.hypot(x - s.x, y - s.y);
+    if (d < s.r && d < bd) { bd = d; best = s; }
+  }
+  return best;
+}
+function doHomeAction(spot) {
+  if (!spot || !state.home) return;
+  if (spot.kind === 'design') { openHomeLand(); return; }
+  if (spot.kind === 'base') {
+    state.home.base = { x: HOME_PLOT.cx, y: HOME_PLOT.cy + HOME_PLOT.h / 2 - 8 };
+    saveState(); blip(720);
+    toast('🚩 Home base set! You will start here when you visit the island.');
+    return;
+  }
+  if (spot.kind === 'wish') {
+    if (state.home.wishDay === todayKey()) { buzz(); toast('You already wished today. Come back tomorrow! ⛲'); return; }
+    state.home.wishDay = todayKey();
+    fanfare(); grant({ keys: 3, xp: 5 }); homeBurst(spot.x, spot.y, '#8fdcf5');
+    toast('⛲ You made a wish! +3 🔑');
+    return;
+  }
+  if (spot.kind === 'pop') {
+    if (state.home.popDay === todayKey()) { buzz(); toast('This balloon already popped today! 🎈'); return; }
+    state.home.popDay = todayKey();
+    playSparkleChime(); grant({ xp: 5 }); homeBurst(spot.x, spot.y, '#ff6b5b');
+    toast('🎈 Pop! +5 XP');
+    return;
+  }
+}
+function homeBurst(x, y, color) {
+  world.homeFx = world.homeFx || [];
+  const t = world.sec || 0;
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    world.homeFx.push({ x, y, vx: Math.cos(a) * (46 + Math.random() * 40), vy: Math.sin(a) * (46 + Math.random() * 40) - 24, t, color });
+  }
+}
+
+function drawHomePlot(ctx, sec) {
+  const P = HOME_PLOT;
+  const x0 = P.cx - P.w / 2, y0 = P.cy - P.h / 2, w = P.w, h = P.h;
+  ctx.save();
+  // grassy pad
+  ctx.fillStyle = 'rgba(122,206,156,.55)';
+  roundRect(ctx, x0 - 18, y0 - 14, w + 36, h + 34, 30); ctx.fill();
+  ctx.strokeStyle = 'rgba(28,154,133,.45)'; ctx.lineWidth = 3;
+  roundRect(ctx, x0 - 18, y0 - 14, w + 36, h + 34, 30); ctx.stroke();
+  // stone path from the front gate into the yard
+  ctx.strokeStyle = 'rgba(230,217,178,.8)'; ctx.lineWidth = 13; ctx.lineCap = 'round';
+  ctx.setLineDash([2, 15]);
+  ctx.beginPath(); ctx.moveTo(P.cx, y0 + h + 16); ctx.lineTo(P.cx, P.cy); ctx.stroke();
+  ctx.setLineDash([]);
+  drawFence(ctx, x0 - 18, y0 - 14, w + 36, h + 34);
+  drawHomeSign(ctx, sec);
+  // decor, painted back-to-front so nearer items overlap farther ones
+  const placed = (state.home && state.home.placed) || {};
+  const ids = Object.keys(placed).map(Number).sort((a, b) => homeCellXY(a).y - homeCellXY(b).y);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  for (const i of ids) {
+    const d = DATA.homeItems.find(x => x.id === placed[i]); if (!d) continue;
+    const p = homeCellXY(i);
+    const bob = Math.sin(sec * 1.6 + i * 1.3) * 2;
+    if (HOME_LIVE[d.id]) {
+      const glow = .3 + Math.sin(sec * 3 + i) * .16;
+      const g = ctx.createRadialGradient(p.x, p.y - 2, 2, p.x, p.y - 2, 34);
+      g.addColorStop(0, `rgba(255,226,122,${glow})`); g.addColorStop(1, 'rgba(255,226,122,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y - 2, 34, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(0,40,20,.16)';
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 16, 16, 6, 0, 0, Math.PI * 2); ctx.fill();
+    const sz = 44;
+    ctx.drawImage(emojiSprite(d.icon), p.x - sz / 2, p.y - sz + 8 + bob, sz, sz);
+  }
+  // décor-action sparkle bursts (wishing well, balloon pop)
+  world.homeFx = (world.homeFx || []).filter(pt => sec - pt.t < .8);
+  world.homeFx.forEach(pt => {
+    const k = (sec - pt.t) / .8;
+    const px = pt.x + pt.vx * k, py = pt.y + pt.vy * k + 60 * k * k;
+    ctx.save(); ctx.globalAlpha = 1 - k; ctx.fillStyle = pt.color;
+    ctx.beginPath(); ctx.arc(px, py, 3.5 * (1 - k) + 1, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  });
+  ctx.restore();
+}
+
+function drawFence(ctx, x, y, w, h) {
+  ctx.save();
+  const gap = 22, pw = 6;
+  for (const ry of [y, y + h]) {
+    ctx.strokeStyle = 'rgba(120,80,40,.5)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x, ry); ctx.lineTo(x + w, ry); ctx.stroke();
+    for (let px = x + 8; px <= x + w - 8; px += gap) {
+      if (ry === y + h && Math.abs(px - (x + w / 2)) < 26) continue; // leave a front gate gap
+      ctx.fillStyle = 'rgba(255,255,255,.92)';
+      ctx.beginPath();
+      ctx.moveTo(px - pw / 2, ry + 6); ctx.lineTo(px - pw / 2, ry - 10);
+      ctx.lineTo(px, ry - 16); ctx.lineTo(px + pw / 2, ry - 10);
+      ctx.lineTo(px + pw / 2, ry + 6); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(120,80,40,.4)'; ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawHomeSign(ctx, sec) {
+  const s = homeSignXY();
+  ctx.save();
+  ctx.fillStyle = '#8a5a2b';
+  ctx.fillRect(s.x - 3, s.y - 6, 6, 50);
+  ctx.translate(s.x, s.y - 4); ctx.rotate(Math.sin(sec * 1.5) * .04);
+  const label = `${(state.player.name || 'My')}'s Home`;
+  ctx.font = '700 13px system-ui, sans-serif';
+  const bw = Math.min(ctx.measureText(label).width, 130) + 40, bh = 26;
+  ctx.fillStyle = '#fff7e6';
+  roundRect(ctx, -bw / 2, -bh, bw, bh, 8); ctx.fill();
+  ctx.strokeStyle = '#d98e00'; ctx.lineWidth = 2.5;
+  roundRect(ctx, -bw / 2, -bh, bw, bh, 8); ctx.stroke();
+  ctx.drawImage(emojiSprite('🏡'), -bw / 2 + 4, -bh / 2 - 10, 20, 20);
+  ctx.fillStyle = '#002d72'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(label, 10, -bh / 2 + 5, 130);
+  ctx.textAlign = 'left';
+  ctx.restore();
+}
+
+function drawHomeVisitor(ctx, sec) {
+  const v = homeVisitor(), p = homeVisitorPos();
+  const dir = state.pos.x >= p.x ? 1 : -1;
+  drawAvatar(ctx, p.x, p.y, .96, v.cfg, sec + p.x * 0.05, false, dir);
+  namePill(ctx, p.x, p.y - 118, v.name, v.color);
+  const near = Math.hypot(state.pos.x - p.x, state.pos.y - p.y) < 150;
+  if (near || sec % 12 < 4) speechBubble(ctx, p.x, p.y - 146, homeVisitorLine());
+}
+
 /* Themed regions — the island is divided into subject lands (a Voronoi of these
    centers), so crossing the map teaches structure: Math to the SE, Words NW,
    Science SW, Logic NE, all around the central Plaza hub. */
@@ -3517,6 +3714,13 @@ function enterWorld() {
   if (!world.cv) initWorld();
   // players saved before the painted-map update spawn inside the old island
   if (!canWalk(state.pos.x, state.pos.y)) { state.pos.x = 990; state.pos.y = 648; }
+  // if a home base flag is planted, start the visit there (once per page session)
+  if (!world._spawned) {
+    world._spawned = true;
+    if (state.home && state.home.base && canWalk(state.home.base.x, state.home.base.y)) {
+      state.pos.x = state.home.base.x; state.pos.y = state.home.base.y;
+    }
+  }
   if (state.tutorialStep === 0) startTutorial();
   else if (state.tutorialStep === 2 && typeof runOnboardingCalibration === 'function') setTimeout(runOnboardingCalibration, 400);
   else updateTutorialBanner();
@@ -3548,7 +3752,7 @@ function initWorld() {
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     world.keysDown[e.key.toLowerCase()] = true;
     if (e.key === 'e' || e.key === 'E' || e.key === 'Enter') {
-      if (world.nearSparkle !== null && world.nearSparkle !== undefined || world.nearNpc || world.nearBuilding) triggerNearAction();
+      if (world.nearSparkle !== null && world.nearSparkle !== undefined || world.nearNpc || world.nearHome || world.nearBuilding) triggerNearAction();
     }
     if (e.key.startsWith('Arrow')) e.preventDefault();
   });
@@ -3564,6 +3768,7 @@ function initWorld() {
     const p = toWorldXY(e);
     const b = BUILDINGS.find(b => Math.hypot(p.x - b.x, p.y - (b.y + b.pinY * .5)) < 85);
     if (b && world.nearBuilding && b.id === world.nearBuilding.id) { openBuilding(b.id); return; }
+    if (world.nearHome && Math.hypot(p.x - world.nearHome.x, p.y - world.nearHome.y) < world.nearHome.r) { doHomeAction(world.nearHome); return; }
     world.target = p;
   });
 
@@ -3651,6 +3856,9 @@ function stepPlayer() {
     if (Math.hypot(state.pos.x - b.x, state.pos.y - b.y) < 105) { world.nearBuilding = b; break; }
   }
 
+  // interactive spot on the student's homestead (design sign or live décor)
+  world.nearHome = homeSpotAt(state.pos.x, state.pos.y);
+
   // nearest uncollected sparkle key within reach
   world.nearSparkle = null;
   SPARKLE_KEYS.forEach(([kx, ky], i) => {
@@ -3680,6 +3888,8 @@ function stepPlayer() {
     btn.classList.add('show'); btn.textContent = 'Collect! ⭐';
   } else if (world.nearNpc && npcQuestFor(world.nearNpc.name) && !npcQuestDone(world.nearNpc.name)) {
     btn.classList.add('show'); btn.textContent = `Help ${world.nearNpc.name} 💬`;
+  } else if (world.nearHome) {
+    btn.classList.add('show'); btn.textContent = world.nearHome.label;
   } else if (world.nearBuilding) {
     btn.classList.add('show'); btn.textContent = `Enter ${world.nearBuilding.name} ✦`;
   } else {
@@ -3699,6 +3909,7 @@ function triggerNearAction() {
     const q = npcQuestFor(world.nearNpc.name);
     if (q && !npcQuestDone(world.nearNpc.name)) { openNpcQuest(world.nearNpc, q); return; }
   }
+  if (world.nearHome) { doHomeAction(world.nearHome); return; }
   if (world.nearBuilding) openBuilding(world.nearBuilding.id);
 }
 
@@ -3921,9 +4132,13 @@ function drawWorld(sec) {
     ctx.restore();
   });
 
+  // the student's homestead: décor blueprint rendered as a walkable yard
+  drawHomePlot(ctx, sec);
+
   // y-sorted characters
   const drawables = [
     ...NPCS.map(n => ({ y: npcPos(n, sec).y, fn: () => drawNPC(ctx, n, sec) })),
+    { y: homeVisitorPos().y, fn: () => drawHomeVisitor(ctx, sec) },
     {
       y: state.pos.y,
       fn: () => {
@@ -5223,7 +5438,7 @@ function openHomeLand() {
 function renderHomeLand() {
   const home = state.home;
   const placedCount = Object.keys(home.placed).length;
-  document.getElementById('hl-sub').textContent = `Coziness: ${placedCount} décor placed · ${state.keys} 🔑 to spend`;
+  document.getElementById('hl-sub').textContent = `Coziness: ${placedCount} décor placed · ${state.keys} 🔑 to spend · walk the island to visit your home`;
   const plot = document.getElementById('hl-plot');
   plot.innerHTML = '';
   for (let i = 0; i < HL_COLS * HL_ROWS; i++) {
