@@ -3558,10 +3558,102 @@ function drawHomePlot(ctx, sec) {
   ctx.restore();
 }
 
+/* ---- hand-drawn vector décor (proof of concept: tree, fountain, tent) ----
+   Painted in the same storybook language as the world: bold shapes, dark
+   outlines, vertical-gradient shading, white highlights, soft ground shadow.
+   Each draws from a bottom-center anchor at (0,0) and animates itself. */
+function vecShadow(ctx, rx) { ctx.fillStyle = 'rgba(20,35,25,.18)'; ctx.beginPath(); ctx.ellipse(0, 2, rx, rx * .28, 0, 0, Math.PI * 2); ctx.fill(); }
+
+function drawVecTree(ctx, sec, i) {
+  const sway = Math.sin(sec * 1.4 + i) * .05;
+  vecShadow(ctx, 21);
+  // trunk
+  const tg = ctx.createLinearGradient(-5, 0, 6, 0);
+  tg.addColorStop(0, '#7a4a24'); tg.addColorStop(1, '#a06a35');
+  ctx.fillStyle = tg; ctx.strokeStyle = '#5a3418'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-5, 1); ctx.lineTo(-3, -20); ctx.lineTo(3, -20); ctx.lineTo(5, 1); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // canopy sways as one piece atop the trunk
+  ctx.save(); ctx.translate(0, -20); ctx.rotate(sway);
+  const blobs = [[0, -24, 21], [-14, -12, 15], [14, -12, 15], [0, -7, 17]];
+  ctx.fillStyle = '#2f7d4f'; // dark rim
+  ctx.beginPath(); blobs.forEach(([bx, by, r]) => { ctx.moveTo(bx + r, by); ctx.arc(bx, by, r, 0, Math.PI * 2); }); ctx.fill();
+  const cg = ctx.createLinearGradient(0, -46, 0, 6);
+  cg.addColorStop(0, '#63cd86'); cg.addColorStop(1, '#3a9b5c');
+  ctx.fillStyle = cg; // lighter inner fill, leaving a rim
+  ctx.beginPath(); blobs.forEach(([bx, by, r]) => { ctx.moveTo(bx + r - 3, by); ctx.arc(bx, by, r - 3, 0, Math.PI * 2); }); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.4)'; // sun highlights
+  ctx.beginPath(); ctx.arc(-7, -28, 4.5, 0, Math.PI * 2); ctx.arc(5, -20, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawVecFountain(ctx, sec, i) {
+  const t = sec + i;
+  const stone = (a, b) => { const g = ctx.createLinearGradient(0, a, 0, b); g.addColorStop(0, '#d6dbe1'); g.addColorStop(1, '#98a0aa'); return g; };
+  vecShadow(ctx, 23);
+  ctx.strokeStyle = '#6c7480'; ctx.lineWidth = 2;
+  // lower basin + water with expanding ripples
+  ctx.fillStyle = stone(-16, -2); ctx.beginPath(); ctx.ellipse(0, -6, 23, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#5cb8e8'; ctx.beginPath(); ctx.ellipse(0, -7, 18, 7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.5;
+  for (let r = 0; r < 2; r++) { const k = (t * .6 + r / 2) % 1; ctx.globalAlpha = (1 - k) * .6; ctx.beginPath(); ctx.ellipse(0, -7, 4 + k * 13, 1.6 + k * 5, 0, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  // pillar + upper bowl
+  ctx.strokeStyle = '#6c7480'; ctx.fillStyle = stone(-24, -8);
+  roundRect(ctx, -5, -24, 10, 18, 3); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = stone(-30, -22); ctx.beginPath(); ctx.ellipse(0, -24, 12, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#5cb8e8'; ctx.beginPath(); ctx.ellipse(0, -25, 9, 3.2, 0, 0, Math.PI * 2); ctx.fill();
+  // spouting water arcs from the top bowl into the basin
+  drawFountainWater(ctx, 0, -28, t * 1.1);
+}
+
+function drawVecTent(ctx, sec, i) {
+  const H = 40, Wt = 30;
+  vecShadow(ctx, 28);
+  // guy-lines to pegs
+  ctx.strokeStyle = 'rgba(90,70,50,.55)'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(-Wt + 3, -2); ctx.lineTo(-Wt - 8, 1); ctx.moveTo(Wt - 3, -2); ctx.lineTo(Wt + 8, 1); ctx.stroke();
+  ctx.strokeStyle = '#12463d'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  // right + left fabric panels, with a gently drooping base
+  ctx.fillStyle = '#1c9a85';
+  ctx.beginPath(); ctx.moveTo(0, -H); ctx.quadraticCurveTo(Wt * .7, -H * .3, Wt, 0); ctx.lineTo(5, 2); ctx.lineTo(0, -6); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#26b59d';
+  ctx.beginPath(); ctx.moveTo(0, -H); ctx.quadraticCurveTo(-Wt * .7, -H * .3, -Wt, 0); ctx.lineTo(-5, 2); ctx.lineTo(0, -6); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // gold accent stripe along each eave
+  ctx.strokeStyle = '#ffb627'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(-Wt + 4, -3); ctx.quadraticCurveTo(-Wt * .55, -H * .28, -1, -H + 5); ctx.moveTo(Wt - 4, -3); ctx.quadraticCurveTo(Wt * .55, -H * .28, 1, -H + 5); ctx.stroke();
+  // arched door with dark interior
+  ctx.fillStyle = '#0e3b33';
+  ctx.beginPath(); ctx.moveTo(-8, 1); ctx.quadraticCurveTo(0, -22, 8, 1); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-8, 1); ctx.quadraticCurveTo(0, -22, 8, 1); ctx.stroke();
+  // ridge pole + a little pennant fluttering on top
+  ctx.strokeStyle = '#7a5a34'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(0, -H); ctx.lineTo(0, -H - 11); ctx.stroke();
+  const fl = Math.sin(sec * 4 + i) * 3;
+  ctx.fillStyle = '#ff6b5b';
+  ctx.beginPath(); ctx.moveTo(0, -H - 11); ctx.lineTo(13, -H - 8 + fl); ctx.lineTo(0, -H - 4); ctx.closePath(); ctx.fill();
+}
+
+const HOME_VEC = { tree: drawVecTree, fountain: drawVecFountain, tent: drawVecTent };
+
+function homeHalo(ctx, x, y, i, sec) {
+  const g0 = .26 + Math.sin(sec * 3 + i) * .14;
+  const rg = ctx.createRadialGradient(x, y, 2, x, y, 36);
+  rg.addColorStop(0, `rgba(255,226,122,${g0})`); rg.addColorStop(1, 'rgba(255,226,122,0)');
+  ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, 36, 0, Math.PI * 2); ctx.fill();
+}
+
 function drawDecorItem(ctx, d, p, i, sec) {
   const a = HOME_ANIM[d.id] || {};
   const ph = sec * 1.6 + i * 1.3;
   const sz = a.big ? 58 : 46;
+
+  // hand-drawn vector décor takes over for its items (self-contained: shadow, body, animation)
+  const vec = HOME_VEC[d.id];
+  if (vec) {
+    if (HOME_LIVE[d.id]) homeHalo(ctx, p.x, p.y - 6, i, sec);
+    ctx.save(); ctx.translate(p.x, p.y + 8); vec(ctx, sec, i); ctx.restore();
+    return;
+  }
 
   // ---- effects painted behind the sprite ----
   if (a.ripple) drawPondRipple(ctx, p.x, p.y + 8, sec + i);
