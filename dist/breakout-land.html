@@ -3482,68 +3482,212 @@ function homeBurst(x, y, color) {
   }
 }
 
+// per-décor animation + living-effect recipe (everything else just gets a gentle bob)
+const HOME_ANIM = {
+  tree: { sway: .05 }, pine: { sway: .04 }, bush: { sway: .07 }, flower: { sway: .12, petals: 1 },
+  tulip: { sway: .12, petals: 1 }, planter: { sway: .05 }, mushroom: { sway: .03 }, rainbow: { big: 1, shimmer: 1 },
+  balloon: { float: 8, rot: .06, string: 1 }, flag: { wave: 1 }, lantern: { glow: 1 }, star: { spin: .5, twinkle: 1 },
+  pond: { ripple: 1, still: 1 }, fountain: { water: 1 }, castle: { big: 1 }, tent: {}, bench: {}, flag2: {},
+};
+
 function drawHomePlot(ctx, sec) {
   const P = HOME_PLOT;
   const x0 = P.cx - P.w / 2, y0 = P.cy - P.h / 2, w = P.w, h = P.h;
+  const px0 = x0 - 18, py0 = y0 - 14, pw = w + 36, ph = h + 34;
   ctx.save();
-  // grassy pad
-  ctx.fillStyle = 'rgba(122,206,156,.55)';
-  roundRect(ctx, x0 - 18, y0 - 14, w + 36, h + 34, 30); ctx.fill();
-  ctx.strokeStyle = 'rgba(28,154,133,.45)'; ctx.lineWidth = 3;
-  roundRect(ctx, x0 - 18, y0 - 14, w + 36, h + 34, 30); ctx.stroke();
-  // stone path from the front gate into the yard
-  ctx.strokeStyle = 'rgba(230,217,178,.8)'; ctx.lineWidth = 13; ctx.lineCap = 'round';
-  ctx.setLineDash([2, 15]);
-  ctx.beginPath(); ctx.moveTo(P.cx, y0 + h + 16); ctx.lineTo(P.cx, P.cy); ctx.stroke();
-  ctx.setLineDash([]);
-  drawFence(ctx, x0 - 18, y0 - 14, w + 36, h + 34);
+  // layered grassy pad — gradient base, organic light patches, soft inner shading
+  roundRect(ctx, px0, py0, pw, ph, 30);
+  ctx.save(); ctx.clip();
+  const gg = ctx.createLinearGradient(0, py0, 0, py0 + ph);
+  gg.addColorStop(0, 'rgba(176,231,190,.92)'); gg.addColorStop(1, 'rgba(126,201,153,.92)');
+  ctx.fillStyle = gg; ctx.fillRect(px0, py0, pw, ph);
+  // dappled sunlight patches
+  for (let i = 0; i < 5; i++) {
+    const bx = px0 + ((i * 137 + 40) % pw), by = py0 + ((i * 83 + 30) % ph);
+    const rp = ctx.createRadialGradient(bx, by, 2, bx, by, 46);
+    rp.addColorStop(0, 'rgba(206,244,214,.5)'); rp.addColorStop(1, 'rgba(206,244,214,0)');
+    ctx.fillStyle = rp; ctx.beginPath(); ctx.arc(bx, by, 46, 0, Math.PI * 2); ctx.fill();
+  }
+  // tiny wildflower speckles dotted across the lawn
+  const spk = ['#ffd75e', '#ff8fb0', '#ffffff', '#c39bff'];
+  for (let i = 0; i < 26; i++) {
+    const sx = px0 + ((i * 71 + 17) % pw), sy = py0 + ((i * 129 + 41) % ph);
+    ctx.fillStyle = spk[i % 4]; ctx.globalAlpha = .8;
+    ctx.beginPath(); ctx.arc(sx, sy, 1.6, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // inner top highlight + bottom shadow for a little depth
+  const sh = ctx.createLinearGradient(0, py0, 0, py0 + ph);
+  sh.addColorStop(0, 'rgba(255,255,255,.16)'); sh.addColorStop(.12, 'rgba(255,255,255,0)');
+  sh.addColorStop(.85, 'rgba(0,40,20,0)'); sh.addColorStop(1, 'rgba(0,40,20,.14)');
+  ctx.fillStyle = sh; ctx.fillRect(px0, py0, pw, ph);
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(28,154,133,.5)'; ctx.lineWidth = 3;
+  roundRect(ctx, px0, py0, pw, ph, 30); ctx.stroke();
+
+  // stepping-stone path from the front gate to the middle of the yard
+  for (let s = 0; s <= 5; s++) {
+    const sy = y0 + h + 12 - s * ((h / 2 + 12) / 5);
+    ctx.fillStyle = 'rgba(226,214,182,.85)';
+    ctx.beginPath(); ctx.ellipse(P.cx, sy, 11, 6, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(150,130,90,.35)'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  drawFence(ctx, px0, py0, pw, ph);
   drawHomeSign(ctx, sec);
-  // decor, painted back-to-front so nearer items overlap farther ones
+
+  // décor, painted back-to-front so nearer items overlap farther ones
   const placed = (state.home && state.home.placed) || {};
   const ids = Object.keys(placed).map(Number).sort((a, b) => homeCellXY(a).y - homeCellXY(b).y);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   for (const i of ids) {
     const d = DATA.homeItems.find(x => x.id === placed[i]); if (!d) continue;
-    const p = homeCellXY(i);
-    const bob = Math.sin(sec * 1.6 + i * 1.3) * 2;
-    if (HOME_LIVE[d.id]) {
-      const glow = .3 + Math.sin(sec * 3 + i) * .16;
-      const g = ctx.createRadialGradient(p.x, p.y - 2, 2, p.x, p.y - 2, 34);
-      g.addColorStop(0, `rgba(255,226,122,${glow})`); g.addColorStop(1, 'rgba(255,226,122,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y - 2, 34, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.fillStyle = 'rgba(0,40,20,.16)';
-    ctx.beginPath(); ctx.ellipse(p.x, p.y + 16, 16, 6, 0, 0, Math.PI * 2); ctx.fill();
-    const sz = 44;
-    ctx.drawImage(emojiSprite(d.icon), p.x - sz / 2, p.y - sz + 8 + bob, sz, sz);
+    drawDecorItem(ctx, d, homeCellXY(i), i, sec);
   }
+
+  // ambient life over the yard: butterflies + petals drifting from flowers
+  drawYardLife(ctx, sec, ids.some(i => { const d = DATA.homeItems.find(x => x.id === placed[i]); return d && HOME_ANIM[d.id] && HOME_ANIM[d.id].petals; }));
+
   // décor-action sparkle bursts (wishing well, balloon pop)
   world.homeFx = (world.homeFx || []).filter(pt => sec - pt.t < .8);
   world.homeFx.forEach(pt => {
     const k = (sec - pt.t) / .8;
-    const px = pt.x + pt.vx * k, py = pt.y + pt.vy * k + 60 * k * k;
+    const bx = pt.x + pt.vx * k, by = pt.y + pt.vy * k + 60 * k * k;
     ctx.save(); ctx.globalAlpha = 1 - k; ctx.fillStyle = pt.color;
-    ctx.beginPath(); ctx.arc(px, py, 3.5 * (1 - k) + 1, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    ctx.beginPath(); ctx.arc(bx, by, 3.5 * (1 - k) + 1, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   });
   ctx.restore();
 }
 
+function drawDecorItem(ctx, d, p, i, sec) {
+  const a = HOME_ANIM[d.id] || {};
+  const ph = sec * 1.6 + i * 1.3;
+  const sz = a.big ? 58 : 46;
+
+  // ---- effects painted behind the sprite ----
+  if (a.ripple) drawPondRipple(ctx, p.x, p.y + 8, sec + i);
+  if (a.glow) drawLanternGlow(ctx, p.x, p.y - 20, sec + i);
+  if (HOME_LIVE[d.id]) { // interactive items wear a soft golden halo
+    const g0 = .26 + Math.sin(sec * 3 + i) * .14;
+    const rg = ctx.createRadialGradient(p.x, p.y - 6, 2, p.x, p.y - 6, 36);
+    rg.addColorStop(0, `rgba(255,226,122,${g0})`); rg.addColorStop(1, 'rgba(255,226,122,0)');
+    ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(p.x, p.y - 6, 36, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // ground contact shadow (skip for the floating balloon)
+  if (!a.float) {
+    ctx.fillStyle = 'rgba(0,40,20,.16)';
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 16, a.big ? 20 : 16, a.big ? 7 : 6, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  const spr = emojiSprite(d.icon);
+  ctx.save();
+  let ay = p.y + 8;
+  if (a.float) { ay -= 14 + (Math.sin(ph) * .5 + .5) * a.float; }
+  ctx.translate(p.x, ay);
+  if (a.sway) ctx.rotate(Math.sin(ph) * a.sway);
+  if (a.rot) ctx.rotate(Math.sin(ph * 1.3) * a.rot);
+  if (a.spin) ctx.rotate(sec * a.spin);
+  if (a.wave) ctx.transform(1, 0, Math.sin(ph * 1.5) * .16, 1, 0, 0); // cloth flutter
+  ctx.drawImage(spr, -sz / 2, -sz, sz, sz);
+  ctx.restore();
+
+  // ---- effects painted in front of the sprite ----
+  if (a.string) { // balloon string dangling to the ground anchor
+    ctx.strokeStyle = 'rgba(120,120,140,.7)'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y + 14);
+    ctx.quadraticCurveTo(p.x + Math.sin(ph) * 4, p.y + 2, p.x + Math.sin(ph) * 2, ay - 4);
+    ctx.stroke();
+  }
+  if (a.water) drawFountainWater(ctx, p.x, p.y - 22, sec + i * 1.7);
+  if (a.twinkle) { const t = (sec * 1.5 + i) % 2.4; if (t < 1.2) { ctx.save(); ctx.globalAlpha = (1 - t / 1.2) * .9; ctx.fillStyle = '#fff6cf'; drawStar(ctx, p.x + 14, p.y - 30, 4, 3.4, 1.3); ctx.fill(); ctx.restore(); } }
+}
+
+function drawPondRipple(ctx, x, y, t) {
+  ctx.save();
+  for (let r = 0; r < 3; r++) {
+    const k = (t * .5 + r / 3) % 1;
+    ctx.globalAlpha = (1 - k) * .5; ctx.strokeStyle = '#bfeaff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(x, y, 7 + k * 22, 3 + k * 10, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawLanternGlow(ctx, x, y, t) {
+  const fl = .5 + Math.sin(t * 6) * .12 + Math.sin(t * 13) * .05;
+  const g = ctx.createRadialGradient(x, y, 2, x, y, 42);
+  g.addColorStop(0, `rgba(255,196,86,${.4 * fl})`); g.addColorStop(1, 'rgba(255,196,86,0)');
+  ctx.save(); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 42, 0, Math.PI * 2); ctx.fill();
+  for (let i = 0; i < 3; i++) { // fireflies drifting in the glow
+    const ang = t * 1.2 + i * 2.1;
+    const fx = x + Math.cos(ang) * 20, fy = y + Math.sin(ang * 1.3) * 13 - 4;
+    ctx.globalAlpha = .35 + Math.abs(Math.sin(t * 4 + i)) * .5; ctx.fillStyle = '#fff3b0';
+    ctx.beginPath(); ctx.arc(fx, fy, 1.8, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawFountainWater(ctx, x, y, t) {
+  ctx.save(); ctx.fillStyle = 'rgba(186,232,255,.92)';
+  for (let i = 0; i < 8; i++) {
+    const k = (t * 1.25 + i / 8) % 1;
+    const ang = -Math.PI / 2 + (i - 3.5) * .26;
+    const dx = Math.cos(ang) * 30 * k, dy = Math.sin(ang) * 30 * k + 34 * k * k;
+    ctx.globalAlpha = (1 - k) * .9;
+    ctx.beginPath(); ctx.arc(x + dx, y + dy, 2.3 * (1 - k) + .8, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawYardLife(ctx, sec, hasFlowers) {
+  const P = HOME_PLOT;
+  // two butterflies wandering inside the fence
+  for (let i = 0; i < 2; i++) {
+    const bx = P.cx + Math.sin(sec * .8 + i * 2.3) * (P.w * .32) + (i - .5) * 40;
+    const by = P.cy - 10 + Math.cos(sec * 1.1 + i * 1.7) * (P.h * .28);
+    const flap = Math.abs(Math.sin(sec * 13 + i * 3));
+    ctx.save(); ctx.translate(bx, by);
+    ctx.fillStyle = ['#ff8fb0', '#a7d8ff'][i];
+    ctx.beginPath(); ctx.ellipse(-3, 0, 4 * flap + .8, 3.6, .5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(3, 0, 4 * flap + .8, 3.6, -.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3a3348';
+    ctx.beginPath(); ctx.ellipse(0, 0, 1, 3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  // petals drifting down when the yard has flowers
+  if (!hasFlowers) return;
+  for (let i = 0; i < 5; i++) {
+    const t = (sec * .35 + i * .37) % 1;
+    const bx = P.cx - P.w * .3 + ((i * 97) % (P.w * .6)) + Math.sin(sec + i) * 12;
+    const by = P.cy - P.h * .4 + t * P.h * .8;
+    ctx.save(); ctx.globalAlpha = (1 - t) * .8; ctx.translate(bx, by); ctx.rotate(sec * 2 + i);
+    ctx.fillStyle = ['#ff8fb0', '#ffc0d6', '#c39bff'][i % 3];
+    ctx.beginPath(); ctx.ellipse(0, 0, 3, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function picket(ctx, px, ry, pw, tall) {
+  ctx.fillStyle = 'rgba(255,255,255,.94)';
+  ctx.beginPath();
+  ctx.moveTo(px - pw / 2, ry + 6); ctx.lineTo(px - pw / 2, ry - tall + 6);
+  ctx.lineTo(px, ry - tall); ctx.lineTo(px + pw / 2, ry - tall + 6);
+  ctx.lineTo(px + pw / 2, ry + 6); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(120,80,40,.4)'; ctx.lineWidth = 1; ctx.stroke();
+}
 function drawFence(ctx, x, y, w, h) {
   ctx.save();
   const gap = 22, pw = 6;
+  // soft ground shadow beneath the fence line
+  ctx.fillStyle = 'rgba(0,40,20,.10)';
+  ctx.beginPath(); ctx.ellipse(x + w / 2, y + h + 10, w / 2, 10, 0, 0, Math.PI * 2); ctx.fill();
   for (const ry of [y, y + h]) {
     ctx.strokeStyle = 'rgba(120,80,40,.5)'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(x, ry); ctx.lineTo(x + w, ry); ctx.stroke();
     for (let px = x + 8; px <= x + w - 8; px += gap) {
-      if (ry === y + h && Math.abs(px - (x + w / 2)) < 26) continue; // leave a front gate gap
-      ctx.fillStyle = 'rgba(255,255,255,.92)';
-      ctx.beginPath();
-      ctx.moveTo(px - pw / 2, ry + 6); ctx.lineTo(px - pw / 2, ry - 10);
-      ctx.lineTo(px, ry - 16); ctx.lineTo(px + pw / 2, ry - 10);
-      ctx.lineTo(px + pw / 2, ry + 6); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(120,80,40,.4)'; ctx.lineWidth = 1; ctx.stroke();
+      if (ry === y + h && Math.abs(px - (x + w / 2)) < 26) continue; // front gate gap
+      picket(ctx, px, ry, pw, 16);
     }
   }
+  // taller posts flanking the front gate
+  picket(ctx, x + w / 2 - 26, y + h, 8, 26);
+  picket(ctx, x + w / 2 + 26, y + h, 8, 26);
   ctx.restore();
 }
 
